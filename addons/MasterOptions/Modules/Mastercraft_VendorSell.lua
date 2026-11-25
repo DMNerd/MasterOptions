@@ -90,6 +90,8 @@ end
 -- Gear that must stay (only asked in "all" mode)
 ---------------------------------------------------------------------------
 local function PawnUpgrade(link)
+    -- (Master Options' shared check: also every spec's scale while Pawn follows GearMatic's spec)
+    if type(_G.MasterOptions_PawnKeeps) == "function" then return MasterOptions_PawnKeeps(link) end
     if type(_G.PawnGetItemData) ~= "function" or type(_G.PawnIsItemAnUpgrade) ~= "function" then return false end
     local ok, item = pcall(_G.PawnGetItemData, link)
     if not ok or type(item) ~= "table" then return false end

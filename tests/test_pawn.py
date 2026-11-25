@@ -198,8 +198,22 @@ lua.execute(r'''
   Fire("PLAYER_TALENT_UPDATE"); RunTimers(); RunTimers()
 ''')
 follow["talent change to Subtlety: both follow"] = (lua.eval('ShownRogue()') == '"PawnForever":ROGUE3' and lua.eval('CheapUpgrades.chardb.spec') == "SUB")
+# keeping (selling / deleting / GearMatic's guard): while following, the other specs' scales count too - an
+# Assassination upgrade (spec 1, hidden now) is kept, and nothing stays shown afterwards
+lua.execute(r'''
+  function PawnGetItemData(link) return { Link = link } end
+  function PawnIsItemAnUpgrade(item)
+    local o = PawnCommon.Scales['"PawnForever":ROGUE1'].PerCharacterOptions[PawnPlayerFullName]
+    if o and o.Visible then return { { '"PawnForever":ROGUE1', "Assassination", 0.12 } } end
+  end
+  KEEPS = MasterOptions_PawnKeeps("item:1234")
+''')
+follow["keeping while following: an off-spec (Assassination) upgrade is still kept"] = lua.eval("KEEPS") is True
+follow["keeping: nothing left shown after the check (still only Subtlety)"] = lua.eval('ShownRogue()') == '"PawnForever":ROGUE3'
 lua.execute('FOLLOW.set("Your own choice"); PawnSetScaleVisible(\'"PawnForever":ROGUE1\', true); GearMatic.ScaleImport.GetActiveSpecIndex = function() return 2 end; Fire("PLAYER_TALENT_UPDATE"); RunTimers(); RunTimers()')
 follow["'Your own choice': nothing follows"] = lua.eval('ShownRogue()') == '"PawnForever":ROGUE1, "PawnForever":ROGUE3'
+lua.execute('PawnSetScaleVisible(\'"PawnForever":ROGUE1\', false); KEEPS2 = MasterOptions_PawnKeeps("item:1234")')
+follow["'Your own choice' with Assassination hidden: only what you show counts (not kept)"] = lua.eval("KEEPS2") is False
 print("spec follow:", follow)
 if not all(follow.values()):
     lua.execute('ERRORS[#ERRORS+1] = "Spec follow wrong"')

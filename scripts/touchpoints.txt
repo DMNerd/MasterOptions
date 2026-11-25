@@ -253,3 +253,8 @@ CheapUpgrades|function|function CU:SetSpec(|MasterOptions.lua (FollowSpec)
 CheapUpgrades|function|function CU:GetClass(|MasterOptions.lua (FollowSpec)
 CheapUpgrades|config-key|watchSpecs|MasterOptions.lua (FollowSpec)
 CheapUpgrades|config-value|"SVMELEE"|MasterOptions.lua (hunters' melee Survival kept)
+
+# --- added in 2.5.1 (MasterOptions_PawnKeeps: other specs counted while following)
+Pawn|text|PawnIsScaleVisible(ScaleName)|MasterOptions.lua (MasterOptions_PawnKeeps)
+Pawn|text|if not CharacterOptions.Visible then|MasterOptions.lua (MasterOptions_PawnKeeps: best-item scan reads the flag)
+Pawn|function|function PawnFindBestItems(|MasterOptions.lua (MasterOptions_PawnKeeps)

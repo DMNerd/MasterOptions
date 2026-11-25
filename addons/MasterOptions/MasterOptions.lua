@@ -208,6 +208,45 @@ local function FollowSpec()
     FollowSpecCheapUpgrades(spec, tab)
 end
 
+-- Should an item be kept (not sold, not deleted) because of Pawn? An upgrade, or already your best or
+-- second-best item, for a scale you show. While Pawn follows GearMatic's spec it shows one spec - then the
+-- other specs' scales of the same sets count too, so off-spec gear stays kept: for the check only, their
+-- Visible flags are set (Pawn's best-item scan reads that flag itself) and put back right after. Nothing is
+-- shown differently; Pawn drops best-item data of hidden scales at logout anyway.
+-- Used by Mastercraft_VendorSell, DeleteCheapestItem_Protect and GearMatic_SellGuard.
+function MasterOptions_PawnKeeps(link)
+    if type(_G.PawnGetItemData) ~= "function" or type(_G.PawnIsItemAnUpgrade) ~= "function" then return false end
+    local ok, item = pcall(_G.PawnGetItemData, link)
+    if not ok or type(item) ~= "table" then return false end
+    local widened = {}
+    local pw, who = PAWN(), _G.PawnPlayerFullName
+    if FollowSpecOn() and GMSpec() and pw and type(pw.Scales) == "table" and who then
+        local _, _, classID = UnitClass("player")
+        local inUse = {}
+        for _, s in pairs(pw.Scales) do
+            if type(s) == "table" and s.ClassID == classID and s.Provider and PawnShows(s) then inUse[s.Provider] = true end
+        end
+        for _, s in pairs(pw.Scales) do
+            if type(s) == "table" and s.ClassID == classID and s.SpecID and inUse[s.Provider] and not PawnShows(s) then
+                -- (an entry made here stays, with the best-item data Pawn works out in it, so the next check
+                -- doesn't scan again; Pawn removes hidden scales' entries at logout)
+                s.PerCharacterOptions = type(s.PerCharacterOptions) == "table" and s.PerCharacterOptions or {}
+                local o = s.PerCharacterOptions[who]
+                if type(o) ~= "table" then o = {}; s.PerCharacterOptions[who] = o end
+                widened[#widened + 1] = { o = o, was = o.Visible }
+                o.Visible = true
+            end
+        end
+    end
+    local ok2, up, _, best, second = pcall(_G.PawnIsItemAnUpgrade, item)
+    for _, w in ipairs(widened) do w.o.Visible = w.was end
+    if not ok2 then return false end
+    for _, t in ipairs({ up or false, best or false, second or false }) do
+        if type(t) == "table" and next(t) ~= nil then return true end
+    end
+    return false
+end
+
 local function ClearPawnHidden()
     local pw = PAWN()
     if not (pw and type(pw.Scales) == "table") then return end
@@ -910,7 +949,7 @@ local OPTIONS = {
     {
         kind = "choice", label = "Spec for Pawn and CheapUpgrades", rec = "Follow GearMatic", since = 26,
         needs = "GearMatic", choices = { "Follow GearMatic", "Your own choice" },
-        tip = "GearMatic works out your spec from your talents (and its own Cat / Bear choice for Feral). Follow GearMatic: Pawn shows only that spec's scale (of the set you use - Pawn Forever's or stock; scales for no particular spec stay as they are), and CheapUpgrades' spec and ticked specs are that spec - so upgrade arrows, tooltips, quest rewards and the auction house all judge by one spec, and follow a talent change. Your own choice: Pawn shows the scales you tick (upgrades for any of them, off-spec too), CheapUpgrades the specs you pick. Note: Pawn judges only the scales it shows - following one spec, off-spec gear is no longer kept from selling or deleting as Pawn's \"best item\" (put pieces you keep for another spec on the never-sell list).",
+        tip = "GearMatic works out your spec from your talents (and its own Cat / Bear choice for Feral). Follow GearMatic: Pawn shows only that spec's scale (of the set you use - Pawn Forever's or stock; scales for no particular spec stay as they are), and CheapUpgrades' spec and ticked specs are that spec - so upgrade arrows, tooltips, quest rewards and the auction house all judge by one spec, and follow a talent change. Your own choice: Pawn shows the scales you tick (upgrades for any of them, off-spec too), CheapUpgrades the specs you pick. Either way, selling and deleting (vendor selling, GearMatic's sell guard, DeleteCheapestItem) keep Pawn's upgrades and best items for every spec of the set you use - following, the other specs are counted for that check only.",
         get = function() return FollowSpecOn() and "Follow GearMatic" or "Your own choice" end,
         set = function(v)
             -- (not `(v ~= ...) and false or nil`: that is always nil)
