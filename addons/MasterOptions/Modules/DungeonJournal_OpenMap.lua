@@ -107,6 +107,21 @@ local function SetOpenMapInside(mod, on)
     end
 end
 
+-- What clicking an OpenMap dungeon entrance opens (Master Options' "Dungeon entrance click",
+-- MasterOptionsDB.entranceClick): "djmap" Dungeon Journal's map of the dungeon on the world map (ours, below),
+-- "djpage" its journal page (OpenMap's own option, worldmap.entranceClick = "journal"), "openmap" OpenMap's map
+-- of it (entranceClick = "map"). Not chosen yet: as Map inside dungeons (OpenMap's map -> OpenMap's).
+local function EntranceMode()
+    local mo = _G.MasterOptionsDB
+    local v = type(mo) == "table" and mo.entranceClick
+    if v == "djmap" or v == "djpage" or v == "openmap" then return v end
+    return (type(mo) == "table" and mo.dungeonMap == "openmap") and "openmap" or "djmap"
+end
+local function SetOpenMapEntrance(mod)
+    local d = mod and mod.db
+    if type(d) == "table" then d.entranceClick = (EntranceMode() == "djpage") and "journal" or "map" end
+end
+
 local function DungeonMapPart()
     local A = C_AddOns or {}
     local state = A.GetAddOnEnableState and A.GetAddOnEnableState("OpenMap_NoDungeonMap", UnitName("player"))
@@ -116,15 +131,18 @@ local function DungeonMapPart()
     local mod = ns and ns.GetModule and ns:GetModule("worldmap")
     if not mod then return end
 
+    -- 1. the map inside dungeons: OpenMap's own switch; with Dungeon Journal's, the floors OpenMap holds there off
     local mo = _G.MasterOptionsDB
     if type(mo) == "table" and mo.dungeonMap == "openmap" then
         SetOpenMapInside(mod, true)
-        return
+    else
+        SetOpenMapInside(mod, false)
+        mod.HoldDungeonHere = function() end
     end
 
-    -- 1. OpenMap's map inside dungeons off (Dungeon Journal's shows there); the floors it holds there too
-    SetOpenMapInside(mod, false)
-    mod.HoldDungeonHere = function() end
+    -- entrance clicks: OpenMap's own option; Dungeon Journal's map (2. and 3. below) only when that's the pick
+    SetOpenMapEntrance(mod)
+    if EntranceMode() ~= "djmap" then return end
 
     -- 2. Dungeon Journal's map on the world map, for a dungeon you're not in
     local FDJ = _G.ForeverDungeonJournal_NS
@@ -311,7 +329,8 @@ local function DungeonMapPart()
     if build then
         S.BuildDungeonPins = function(...)
             local pins = build(...)
-            for _, pin in ipairs(pins) do pin.OnClick = FDJ and Click or nil end
+            -- (without Dungeon Journal's data: OpenMap's own click stays)
+            if FDJ then for _, pin in ipairs(pins) do pin.OnClick = Click end end
             return pins
         end
     end
@@ -350,10 +369,12 @@ f:SetScript("OnEvent", function(_, event, name)
     elseif event == "PLAYER_LOGIN" then
         -- (Dungeon Journal sets its arrow functions up as it loads; again a moment later to be sure)
         if not Hook() then C_Timer.After(2, Hook) end
+        local om = _G.OpenMap
+        local wm = om and om.GetModule and om:GetModule("worldmap")
         if insideWanted ~= nil then
-            local om = _G.OpenMap
-            Check("setting OpenMap's map inside dungeons", pcall(SetOpenMapInside, om and om.GetModule and om:GetModule("worldmap"), insideWanted))
+            Check("setting OpenMap's map inside dungeons", pcall(SetOpenMapInside, wm, insideWanted))
         end
+        if wm then Check("setting OpenMap's entrance click", pcall(SetOpenMapEntrance, wm)) end
     end
 end)
 

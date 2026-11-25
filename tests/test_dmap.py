@@ -7,7 +7,7 @@ src = open(sys.argv[1], encoding="utf-8").read()
 res = {}
 
 
-def run(mode, db, store=None):
+def run(mode, db, store=None, entrance=None):
     lua = LuaRuntime()
     lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")  # (module files: run at once, as their old addon did)
     lua.execute(r'''
@@ -25,7 +25,8 @@ def run(mode, db, store=None):
     ''')
     lua.execute("OM.db = %s" % db)
     lua.execute("MasterOptions_DJOpenMapDB = %s" % (store or "nil"))
-    lua.execute("MasterOptionsDB = { dungeonMap = %s }" % ("nil" if mode == "journal" else '"openmap"'))
+    lua.execute("MasterOptionsDB = { dungeonMap = %s, entranceClick = %s }" % ("nil" if mode == "journal" else '"openmap"',
+                                                                            '"%s"' % entrance if entrance else "nil"))
     lua.eval("function(s) return load(s, '=p') end")(src)("MasterOptions_DungeonJournal_OpenMap")
     lua.execute('for _, f in ipairs(FRAMES) do if f.OnEvent then f.OnEvent(f, "PLAYER_LOGIN") end end')
     return lua
@@ -42,6 +43,17 @@ lua = run("openmap", "{ dungeonInside = false }", "{ ours = {} }")
 res["openmap: your own OpenMap setting (off) left as you set it"] = lua.eval("OM.db.dungeonInside == false")
 lua = run("journal", "nil")
 res["journal, OpenMap's settings not loaded yet: no error, SetupDungeons left"] = lua.eval("OM.SetupDungeons == ORIG_SETUP")
+# Dungeon entrance click: one choice for OpenMap's own option (map / journal page) and ours (Dungeon Journal's map)
+lua = run("journal", "{}")
+res["entrance, default: Dungeon Journal's map (ours), OpenMap's option 'map'"] = lua.eval('OpenMap.MapStitch.BuildDungeonPins()[1].OnClick ~= nil and OM.db.entranceClick == "map"')
+lua = run("journal", "{}", entrance="djpage")
+res["entrance 'Dungeon Journal page': OpenMap's own option 'journal', its click left"] = lua.eval('OpenMap.MapStitch.BuildDungeonPins()[1].OnClick == nil and OM.db.entranceClick == "journal"')
+lua = run("journal", "{}", entrance="openmap")
+res["entrance 'OpenMap's map': OpenMap's option 'map', its click left"] = lua.eval('OpenMap.MapStitch.BuildDungeonPins()[1].OnClick == nil and OM.db.entranceClick == "map"')
+lua = run("openmap", "{}")
+res["entrance not chosen, inside = OpenMap: OpenMap's map as before"] = lua.eval('OpenMap.MapStitch.BuildDungeonPins()[1].OnClick == nil and OM.db.entranceClick == "map"')
+lua = run("openmap", "{}", entrance="djmap")
+res["entrance 'Dungeon Journal map' with inside = OpenMap: ours"] = lua.eval('OpenMap.MapStitch.BuildDungeonPins()[1].OnClick ~= nil and OM.db.dungeonInside ~= false')
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)
 print("ERRORS:", sum(1 for v in res.values() if not v))

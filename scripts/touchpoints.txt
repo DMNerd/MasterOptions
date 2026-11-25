@@ -238,3 +238,10 @@ Sparkles_Forever|config-key|minimapAutoAlternate|MasterOptions.lua (Problems)
 Sparkles_Forever|config-key|masterEnabled|MasterOptions.lua (Problems)
 ShortestPathForever|frame|"ShortestPathForeverMinimapRoute"|ShortestPathForever_OpenMapMiniMap.lua
 ShortestPathForever|method|Minimap:CreateTexture|ShortestPathForever_OpenMapMiniMap.lua
+
+# --- added in 2.4.0
+GearMatic|function|function VA.RegisterSellGuard(|GearMatic_SellGuard.lua
+OpenMap|config-key|entranceClick|DungeonJournal_OpenMap.lua (Dungeon entrance click)
+OpenMap|config-key|d.townsfolk|MasterOptions.lua (Town NPC icons)
+OpenMap|method|function mod:RefreshTownsfolk|MasterOptions.lua (Town NPC icons)
+OpenMap|config-value|key = "stable"|MasterOptions.lua (Town NPC icons)

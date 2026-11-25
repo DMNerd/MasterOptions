@@ -294,13 +294,25 @@ local function QuestieTownRefresh()
     local ok, menu = pcall(ql.ImportModule, ql, "QuestieMenu")
     if ok and type(menu) == "table" and menu.OnLogin then pcall(menu.OnLogin, menu, true) end
 end
+-- OpenMap draws some of the same kinds on the world map (Map\Townsfolk.lua, from Questie's database; all off
+-- by default): with Questie's on too, each shows twice there. (Not on the minimap, so the game's tracking and
+-- OpenMap's don't double.) Questie's name -> OpenMap's key.
+local TOWN_OPENMAP = { Auctioneer = "auctioneer", Banker = "banker", Innkeeper = "innkeeper", Mailbox = "mailbox",
+                       Repair = "repair", ["Stable Master"] = "stable" }
+local function OpenMapTown()
+    local om = Loaded("OpenMap") and _G.OpenMap
+    local mod = type(om) == "table" and om.GetModule and om:GetModule("worldmap")
+    if mod and type(mod.db) == "table" and type(mod.db.townsfolk) == "table" then return mod.db.townsfolk, mod end
+end
 local function TownGet()
     local t, q = TownTracking(), QuestieTown()
     if not q then return "Questie" end
+    local o = OpenMapTown() or {}
     local game, questie = false, false
     for _, k in ipairs(TOWN) do
         local g, qq = t[k] and t[k].active, q[k] == true
         if g and qq then return "Both (conflict)" end
+        if qq and TOWN_OPENMAP[k] and o[TOWN_OPENMAP[k]] == true then return "Both (conflict)" end
         game, questie = game or g, questie or qq
     end
     return (game and not questie) and "Game's tracking" or "Questie"
@@ -309,18 +321,24 @@ end
 local function TownSet(v)
     local t, q = TownTracking(), QuestieTown()
     if not q then return end
+    local o, omMod = OpenMapTown()
     local setTracking = C_Minimap and C_Minimap.SetTracking
+    local omChanged = false
     for _, k in ipairs(TOWN) do
         local g = t[k]
-        local on = (g and g.active) or q[k] == true
+        local ok = o and TOWN_OPENMAP[k]
+        local on = (g and g.active) or q[k] == true or (ok and o[ok] == true)
         if v == "Questie" then
             if on then q[k] = true end
             if g and g.active and setTracking then pcall(setTracking, g.index, false) end
+            -- (Questie's own world map icons: OpenMap's of the same kind off, else each shows twice there)
+            if ok and o[ok] == true then o[ok] = false; omChanged = true end
         elseif g then -- (a kind the game's list doesn't have stays with Questie)
             if on and not g.active and setTracking then pcall(setTracking, g.index, true) end
             if q[k] then q[k] = false end
         end
     end
+    if omChanged and omMod and omMod.RefreshTownsfolk then pcall(omMod.RefreshTownsfolk, omMod) end
     QuestieTownRefresh()
 end
 
@@ -671,14 +689,32 @@ local OPTIONS = {
         kind = "choice", label = "Map inside dungeons", rec = "Dungeon Journal", since = 11, reload = true,
         needs = { "OpenMap", "ForeverDungeonJournal", "MasterOptions_DungeonJournal_OpenMap" },
         choices = { "Dungeon Journal", "OpenMap" },
-        tip = "OpenMap and Dungeon Journal both put a map of the dungeon on the world map when you're inside one. Dungeon Journal: OpenMap's dungeon map is off, and OpenMap's entrance icons open Dungeon Journal's map of that dungeon (a list where several share an entrance). OpenMap: its own dungeon map.",
+        tip = "OpenMap and Dungeon Journal both put a map of the dungeon on the world map when you're inside one. Dungeon Journal: OpenMap's own \"Dungeon maps inside dungeons\" is off (the rest of OpenMap's dungeon features stay). OpenMap: its own dungeon map. What an entrance click opens: the next row.",
         get = function() return (MasterOptionsDB and MasterOptionsDB.dungeonMap == "openmap") and "OpenMap" or "Dungeon Journal" end,
         set = function(v) MasterOptionsDB.dungeonMap = (v == "OpenMap") and "openmap" or nil end,
     },
     {
+        -- OpenMap has its own "Clicking a dungeon entrance opens" (its map / Dungeon Journal's page:
+        -- worldmap.entranceClick); MasterOptions_DungeonJournal_OpenMap adds Dungeon Journal's map of the dungeon.
+        -- One choice for the three, written to OpenMap's option too. (No `since`: recommended for a new
+        -- character only - an update keeps what your entrances open now.)
+        kind = "choice", label = "Dungeon entrance click", rec = "Dungeon Journal map", reload = true,
+        needs = { "OpenMap", "ForeverDungeonJournal", "MasterOptions_DungeonJournal_OpenMap" },
+        choices = { "Dungeon Journal map", "Dungeon Journal page", "OpenMap's map" },
+        tip = "What clicking a dungeon entrance on OpenMap's world map opens. Dungeon Journal map: Dungeon Journal's map of that dungeon on the world map (a list when several share the entrance; right-click or Esc back). Dungeon Journal page: its journal page (OpenMap's own option). OpenMap's map: OpenMap's map of the dungeon.",
+        get = function()
+            local v = MasterOptionsDB and MasterOptionsDB.entranceClick
+            if v == nil then v = (MasterOptionsDB and MasterOptionsDB.dungeonMap == "openmap") and "openmap" or "djmap" end
+            return (v == "djpage" and "Dungeon Journal page") or (v == "openmap" and "OpenMap's map") or "Dungeon Journal map"
+        end,
+        set = function(v)
+            MasterOptionsDB.entranceClick = (v == "Dungeon Journal page" and "djpage") or (v == "OpenMap's map" and "openmap") or "djmap"
+        end,
+    },
+    {
         kind = "choice", label = "Town NPC icons", rec = "Questie", since = 21, scope = "character",
         needs = "Questie", choices = { "Questie", "Game's tracking" },
-        tip = "Auctioneer, banker, battlemaster, innkeeper, mailbox, repair, stable master and flight master icons: the game's minimap tracking menu and Questie's townsfolk menu both draw them, so a kind ticked in both shows twice. Questie: on the world map and the minimap (pick the kinds in Questie's menu). Game's tracking: on the minimap only. Switching moves the kinds you have on to the one you pick; trainers and the rest stay as they are.",
+        tip = "Auctioneer, banker, battlemaster, innkeeper, mailbox, repair, stable master and flight master icons: the game's minimap tracking menu and Questie's townsfolk menu both draw them, so a kind ticked in both shows twice. Questie: on the world map and the minimap (pick the kinds in Questie's menu). Game's tracking: on the minimap only. Switching moves the kinds you have on to the one you pick; trainers and the rest stay as they are. OpenMap can draw some of the same kinds on the world map too (its Townsfolk menu): Questie turns those off (else they show twice there); with Game's tracking they can stay - the game's are on the minimap only.",
         get = TownGet, set = TownSet,
     },
 
@@ -1068,7 +1104,7 @@ local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions
                       MasterOptions_Mastercraft_BankMats = 18,
                       MasterOptions_OpenMapMiniMap_Border = 19,
                       MasterOptions_ShortestPathForever_OpenMapMiniMap = 23,
-                      MasterOptions_NeverSell = 24 }
+                      MasterOptions_NeverSell = 24, MasterOptions_GearMatic_SellGuard = 25 }
 local PATCH_TIP = {
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
     MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
@@ -1083,6 +1119,7 @@ local PATCH_TIP = {
     MasterOptions_Mastercraft_VendorSell = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank.",
     MasterOptions_Mastercraft_BankMats = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank.",
     MasterOptions_OpenMapMiniMap_Border = "OpenMap's square minimap framed with the action bar buttons' border (Look > Minimap border).",
+    MasterOptions_GearMatic_SellGuard = "GearMatic's gear and low-value selling keeps what Master Options protects: the never-sell list, materials your Mastercraft guides need, and gear Pawn calls an upgrade or already your best for a spec (through GearMatic's own sell guard).",
     MasterOptions_NeverSell = "One never-sell list, kept the same in GearMatic (never auto-sold), Mastercraft (no VENDOR / AUCTION advice) and DeleteCheapestItem (never offered for deletion): add or remove an item in any of them, or with /mo never <item>, and it changes in all. /mo never lists it.",
     MasterOptions_ShortestPathForever_OpenMapMiniMap = "Shortest Path's journey goal on the minimap stays visible over OpenMap's painted minimap (it faded with the game's terrain, and was gone at far zoom).",
     MasterOptions_DungeonJournal_OpenMap = "Dungeon Journal's Show on Map also puts a blue OpenMap pin there (named, followed like a pin you drop), gone again when Dungeon Journal clears its mark. And the map inside dungeons (Maps > Map inside dungeons). Replaces OpenMap_NoDungeonMap.",
@@ -1093,7 +1130,7 @@ local MODULE_STATE_TEXT = { on = "|cff66dd66running|r", off = "|cff9d9d9doff|r",
 local MODULE_ORDER = { "Mastercraft_FishingView", "CheapUpgrades_Baganator", "OpenMapTweaks_Mastercraft", "GearMatic_Baganator",
     "GearMatic_Forever", "DialogKey_Pawn", "Mastercraft_Auctionator", "DeleteCheapestItem_Protect", "Mastercraft_Keep",
     "DungeonJournal_OpenMap", "Mastercraft_Chattynator", "Mastercraft_VendorSell", "Mastercraft_BankMats", "OpenMapMiniMap_Border",
-    "ShortestPathForever_OpenMapMiniMap", "NeverSell" }
+    "ShortestPathForever_OpenMapMiniMap", "NeverSell", "GearMatic_SellGuard" }
 for _, short in ipairs(MODULE_ORDER) do
     local name = "MasterOptions_" .. short
     local function M() return _G.MasterOptions_Modules end
@@ -1366,7 +1403,7 @@ local Available
 
 -- Recommended setup, applied once per character on first load (and by the button).
 -- Skips anything whose addon isn't loaded; returns how many rows it set.
-local DEFAULTS_VERSION = 24
+local DEFAULTS_VERSION = 25
 local Remember -- set below
 local function ApplyRecommended(after, manual) -- after: only options added after this defaults version
     local n = 0

@@ -62,10 +62,11 @@ The workflow checks that the tag matches the `.toc` version, builds the pack, an
 | Mastercraft / VendorSell | Mastercraft | Items Mastercraft marks VENDOR are sold by your junk seller, and get the junk coin |
 | Mastercraft / BankMats | Mastercraft | At the bank, guide materials go in; VENDOR / AUCTION items stay in bags |
 | OpenMapMiniMap / Border | OpenMap_MiniMap | Square minimap framed with the action bar buttons' border |
-| DungeonJournal / OpenMap | ForeverDungeonJournal, OpenMap | Show on Map puts an OpenMap pin; map inside dungeons |
+| DungeonJournal / OpenMap | ForeverDungeonJournal, OpenMap | Show on Map puts an OpenMap pin; map inside dungeons (OpenMap's own switch); Dungeon entrance click: Dungeon Journal's map, its page, or OpenMap's map (written to OpenMap's option too) |
 | Mastercraft / FishingView | Mastercraft | Bags, popups and loot rolls stay visible in the fishing view |
 | Mastercraft / Chattynator | Mastercraft, Chattynator | Mastercraft's /played request stays out of Chattynator |
 | ShortestPathForever / OpenMapMiniMap | ShortestPathForever, OpenMap_MiniMap | Shortest Path's journey goal stays visible on OpenMap's painted minimap |
+| GearMatic / SellGuard | GearMatic | GearMatic's gear and low-value selling keeps the never-sell list, materials Mastercraft's guides need, and gear Pawn calls an upgrade or your best for a spec (GearMatic's own sell guard) |
 | NeverSell | any of GearMatic, Mastercraft, DeleteCheapestItem | One never-sell list, the same in GearMatic (never auto-sold), Mastercraft (no VENDOR / AUCTION advice) and DeleteCheapestItem (never offered for deletion): change it in any of them, or with `/mo never <item>` / `/mo never remove <item>`, and all follow. `/mo never` lists it, and /mo > Never sell shows it (add by shift-click, drag or item ID; Remove per item). Keep's and Protect's automatic entries aren't part of it |
 
 ## Supported addons

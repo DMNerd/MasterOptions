@@ -166,6 +166,23 @@ lua.execute(r'''
 ''')
 res["Junk coin 'Greys only': poor_quality chosen, GearMatic's and Mastercraft's plugins ignored by Baganator"] = lua.eval(
     'JUNK ~= nil and BAGP.junk_plugin == "poor_quality" and type(BAGP.junk_plugin_ignored) == "table" and BAGP.junk_plugin_ignored.gearmatic == true and BAGP.junk_plugin_ignored.mastercraft == true') is True
+# Town NPC icons: OpenMap's world-map townsfolk are a third source - Questie + OpenMap on the same kind is a
+# conflict; picking Questie turns OpenMap's off (the kinds move to Questie); Game's tracking leaves OpenMap's
+lua.execute(r'''
+  OMTOWN = { banker = true, mailbox = false, vendor = true }
+  OM_REFRESHED = 0
+  local wm = { db = { townsfolk = OMTOWN }, RefreshTownsfolk = function() OM_REFRESHED = OM_REFRESHED + 1 end }
+  OpenMap = { GetModule = function() return wm end }
+  Questie = { db = { profile = { townsfolkConfig = { Banker = true } } } }
+  QTOWN = Questie.db.profile.townsfolkConfig
+  for _, s in ipairs(SETTINGS) do if s.name:find("^Town NPC icons") then TOWN = s end end
+''')
+res["Town NPC icons: Questie + OpenMap on the same kind (Banker) = conflict"] = lua.eval('TOWN ~= nil and TOWN.get() == "Both (conflict)"')
+lua.execute('if TOWN then TOWN.set("Questie") end')
+res["Town NPC icons -> Questie: OpenMap's banker off, Questie keeps it; OpenMap's own kinds (vendors) untouched; OpenMap redrawn"] = lua.eval(
+    'OMTOWN.banker == false and QTOWN.Banker == true and OMTOWN.vendor == true and OM_REFRESHED > 0 and TOWN.get() == "Questie"')
+lua.execute('OMTOWN.mailbox = true')
+res["Town NPC icons: a kind on only in OpenMap (not doubled) is no conflict, left as it is"] = lua.eval('TOWN.get() == "Questie" and OMTOWN.mailbox == true')
 L('RunTimers()')
 lua.execute(r'''
   SparklesDB.sparkleBobber = true; MastercraftDB.settings.fishMarker = true -- you pick Both afterwards
