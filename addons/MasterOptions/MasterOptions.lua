@@ -1048,7 +1048,8 @@ local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions
                       MasterOptions_Mastercraft_Chattynator = 14, MasterOptions_Mastercraft_VendorSell = 17,
                       MasterOptions_Mastercraft_BankMats = 18,
                       MasterOptions_OpenMapMiniMap_Border = 19,
-                      MasterOptions_ShortestPathForever_OpenMapMiniMap = 23 }
+                      MasterOptions_ShortestPathForever_OpenMapMiniMap = 23,
+                      MasterOptions_NeverSell = 24 }
 local PATCH_TIP = {
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
     MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
@@ -1063,6 +1064,7 @@ local PATCH_TIP = {
     MasterOptions_Mastercraft_VendorSell = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank.",
     MasterOptions_Mastercraft_BankMats = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank.",
     MasterOptions_OpenMapMiniMap_Border = "OpenMap's square minimap framed with the action bar buttons' border (Look > Minimap border).",
+    MasterOptions_NeverSell = "One never-sell list, kept the same in GearMatic (never auto-sold), Mastercraft (no VENDOR / AUCTION advice) and DeleteCheapestItem (never offered for deletion): add or remove an item in any of them, or with /mo never <item>, and it changes in all. /mo never lists it.",
     MasterOptions_ShortestPathForever_OpenMapMiniMap = "Shortest Path's journey goal on the minimap stays visible over OpenMap's painted minimap (it faded with the game's terrain, and was gone at far zoom).",
     MasterOptions_DungeonJournal_OpenMap = "Dungeon Journal's Show on Map also puts a blue OpenMap pin there (named, followed like a pin you drop), gone again when Dungeon Journal clears its mark. And the map inside dungeons (Maps > Map inside dungeons). Replaces OpenMap_NoDungeonMap.",
 }
@@ -1072,7 +1074,7 @@ local MODULE_STATE_TEXT = { on = "|cff66dd66running|r", off = "|cff9d9d9doff|r",
 local MODULE_ORDER = { "Mastercraft_FishingView", "CheapUpgrades_Baganator", "OpenMapTweaks_Mastercraft", "GearMatic_Baganator",
     "GearMatic_Forever", "DialogKey_Pawn", "Mastercraft_Auctionator", "DeleteCheapestItem_Protect", "Mastercraft_Keep",
     "DungeonJournal_OpenMap", "Mastercraft_Chattynator", "Mastercraft_VendorSell", "Mastercraft_BankMats", "OpenMapMiniMap_Border",
-    "ShortestPathForever_OpenMapMiniMap" }
+    "ShortestPathForever_OpenMapMiniMap", "NeverSell" }
 for _, short in ipairs(MODULE_ORDER) do
     local name = "MasterOptions_" .. short
     local function M() return _G.MasterOptions_Modules end
@@ -1344,7 +1346,7 @@ local Available
 
 -- Recommended setup, applied once per character on first load (and by the button).
 -- Skips anything whose addon isn't loaded; returns how many rows it set.
-local DEFAULTS_VERSION = 23
+local DEFAULTS_VERSION = 24
 local Remember -- set below
 local function ApplyRecommended(after, manual) -- after: only options added after this defaults version
     local n = 0
@@ -2191,8 +2193,42 @@ end)
 
 SLASH_MASTEROPTIONS1 = "/mo"
 SLASH_MASTEROPTIONS2 = "/masteroptions"
+-- /mo never [remove] <item link or ID>, /mo never: the shared never-sell list (Modules\NeverSell.lua)
+local function NeverSellCommand(rest)
+    local ns = _G.MasterOptions_NeverSell
+    local head = "|cffffd200Master Options:|r "
+    if not ns then print(head .. "the NeverSell module is off (/mo > Modules).") return end
+    local function Name(id)
+        local name, link = (C_Item and C_Item.GetItemInfo or GetItemInfo)(id)
+        return link or name or ("item " .. id)
+    end
+    local remove, item = rest:match("^(remove)%s+(.+)$")
+    item = item or rest
+    local id = tonumber(item:match("item:(%d+)") or item:match("^(%d+)$"))
+    if id then
+        ns.Set(id, not remove)
+        local where = ns.Sources()
+        print(head .. Name(id) .. (remove and " taken off" or " put on") .. " the never-sell list"
+            .. (#where > 0 and (" (" .. table.concat(where, ", ") .. ")") or "") .. ".")
+        return
+    end
+    if item ~= "" then print(head .. "/mo never <item link or ID> adds, /mo never remove <item> takes off, /mo never lists.") return end
+    ns.Sync()
+    local list = ns.List()
+    local where = ns.Sources()
+    print(head .. #list .. " item" .. (#list == 1 and "" or "s") .. " on the never-sell list, kept in sync with "
+        .. (#where > 0 and table.concat(where, ", ") or "no installed addon") .. ":")
+    for i, id in ipairs(list) do
+        if i > 40 then print(("  ... and %d more"):format(#list - 40)) break end
+        print("  " .. Name(id))
+    end
+end
+
 SlashCmdList.MASTEROPTIONS = function(msg)
-    msg = (msg or ""):lower():match("^%s*(.-)%s*$")
+    msg = (msg or ""):match("^%s*(.-)%s*$")
+    local never = msg:match("^[Nn][Ee][Vv][Ee][Rr]%s*(.*)$")
+    if never then NeverSellCommand(never) return end
+    msg = msg:lower()
     if msg == "minimap" then
         local DBI = LibStub and LibStub("LibDBIcon-1.0", true)
         MasterOptionsDB.minimap = MasterOptionsDB.minimap or {}

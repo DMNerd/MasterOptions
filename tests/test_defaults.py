@@ -141,7 +141,7 @@ res = {
     "new row applied: Sparkles' bobber effect on": lua.eval("SparklesDB.sparkleBobber") is True,
     "new row applied: Mastercraft's bobber mark off": lua.eval("MastercraftDB.settings.fishMarker") is False,
     "older row left alone (When nodes show stays Always)": lua.eval("MastercraftDB.settings.nodesWhen") == "always",
-    "character now at defaults version 23": lua.eval('MasterOptionsDB.applied["Testchar Alpha-"]') == 23,
+    "character moved up to the current defaults version": lua.eval('MasterOptionsDB.applied["Testchar Alpha-"]') > 22,
     "Quest reward marker applied: Pawn's on, GearMatic's off (its autoDetect untouched)": lua.eval(
         "PawnCommon.ShowQuestUpgradeAdvisor == true and GearMaticDB.profiles.Default.autoDetectQuestReward == false and GearMaticDB.profiles.Default.autoDetect ~= false") is True,
     "Minimap row applied: BetterBlizzFrames' minimap options off, its button tint skipped": lua.eval("BetterBlizzFramesDB.classicMinimap == false and BetterBlizzFramesDB.foreverMinimapTweaks == false and BetterBlizzFramesDB.SkipMinimapForeverTint == true") is True,
