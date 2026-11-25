@@ -62,6 +62,10 @@ L('Login("Testchar Beta")')
 res["other character: its list catches up and its entry (401) joins everywhere"] = E("Everywhere(500) and Everywhere(301) and Everywhere(401) and Nowhere(201)")
 L('Login("Testchar Alpha")')
 res["back on the first character: Beta's entry arrives in its list"] = E("Has(DCI_CharDB.IgnoredItems, 401)")
+# DeleteCheapestItem 1.9's one-time migration replaces a character's list (schemaVersion appears): the entries
+# that vanish must not be taken as removals everywhere
+L('DCI_CharDB.IgnoredItems = { 301 }; DCI_CharDB.schemaVersion = 1; Tick()')
+res["DeleteCheapestItem migration: its replaced list isn't read as removals"] = E("Everywhere(500) and Everywhere(102) and Everywhere(401) and Has(DCI_CharDB.IgnoredItems, 500)")
 L('LOADED.Mastercraft = false; MastercraftDB.settings.lootNever = { }; GearMaticDB.sellIgnore[700] = true; Tick()')
 res["an addon not loaded is left alone (not wiped, not read)"] = E("Everywhere == Everywhere and GearMaticDB.sellIgnore[700] == true and next(MastercraftDB.settings.lootNever) == nil")
 for k, v in res.items():

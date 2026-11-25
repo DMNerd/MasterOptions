@@ -93,8 +93,14 @@ local function PawnUpgrade(link)
     if type(_G.PawnGetItemData) ~= "function" or type(_G.PawnIsItemAnUpgrade) ~= "function" then return false end
     local ok, item = pcall(_G.PawnGetItemData, link)
     if not ok or type(item) ~= "table" then return false end
-    local ok2, up = pcall(_G.PawnIsItemAnUpgrade, item)
-    return ok2 and type(up) == "table" and next(up) ~= nil
+    -- an upgrade for a scale you show, or already your best or second-best item for one (Pawn's 3rd / 4th
+    -- returns: an off-spec piece you keep in your bags is never "an upgrade", but it is your best)
+    local ok2, up, _, best, second = pcall(_G.PawnIsItemAnUpgrade, item)
+    if not ok2 then return false end
+    for _, t in ipairs({ up or false, best or false, second or false }) do
+        if type(t) == "table" and next(t) ~= nil then return true end
+    end
+    return false
 end
 
 local function LoadoutIDs()

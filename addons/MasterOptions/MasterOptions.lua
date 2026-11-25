@@ -209,6 +209,23 @@ local function DCIProfile()
     end
 end
 
+-- Baganator switches to a plugin as it registers whenever the chosen one isn't a registered plugin ("Greys only"
+-- = "poor_quality" and "Off" = "none" never are) unless that plugin is on its *_plugin_ignored list (API\Main.lua
+-- AutoSet). Its own settings window fills that list on every change; writing the choice directly didn't - so
+-- "Greys only" came back as GearMatic's coins after a reload. Every plugin we know of goes on the list, the
+-- chosen one off it.
+local KNOWN_PLUGINS = {
+    junk = { "gearmatic", "mastercraft", "selljunk", "scrap", "vendor", "dejunk", "peddler", "enhanceqol_vendor" },
+    upgrade = { "pawn", "gearmatic_upgrade", "simple_item_levels" },
+}
+local function SetBagPlugin(p, kind, id)
+    p[kind .. "_plugin"] = id
+    local key = kind .. "_plugin_ignored"
+    p[key] = type(p[key]) == "table" and p[key] or {}
+    for _, other in ipairs(KNOWN_PLUGINS[kind]) do p[key][other] = true end
+    p[key][id] = nil
+end
+
 -- Baganator: the two bag-icon rows, on any profile
 local function ApplyUpgradeArrow(p, v)
     if v == "Pawn" and not Loaded("Pawn") then return end
@@ -216,12 +233,12 @@ local function ApplyUpgradeArrow(p, v)
     CornerRemove(p, "pawn"); CornerRemove(p, "gearmatic_upgrade_corner")
     if v == "Pawn" then CornerAdd(p, "pawn", CORNERS[1])
     elseif v == "GearMatic" then CornerAdd(p, "gearmatic_upgrade_corner", CORNERS[1]) end
-    p.upgrade_plugin = (v == "Pawn" and "pawn") or (v == "GearMatic" and "gearmatic_upgrade") or "none"
+    SetBagPlugin(p, "upgrade", (v == "Pawn" and "pawn") or (v == "GearMatic" and "gearmatic_upgrade") or "none")
 end
 local function ApplyJunk(p, v)
-    if v == "GearMatic" and Loaded("MasterOptions_GearMatic_Baganator") then p.junk_plugin = "gearmatic"
-    elseif v == "Mastercraft" and Loaded("MasterOptions_Mastercraft_VendorSell") then p.junk_plugin = "mastercraft"
-    else p.junk_plugin = "poor_quality" end -- (Mastercraft without the VendorSell patch sells greys only)
+    if v == "GearMatic" and Loaded("MasterOptions_GearMatic_Baganator") then SetBagPlugin(p, "junk", "gearmatic")
+    elseif v == "Mastercraft" and Loaded("MasterOptions_Mastercraft_VendorSell") then SetBagPlugin(p, "junk", "mastercraft")
+    else SetBagPlugin(p, "junk", "poor_quality") end -- (Mastercraft without the VendorSell patch sells greys only)
 end
 local function ArrowState(p)
     local pw, gm = CornerHas(p, "pawn"), CornerHas(p, "gearmatic_upgrade_corner")
@@ -742,8 +759,10 @@ local OPTIONS = {
           function() local pw = PAWN(); return pw and pw.ShowUpgradesOnTooltips and true or false end,
           function(on) local pw = PAWN(); if pw then pw.ShowUpgradesOnTooltips = on end end },
         { "GearMatic",
-          function() local g = GM(); return g ~= nil and g.showInTooltip ~= false end,
-          function(on) local g = GM(); if g then g.showInTooltip = on end end },
+          -- (its item tooltip line: autoDetectTooltip, shown while autoDetect is on too - ItemTooltipHook.lua.
+          -- showInTooltip, used here before 2.3.2, is only its summary on a character's mouseover tooltip)
+          function() local g = GM(); return g ~= nil and g.autoDetect ~= false and g.autoDetectTooltip ~= false end,
+          function(on) local g = GM(); if g then g.autoDetectTooltip = on; if on then g.autoDetect = true end end end },
         { "CheapUpgrades",
           function() local c = CU(); return c and c.tooltip ~= false and c.tooltipUpgrades ~= false end,
           function(on) local c = CU(); if c then c.tooltipUpgrades = on; if on then c.tooltip = true end end end },
@@ -1054,7 +1073,7 @@ local PATCH_TIP = {
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
     MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
     MasterOptions_OpenMapTweaks_Mastercraft = "Mastercraft's node rule also filters OpenMap_Tweaks' gathering pins.",
-    MasterOptions_GearMatic_Baganator = "Baganator junk coins from GearMatic's vendor rules, and GearMatic loadouts shown as equipment sets on bag slots.",
+    MasterOptions_GearMatic_Baganator = "Baganator junk coins from GearMatic's vendor rules, and GearMatic loadouts shown as equipment sets on bag slots (GearMatic has loadouts on Vanilla / TBC clients only - not on Forever).",
     MasterOptions_GearMatic_Forever = "Keeps GearMatic's data apart for characters that share a first name (Forever reports no realm, so GearMatic saved them as one). Turning it off later makes GearMatic go back to the shared record.",
     MasterOptions_DialogKey_Pawn = "Pre-selects the best quest reward so DialogKey's key takes it (pick whose choice under Quests).",
     MasterOptions_Mastercraft_Auctionator = "Mastercraft's Scan prices button on Auctionator's page (next to Full Scan) instead of the tab row or the bottom corner, where it covered Buyout.",
@@ -1302,7 +1321,8 @@ local function Problems()
         end
         -- "Switch Herbs and Ore for me" swaps your tracking every few seconds: with nodes shown "While tracking",
         -- Mastercraft's (and OpenMap_Tweaks', through the module) node pins blink in and out with it
-        if spk.minimapAutoAlternate == true and spk.minimapResources == true and (mcs.nodesWhen or "tracking") == "tracking" then
+        if spk.masterEnabled ~= false and spk.minimapAutoAlternate == true and spk.minimapResources == true
+            and (mcs.nodesWhen or "tracking") == "tracking" then
             add("sparkles:alternate", "Sparkles' \"Switch Herbs and Ore for me\" swaps your tracking every few seconds, so gathering node pins shown \"While tracking\" blink in and out. Turn the switching off, or set When nodes show to Always.",
                 "Turn off", function() spk.minimapAutoAlternate = false end)
         end
@@ -1314,12 +1334,12 @@ local function Problems()
         local j = p.junk_plugin
         if BAG_JUNK_OWNER[j] and not OwnerLoaded(BAG_JUNK_OWNER[j]) then
             add("bagjunk:" .. j, ("Baganator's junk coin is set to \"%s\", whose addon isn't loaded (so only greys are marked)."):format(j), "Reset",
-                function() p.junk_plugin = Loaded("MasterOptions_GearMatic_Baganator") and "gearmatic" or "poor_quality" end)
+                function() SetBagPlugin(p, "junk", Loaded("MasterOptions_GearMatic_Baganator") and "gearmatic" or "poor_quality") end)
         end
         local u = p.upgrade_plugin
         if BAG_UPGRADE_OWNER[u] and not OwnerLoaded(BAG_UPGRADE_OWNER[u]) then
             add("bagupgrade:" .. u, ("Baganator's upgrade plugin is set to \"%s\", whose addon isn't loaded."):format(u), "Reset",
-                function() p.upgrade_plugin = Loaded("Pawn") and "pawn" or "none" end)
+                function() SetBagPlugin(p, "upgrade", Loaded("Pawn") and "pawn" or "none") end)
         end
     end
     return out

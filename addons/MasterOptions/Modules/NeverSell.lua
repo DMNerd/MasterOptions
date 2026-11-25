@@ -97,6 +97,10 @@ SOURCES[#SOURCES + 1] = {
 
 SOURCES[#SOURCES + 1] = {
     key = "dci", name = "DeleteCheapestItem", perChar = true,
+    -- (its list's format: DeleteCheapestItem 1.9 replaced each character's list once with a copy of the old
+    -- one, setting schemaVersion. A list whose version changed since the last sync is read as new - joined,
+    -- never taken as your removals.)
+    version = function(c) return c.schemaVersion end,
     get = function()
         local c = _G.DCI_CharDB
         if not (Loaded("DeleteCheapestItem") and type(c) == "table") then return nil end
@@ -142,6 +146,12 @@ local function Sync()
         if h then
             local now = src.read(h)
             local was = seen[SeenKey(src)]
+            if src.version then
+                MasterOptionsDB.neverSellVersion = type(MasterOptionsDB.neverSellVersion) == "table" and MasterOptionsDB.neverSellVersion or {}
+                local v = tostring(src.version(h))
+                if was and MasterOptionsDB.neverSellVersion[SeenKey(src)] ~= v then was = nil end
+                MasterOptionsDB.neverSellVersion[SeenKey(src)] = v
+            end
             live[#live + 1] = { src = src, h = h, now = now }
             for id in pairs(now) do
                 if not (was and was[id]) then added[id] = true end

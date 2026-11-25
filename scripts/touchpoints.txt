@@ -1,0 +1,240 @@
+# Names Master Options relies on in other addons, checked by scripts\check-addons.ps1 against the installed copies.
+# Addon folder | kind | literal text that would disappear if the addon renamed or removed it | our file using it
+# Verified against the installed versions on 2026-11-25 (Mastercraft 2.1.2, OpenMap_Tweaks 1.5.4, CheapUpgrades 0.18.11
+# and the rest as audited).
+
+# --- Mastercraft (2.1.2)
+Mastercraft|global|MastercraftDB|MasterOptions.lua, Modules
+Mastercraft|config-key|autoJunk|MasterOptions.lua, Mastercraft_VendorSell.lua
+Mastercraft|config-key|autoRepair|MasterOptions.lua
+Mastercraft|config-key|repairGuild|MasterOptions.lua
+Mastercraft|config-key|nodesWorldMap|MasterOptions.lua
+Mastercraft|config-key|nodesMinimap|MasterOptions.lua
+Mastercraft|config-key|nodesFilter|MasterOptions.lua, OpenMapTweaks_Mastercraft.lua
+Mastercraft|config-key|nodesWhen|MasterOptions.lua, OpenMapTweaks_Mastercraft.lua
+Mastercraft|config-key|hideAuctionatorTips|MasterOptions.lua
+Mastercraft|config-key|tipPrice|MasterOptions.lua
+Mastercraft|config-key|tipVendor|MasterOptions.lua
+Mastercraft|config-key|tipOwnersList|MasterOptions.lua
+Mastercraft|config-key|tipGuide|Mastercraft_Keep.lua
+Mastercraft|config-key|fishMarker|MasterOptions.lua (Fishing bobber mark)
+Mastercraft|config-key|fishHideChat|Mastercraft_FishingView.lua
+Mastercraft|config-key|lootNever|NeverSell.lua
+Mastercraft|config-key|depositNever|Mastercraft_BankMats.lua
+Mastercraft|config-key|theme|MasterOptions.lua (UI style)
+Mastercraft|config-key|s.modules|MasterOptions.lua, Mastercraft_Keep/Auctionator.lua (Settings > Modules)
+Mastercraft|config-value|key = "tip"|MasterOptions.lua, Mastercraft_Keep.lua
+Mastercraft|config-value|key = "ah"|Mastercraft_Auctionator.lua
+Mastercraft|config-key|ns.db.goals|Mastercraft_Keep.lua (item tracker)
+Mastercraft|config-key|ns.db.farm|OpenMapTweaks_Mastercraft.lua (farm session)
+Mastercraft|config-key|settings.nodes|OpenMapTweaks_Mastercraft.lua (per-profession map switch)
+Mastercraft|config-value|"farming"|MasterOptions.lua, OpenMapTweaks_Mastercraft.lua
+Mastercraft|method|isMastercraft|Mastercraft_Auctionator.lua
+Mastercraft|method|minWidth|Mastercraft_Auctionator.lua
+Mastercraft|method|mcTip|Mastercraft_Auctionator.lua
+Mastercraft|text|cff4da6ffMastercraft|Keep, VendorSell, BankMats (the tooltip header's colour code + name)
+Mastercraft|text|guide still needs|Mastercraft_BankMats.lua
+Mastercraft|text|guide uses all|Mastercraft_BankMats.lua
+Mastercraft|text|You're tracking it:|Mastercraft_BankMats.lua
+Mastercraft|text|guide needs|Mastercraft_Keep.lua
+Mastercraft|text|Keep %d for your|Mastercraft_VendorSell.lua
+Mastercraft|event|TIME_PLAYED_MSG|Mastercraft_Chattynator.lua
+
+# --- OpenMap_Tweaks (1.5.4)
+OpenMap_Tweaks|global|OpenMapTweaksDB|MasterOptions.lua
+OpenMap_Tweaks|global|OpenMapTweaksNodePinMixin|OpenMapTweaks_Mastercraft.lua
+OpenMap_Tweaks|method|OnAcquired|OpenMapTweaks_Mastercraft.lua
+OpenMap_Tweaks|config-key|gatherMinimap|MasterOptions.lua
+OpenMap_Tweaks|config-value|"omt_gather"|OpenMapTweaks_Mastercraft.lua (stitched-map pin set)
+OpenMap_Tweaks|function|OPENMAPTWEAKS|MasterOptions.lua (/omt gather)
+
+# --- CheapUpgrades (0.18.11)
+CheapUpgrades|global|CheapUpgradesDB|MasterOptions.lua, CheapUpgrades_Baganator.lua
+CheapUpgrades|config-key|tooltipPrice|MasterOptions.lua
+CheapUpgrades|config-key|tooltipUpgrades|MasterOptions.lua
+CheapUpgrades|config-key|usePawn|MasterOptions.lua
+CheapUpgrades|config-key|bagBadges|MasterOptions.lua, CheapUpgrades_Baganator.lua
+CheapUpgrades|function|NotePawnLinks|MasterOptions.lua
+CheapUpgrades|function|WatchedInfo|CheapUpgrades_Baganator.lua
+CheapUpgrades|function|BadgeText|CheapUpgrades_Baganator.lua
+CheapUpgrades|function|SafeCall|MasterOptions.lua
+
+# --- Pawn (2.14.8) / Pawn_Forever (1.3.1)
+Pawn|global|PawnCommon|MasterOptions.lua
+Pawn|global|PawnPlayerFullName|MasterOptions.lua
+Pawn|function|function PawnSetScaleVisible(|MasterOptions.lua
+Pawn|function|function PawnGetItemData(|DialogKey_Pawn.lua, DeleteCheapestItem_Protect.lua, Mastercraft_VendorSell.lua
+Pawn|function|function PawnIsItemAnUpgrade(|DialogKey_Pawn.lua, DeleteCheapestItem_Protect.lua, Mastercraft_VendorSell.lua
+Pawn|text|BestItemFor, SecondBestItemFor|DeleteCheapestItem_Protect.lua, Mastercraft_VendorSell.lua (3rd/4th returns)
+Pawn|config-key|PercentUpgrade|DialogKey_Pawn.lua
+Pawn|config-key|PerCharacterOptions|MasterOptions.lua
+Pawn|config-key|ShowUpgradesOnTooltips|MasterOptions.lua
+Pawn|config-key|ShowQuestUpgradeAdvisor|MasterOptions.lua (Quest reward marker)
+Pawn|config-value|ScaleProviderName = "Classic"|MasterOptions.lua (Pawn scales)
+Pawn_Forever|config-value|PROVIDER = "PawnForever"|MasterOptions.lua (Pawn scales)
+Pawn_Forever|text|"/pff"|MasterOptions.lua
+Pawn_Forever|text|"forever"|MasterOptions.lua
+Pawn_Forever|text|"stock"|MasterOptions.lua
+Pawn_Forever|event|PLAYER_LEVEL_UP|MasterOptions.lua
+
+# --- Baganator (868) / Syndicator (293)
+Baganator|global|BAGANATOR_CONFIG|MasterOptions.lua
+Baganator|global|BAGANATOR_CURRENT_PROFILE|MasterOptions.lua
+Baganator|config-key|"current_skin"|MasterOptions.lua (UI style)
+Baganator|config-key|icon_top_left_corner_array|MasterOptions.lua
+Baganator|config-key|icon_bottom_left_corner_array|MasterOptions.lua
+Baganator|config-key|"junk_plugin"|MasterOptions.lua
+Baganator|config-key|"upgrade_plugin"|MasterOptions.lua
+Baganator|config-key|junk_plugin_ignored|MasterOptions.lua (SetBagPlugin)
+Baganator|config-key|upgrade_plugin_ignored|MasterOptions.lua (SetBagPlugin)
+Baganator|config-value|"poor_quality"|MasterOptions.lua
+Baganator|config-value|"simple_item_levels"|MasterOptions.lua
+Baganator|config-value|"selljunk"|MasterOptions.lua
+Baganator|function|function Baganator.API.RegisterJunkPlugin(|GearMatic_Baganator.lua, Mastercraft_VendorSell.lua
+Baganator|function|function Baganator.API.RegisterCornerWidget(|CheapUpgrades_Baganator.lua
+Baganator|function|function Baganator.API.RegisterItemSetSource(|GearMatic_Baganator.lua
+Baganator|function|function Baganator.API.RequestItemButtonsRefresh|MasterOptions.lua, modules
+Baganator|function|function Baganator.API.Skins.GetCurrentSkin()|Mastercraft_BankMats.lua, Mastercraft_FishingView.lua
+Baganator|frame|"Baganator_SingleViewBackpackViewFrame"|Mastercraft_FishingView.lua
+Baganator|frame|"Baganator_CategoryViewBackpackViewFrame"|Mastercraft_FishingView.lua
+Baganator|frame|"Baganator_SingleViewBankViewFrame"|Mastercraft_BankMats.lua
+Baganator|frame|"Baganator_CategoryViewBankViewFrame"|Mastercraft_BankMats.lua
+Baganator|frame|"Baganator_CharacterSelectFrame"|Mastercraft_FishingView.lua
+Baganator|frame|"Baganator_CurrencyPanelFrame"|Mastercraft_FishingView.lua
+Baganator|method|GetBankType()|Mastercraft_BankMats.lua
+Syndicator|global|SYNDICATOR_CONFIG|MasterOptions.lua
+Syndicator|config-key|show_inventory_tooltips|MasterOptions.lua (Counts on your characters)
+
+# --- GearMatic (6.9.1)
+GearMatic|global|GearMaticDB|MasterOptions.lua, modules
+GearMatic|config-key|autoSellJunk|MasterOptions.lua, Mastercraft_VendorSell.lua
+GearMatic|config-key|autoRepair|MasterOptions.lua
+GearMatic|config-key|autoSellGear|GearMatic_Baganator.lua
+GearMatic|config-key|usePawnWeights|MasterOptions.lua
+GearMatic|config-key|pawnAutoImport|MasterOptions.lua
+GearMatic|config-key|autoDetectTooltip|MasterOptions.lua (Upgrade % per spec)
+GearMatic|config-key|autoEquipUpgrades|MasterOptions.lua
+GearMatic|config-key|autoDetectQuestReward|MasterOptions.lua (Quest reward marker)
+GearMatic|function|function C.CurrentCharKey|GearMatic_Forever.lua
+GearMatic|function|function C.RealmCharKey|GearMatic_Forever.lua
+GearMatic|function|function C.PlayerRealm|GearMatic_Forever.lua
+GearMatic|config-key|GearMaticDB.chars|GearMatic_Forever.lua
+GearMatic|config-key|sellIgnore|NeverSell.lua, Mastercraft_Keep.lua
+GearMatic|config-key|sellMark|Mastercraft_VendorSell.lua
+GearMatic|function|RefreshSellIgnoreSurfaces|Mastercraft_Keep.lua, NeverSell.lua
+GearMatic|function|function VA.SellJunk|Mastercraft_VendorSell.lua
+GearMatic|function|function VA._Queue|Mastercraft_VendorSell.lua
+GearMatic|function|function VA.IsSellIgnored|GearMatic_Baganator.lua
+GearMatic|function|function VA.IsJunk|GearMatic_Baganator.lua
+GearMatic|function|function VA.IsSellMarked|GearMatic_Baganator.lua
+GearMatic|function|function VA.InEquipmentSet|DeleteCheapestItem_Protect.lua, Mastercraft_VendorSell.lua
+GearMatic|function|VA.MarkSellCheck =|GearMatic_Baganator.lua
+GearMatic|function|VA.GearSellCheck =|GearMatic_Baganator.lua
+GearMatic|function|VA.ValueSellCheck =|GearMatic_Baganator.lua
+GearMatic|function|MarkerVerdict|DialogKey_Pawn.lua, DeleteCheapestItem_Protect.lua, Mastercraft_VendorSell.lua
+GearMatic|function|function Pawn.ImportAllScales|MasterOptions.lua
+GearMatic|function|function SI.IsBuiltinChosen|MasterOptions.lua
+GearMatic|function|function SI.UsePawnScale|MasterOptions.lua
+GearMatic|function|function SI.UseBuiltinScale|MasterOptions.lua
+GearMatic|function|function SI.GetActiveSpecIndex|MasterOptions.lua
+GearMatic|function|ns.SetFeralRole|MasterOptions.lua
+GearMatic|function|_mostValuable|DialogKey_Pawn.lua
+GearMatic|config-value|pawnScale.Hidden|MasterOptions.lua (Pawn scales)
+GearMatic|config-value|"gearmatic_upgrade_corner"|MasterOptions.lua
+GearMatic|config-value|"gearmatic_upgrade"|MasterOptions.lua
+
+# --- OpenMap (0.8.13) / OpenMap_MiniMap (1.3.1) / ForeverDungeonJournal (2.1.6) / Questie
+OpenMap|method|function ns:GetModule|DungeonJournal_OpenMap.lua
+OpenMap|text|NewModule("worldmap"|DungeonJournal_OpenMap.lua
+OpenMap|config-key|pinsHidden|DungeonJournal_OpenMap.lua
+OpenMap|config-key|pinsFollowNew|DungeonJournal_OpenMap.lua
+OpenMap|config-key|dungeonInside|DungeonJournal_OpenMap.lua (Map inside dungeons)
+OpenMap|function|function mod.PinAt(|DungeonJournal_OpenMap.lua
+OpenMap|function|function mod.SetPinsHidden|DungeonJournal_OpenMap.lua
+OpenMap|function|function mod.TrackPoint(|DungeonJournal_OpenMap.lua
+OpenMap|function|function mod.RefreshPins|DungeonJournal_OpenMap.lua
+OpenMap|function|function mod.WaypointPoint|DungeonJournal_OpenMap.lua
+OpenMap|function|function mod.ClearPin|DungeonJournal_OpenMap.lua
+OpenMap|function|function mod.HoldDungeonHere|DungeonJournal_OpenMap.lua
+OpenMap|global|ns.MapStitch = S|DungeonJournal_OpenMap.lua, OpenMapTweaks_Mastercraft.lua
+OpenMap|function|function S.BuildDungeonPins(|DungeonJournal_OpenMap.lua
+OpenMap|function|function S.AddPin(|OpenMapTweaks_Mastercraft.lua (stitched-map filter)
+OpenMap|function|function S.GetPinSet(|OpenMapTweaks_Mastercraft.lua
+OpenMap|text|pin.instances|DungeonJournal_OpenMap.lua
+OpenMap|text|UI-HUD-ActionBar-IconFrame|OpenMapMiniMap_Border.lua
+OpenMap_MiniMap|global|OpenMapMiniMapDB|OpenMapMiniMap_Border.lua, MasterOptions.lua
+OpenMap_MiniMap|config-value|"square"|MasterOptions.lua
+OpenMap_MiniMap|frame|edge.lines|OpenMapMiniMap_Border.lua
+OpenMap_MiniMap|frame|edge.texture|OpenMapMiniMap_Border.lua
+OpenMap_MiniMap|frame|bar.texture|OpenMapMiniMap_Border.lua
+OpenMap_MiniMap|config-value|HEADER_H = 23|OpenMapMiniMap_Border.lua
+OpenMap_MiniMap|event|LibDBIcon_IconCreated|OpenMapMiniMap_Border.lua
+OpenMap_MiniMap|config-key|minimapShowPlayerCoords|OpenMapMiniMap_Border.lua
+OpenMap_MiniMap|function|ScanOthers|ShortestPathForever_OpenMapMiniMap.lua (why the goal texture needs our help)
+ForeverDungeonJournal|global|ForeverDungeonJournal_NS|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|function|RefreshWorldMapOverlay|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|function|FDJ.CurrentDungeon|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|config-key|FDJ.DUNGEON_MAPS|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|config-key|previewOnly|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|function|FDJ.OpenDungeonMap|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|function|FDJ.OpenBossPage|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|function|function FDJ.IsDungeonMapLocked|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|function|function FDJ.IsWorldMapOverlayAttached|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|frame|"ForeverDungeonJournalFrame"|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|frame|dungeonMapPanel|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|function|ForeverDungeonJournal_Toggle|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|frame|ForeverDungeonJournalWorldMapToggle|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|function|function FDJ.SetWaypointArrow(|DungeonJournal_OpenMap.lua
+ForeverDungeonJournal|function|function FDJ.ClearWaypointArrow(|DungeonJournal_OpenMap.lua
+Questie|config-key|townsfolkConfig|MasterOptions.lua (Town NPC icons)
+Questie|config-value|["Stable Master"]|MasterOptions.lua
+Questie|config-value|["Flight Master"]|MasterOptions.lua
+Questie|method|function QuestieLoader:ImportModule|MasterOptions.lua
+Questie|method|function QuestieMenu:OnLogin(|MasterOptions.lua
+Questie|config-key|nameplateEnabled|MasterOptions.lua
+Questie|config-key|nameplateTargetFrameEnabled|MasterOptions.lua
+
+# --- DialogKey_Numy / Chattynator / Auctionator / BetterBlizz* / Details / DeleteCheapestItem / Sparkles / ShortestPathForever
+DialogKey_Numy|config-key|itemChoice|DialogKey_Pawn.lua
+DialogKey_Numy|event|QUEST_COMPLETE|DialogKey_Pawn.lua
+DialogKey_Numy|function|QuestInfoItem_OnClick|DialogKey_Pawn.lua
+Chattynator|function|function Chattynator.API.FilterTimePlayed|Mastercraft_Chattynator.lua
+Chattynator|frame|ChattynatorHyperlinkHandler|Mastercraft_FishingView.lua
+Chattynator|method|ScrollingMessages|Mastercraft_FishingView.lua
+Chattynator|global|CHATTYNATOR_CONFIG|MasterOptions.lua
+Chattynator|global|CHATTYNATOR_CURRENT_PROFILE|MasterOptions.lua
+Chattynator|config-value|"dark"|MasterOptions.lua (UI style)
+Auctionator|frame|"AuctionatorConfigFrame"|Mastercraft_Auctionator.lua
+Auctionator|frame|OptionsButton|Mastercraft_Auctionator.lua
+Auctionator|function|function Auctionator.Config.Get(|MasterOptions.lua
+Auctionator|function|function Auctionator.Config.Set(|MasterOptions.lua
+Auctionator|config-key|"auction_tooltips"|MasterOptions.lua
+Auctionator|config-key|"vendor_tooltips"|MasterOptions.lua
+BetterBlizzPlates|config-key|questIndicator|MasterOptions.lua (Quest icons on nameplates)
+BetterBlizzFrames|config-key|questIndicator|MasterOptions.lua (Quest icon on target frame)
+BetterBlizzFrames|config-key|darkModeUi|MasterOptions.lua (UI style)
+BetterBlizzFrames|config-key|"classicMinimap"|MasterOptions.lua (Minimap)
+BetterBlizzFrames|config-key|"foreverMinimapTweaks"|MasterOptions.lua (Minimap)
+BetterBlizzFrames|config-key|"hideMinimapButtons"|MasterOptions.lua (Minimap)
+BetterBlizzFrames|config-key|"hideMinimap"|MasterOptions.lua (Minimap)
+BetterBlizzFrames|config-key|"hideChatButtons"|MasterOptions.lua (Problems)
+BetterBlizzFrames|config-key|SkipMinimapForeverTint|MasterOptions.lua (Minimap)
+Details|method|function Details:GetAllInstances|MasterOptions.lua
+Details|method|function Details:ChangeSkin|MasterOptions.lua
+Details|config-key|chat_tab_embed|MasterOptions.lua (Problems)
+Details|method|SetTabSettings|MasterOptions.lua (Problems)
+Details|config-value|"WoW Interface"|MasterOptions.lua (UI style)
+Details|config-value|"Minimalistic"|MasterOptions.lua (UI style)
+DeleteCheapestItem|global|DCI_ProfilesDB|MasterOptions.lua
+DeleteCheapestItem|config-key|"HideBronzeTheme"|MasterOptions.lua
+DeleteCheapestItem|global|DCI_CharDB|DeleteCheapestItem_Protect.lua, NeverSell.lua
+DeleteCheapestItem|config-key|IgnoredItems|DeleteCheapestItem_Protect.lua, NeverSell.lua
+DeleteCheapestItem|config-key|schemaVersion|NeverSell.lua (migration guard)
+DeleteCheapestItem|frame|"DCIFrame"|Mastercraft_FishingView.lua
+Sparkles_Forever|global|SparklesDB|MasterOptions.lua
+Sparkles_Forever|config-key|sparkleBobber|MasterOptions.lua (Fishing bobber mark)
+Sparkles_Forever|config-key|minimapResources|MasterOptions.lua (Problems)
+Sparkles_Forever|config-key|minimapAutoAlternate|MasterOptions.lua (Problems)
+Sparkles_Forever|config-key|masterEnabled|MasterOptions.lua (Problems)
+ShortestPathForever|frame|"ShortestPathForeverMinimapRoute"|ShortestPathForever_OpenMapMiniMap.lua
+ShortestPathForever|method|Minimap:CreateTexture|ShortestPathForever_OpenMapMiniMap.lua

@@ -88,19 +88,42 @@ end
 -- button or Esc goes back. Must run now, as the files load: before OpenMap's PLAYER_LOGIN setup.
 -- (Left to OpenMap_NoDungeonMap if that is still on, so the two never both do it.)
 --------------------------------------------------------------------------------
+-- OpenMap's own switch for its map inside dungeons (Map\Dungeons.lua: worldmap.dungeonInside; its menu's
+-- "Dungeon maps inside dungeons"). Until 2.3.1 this replaced OpenMap's whole SetupDungeons, which now also
+-- does Zephras Isle's map, marking dungeons you entered, the wheel back out, the dungeon card, the quest
+-- log docking and the Scarlet Monastery / Dire Maul wing for Dungeon Journal - all of that was lost.
+local insideWanted -- true / false once decided below: set again at login (OpenMap's settings may load later)
+local function SetOpenMapInside(mod, on)
+    insideWanted = on
+    local d = mod and mod.db
+    if type(d) ~= "table" then return end
+    MasterOptions_DJOpenMapDB = MasterOptions_DJOpenMapDB or {}
+    local store = MasterOptions_DJOpenMapDB -- (this runs before the module's own ADDON_LOADED setup below)
+    if not on then
+        if d.dungeonInside ~= false then d.dungeonInside = false; store.setInside = true end
+    elseif store.setInside then
+        d.dungeonInside = nil -- (only what we turned off: back to OpenMap's default)
+        store.setInside = nil
+    end
+end
+
 local function DungeonMapPart()
     local A = C_AddOns or {}
     local state = A.GetAddOnEnableState and A.GetAddOnEnableState("OpenMap_NoDungeonMap", UnitName("player"))
     if (state or 0) > 0 then return end
-    local mo = _G.MasterOptionsDB
-    if type(mo) == "table" and mo.dungeonMap == "openmap" then return end
 
     local ns = _G.OpenMap
     local mod = ns and ns.GetModule and ns:GetModule("worldmap")
     if not mod then return end
 
-    -- 1. OpenMap's dungeon map off
-    mod.SetupDungeons = function() end
+    local mo = _G.MasterOptionsDB
+    if type(mo) == "table" and mo.dungeonMap == "openmap" then
+        SetOpenMapInside(mod, true)
+        return
+    end
+
+    -- 1. OpenMap's map inside dungeons off (Dungeon Journal's shows there); the floors it holds there too
+    SetOpenMapInside(mod, false)
     mod.HoldDungeonHere = function() end
 
     -- 2. Dungeon Journal's map on the world map, for a dungeon you're not in
@@ -327,6 +350,10 @@ f:SetScript("OnEvent", function(_, event, name)
     elseif event == "PLAYER_LOGIN" then
         -- (Dungeon Journal sets its arrow functions up as it loads; again a moment later to be sure)
         if not Hook() then C_Timer.After(2, Hook) end
+        if insideWanted ~= nil then
+            local om = _G.OpenMap
+            Check("setting OpenMap's map inside dungeons", pcall(SetOpenMapInside, om and om.GetModule and om:GetModule("worldmap"), insideWanted))
+        end
     end
 end)
 

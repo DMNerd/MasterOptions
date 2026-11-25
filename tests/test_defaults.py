@@ -156,6 +156,16 @@ res["Minimap row: BetterBlizzFrames classic -> its classic on, OpenMap_MiniMap d
 lua.execute('if MINIMAP then MINIMAP.set("OpenMap_MiniMap") end')
 res["Minimap row: back to OpenMap_MiniMap -> enabled again, BetterBlizzFrames' classic off"] = lua.eval(
     'C_AddOns.GetAddOnEnableState("OpenMap_MiniMap") == 2 and BetterBlizzFramesDB.classicMinimap == false and MINIMAP.get() == "OpenMap_MiniMap"') is True
+# Baganator: picking "Greys only" junk coins must survive a plugin registering later (its AutoSet) - so
+# the other plugins go on its junk_plugin_ignored list, as its own settings window does
+lua.execute(r'''
+  for _, s in ipairs(SETTINGS) do if s.name:find("^Junk coin in bags") then JUNK = s end end
+  local p = BAGANATOR_CONFIG.Profiles[BAGANATOR_CURRENT_PROFILE or "DEFAULT"] or BAGANATOR_CONFIG.Profiles.DEFAULT
+  BAGP = p
+  if JUNK then JUNK.set("Greys only") end
+''')
+res["Junk coin 'Greys only': poor_quality chosen, GearMatic's and Mastercraft's plugins ignored by Baganator"] = lua.eval(
+    'JUNK ~= nil and BAGP.junk_plugin == "poor_quality" and type(BAGP.junk_plugin_ignored) == "table" and BAGP.junk_plugin_ignored.gearmatic == true and BAGP.junk_plugin_ignored.mastercraft == true') is True
 L('RunTimers()')
 lua.execute(r'''
   SparklesDB.sparkleBobber = true; MastercraftDB.settings.fishMarker = true -- you pick Both afterwards

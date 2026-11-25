@@ -52,6 +52,7 @@ local function BaganatorFrames(list)
         end
     end
     list[#list + 1] = _G["Baganator_CharacterSelectFrame" .. skin]
+    list[#list + 1] = _G["Baganator_CurrencyPanelFrame" .. skin]
 end
 
 local function Keepers()

@@ -26,6 +26,7 @@ public data and settings; the third-party addons themselves are never edited.
 .\scripts\pack.ps1      # dist\MasterOptionsPack.zip
 .\scripts\pull.ps1      # copy changes made directly in AddOns back into the repo
 .\scripts\lint.ps1      # luacheck (.luacheckrc); first run downloads luacheck 1.2.0 into .tools\ (checksum pinned)
+.\scripts\check-addons.ps1  # after updating other addons: is every name we use (scripts\touchpoints.txt) still there?
 ```
 
 Edit in `addons/`, run the tests, deploy, then check in game.
