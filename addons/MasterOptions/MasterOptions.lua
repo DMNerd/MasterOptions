@@ -1756,6 +1756,155 @@ local function FillProblems()
 end
 
 ---------------------------------------------------------------------------
+-- Never sell: its own section - the shared list of Modules\NeverSell.lua (MasterOptions_NeverSell)
+---------------------------------------------------------------------------
+local nsPane = CreateFrame("Frame", nil, body)
+nsPane:SetPoint("TOPLEFT")
+nsPane:SetSize(PANE_W, 50)
+local nsSec -- set in BuildWindow
+local nsHeader = nsPane:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+nsHeader:SetPoint("TOPLEFT", 8, -6)
+nsHeader:SetPoint("RIGHT", nsPane, "RIGHT", -8, 0)
+nsHeader:SetJustifyH("LEFT")
+local ItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+local ItemIcon = (C_Item and C_Item.GetItemIconByID) or GetItemIcon
+local FillNeverSell -- (below)
+
+-- the add box: an item ID, a shift-clicked item link, or an item dragged onto it
+local nsBox = CreateFrame("EditBox", nil, nsPane, "InputBoxTemplate")
+nsBox:SetSize(260, 22)
+nsBox:SetAutoFocus(false)
+local nsAdd = CreateFrame("Button", nil, nsPane, "UIPanelButtonTemplate")
+nsAdd:SetSize(70, 22)
+nsAdd:SetPoint("LEFT", nsBox, "RIGHT", 8, 0)
+nsAdd:SetText("Add")
+local nsHint = nsPane:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+nsHint:SetPoint("LEFT", nsAdd, "RIGHT", 10, 0)
+nsHint:SetPoint("RIGHT", nsPane, "RIGHT", -8, 0)
+nsHint:SetJustifyH("LEFT")
+nsHint:SetText("Shift-click or drag an item here, or type its ID.")
+local function NeverSellAddFromBox()
+    local ns = _G.MasterOptions_NeverSell
+    local text = nsBox:GetText()
+    if type(text) ~= "string" then text = "" end
+    local id = tonumber(text:match("item:(%d+)") or text:match("^%s*(%d+)%s*$"))
+    if ns and id then
+        ns.Set(id, true)
+        nsBox:SetText("")
+        nsBox:ClearFocus()
+        FillNeverSell()
+    end
+end
+nsAdd:SetScript("OnClick", NeverSellAddFromBox)
+nsBox:SetScript("OnEnterPressed", NeverSellAddFromBox)
+nsBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+local function DropItem()
+    local kind, id = GetCursorInfo and GetCursorInfo()
+    if kind == "item" and id then
+        nsBox:SetText(tostring(id))
+        if ClearCursor then ClearCursor() end
+        NeverSellAddFromBox()
+    end
+end
+nsBox:SetScript("OnReceiveDrag", DropItem)
+nsBox:SetScript("OnMouseDown", function() if GetCursorInfo and GetCursorInfo() == "item" then DropItem() end end)
+-- shift-click an item while the box has the cursor: its link goes in (the game only fills the chat box)
+local function InsertLink(link)
+    if nsBox:HasFocus() and type(link) == "string" then nsBox:SetText(link); return true end
+end
+if ChatFrameUtil and ChatFrameUtil.InsertLink then hooksecurefunc(ChatFrameUtil, "InsertLink", InsertLink) end
+if ChatEdit_InsertLink then hooksecurefunc("ChatEdit_InsertLink", InsertLink) end
+
+local nsLines = {}
+local function NeverSellLine(i)
+    local l = nsLines[i]
+    if l then return l end
+    l = CreateFrame("Frame", nil, nsPane)
+    l:SetHeight(24)
+    l.bg = l:CreateTexture(nil, "BACKGROUND")
+    l.bg:SetAllPoints()
+    l.bg:SetColorTexture(1, 1, 1, (i % 2 == 0) and 0.04 or 0)
+    l.icon = l:CreateTexture(nil, "ARTWORK")
+    l.icon:SetSize(20, 20)
+    l.icon:SetPoint("LEFT", 8, 0)
+    l.text = l:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    l.text:SetPoint("LEFT", l.icon, "RIGHT", 6, 0)
+    l.text:SetPoint("RIGHT", l, "RIGHT", -86, 0)
+    l.text:SetJustifyH("LEFT")
+    l.remove = CreateFrame("Button", nil, l, "UIPanelButtonTemplate")
+    l.remove:SetSize(70, 20)
+    l.remove:SetPoint("RIGHT", -6, 0)
+    l.remove:SetText("Remove")
+    -- the item's tooltip on hover
+    l:EnableMouse(true)
+    l:SetScript("OnEnter", function(self)
+        if not self.id then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        if GameTooltip.SetItemByID then GameTooltip:SetItemByID(self.id) else GameTooltip:SetHyperlink("item:" .. self.id) end
+        GameTooltip:Show()
+    end)
+    l:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    nsLines[i] = l
+    return l
+end
+
+local nsWaiting = false -- (an item's name not in the client's cache yet: shown once it arrives)
+FillNeverSell = function()
+    local ns = _G.MasterOptions_NeverSell
+    for _, l in ipairs(nsLines) do l:Hide() end
+    if not ns then
+        nsHeader:SetText("|cff9d9d9dThe NeverSell module is off - turn it on under Modules (takes a reload).|r")
+        nsBox:Hide(); nsAdd:Hide(); nsHint:Hide()
+        if nsSec then nsSec.height = 50 end
+        nsPane:SetHeight(50)
+        return
+    end
+    nsBox:Show(); nsAdd:Show(); nsHint:Show()
+    local list, where = ns.List(), ns.Sources()
+    nsHeader:SetText(("|cffffd200%d item%s|r  |cff9d9d9dnever sold, never suggested for selling or deletion - the same list in %s. Add or remove one there, or here.|r")
+        :format(#list, #list == 1 and "" or "s", #where > 0 and table.concat(where, ", ") or "no installed addon (GearMatic, Mastercraft, DeleteCheapestItem)"))
+    local y = -6 - (nsHeader:GetStringHeight() or 14) - 8
+    nsBox:ClearAllPoints()
+    nsBox:SetPoint("TOPLEFT", 14, y)
+    y = y - 30
+    -- by name; items not cached yet last, by ID
+    local rows = {}
+    for _, id in ipairs(list) do
+        local name, link
+        if ItemInfo then name, link = ItemInfo(id) end
+        if not name then nsWaiting = true end
+        rows[#rows + 1] = { id = id, name = name, link = link }
+    end
+    table.sort(rows, function(a, b)
+        if (a.name ~= nil) ~= (b.name ~= nil) then return a.name ~= nil end
+        if a.name and b.name and a.name ~= b.name then return a.name < b.name end
+        return a.id < b.id
+    end)
+    for i, r in ipairs(rows) do
+        local l = NeverSellLine(i)
+        l.id = r.id
+        l:ClearAllPoints()
+        l:SetPoint("TOPLEFT", 0, y)
+        l:SetPoint("RIGHT", nsPane, "RIGHT", 0, 0)
+        l.icon:SetTexture(ItemIcon and ItemIcon(r.id) or 134400)
+        l.text:SetText((r.link or r.name or "item") .. "  |cff6a6a6a" .. r.id .. "|r")
+        l.remove:SetScript("OnClick", function() ns.Set(r.id, false); FillNeverSell() end)
+        l:Show()
+        y = y - 25
+    end
+    local h = -y + 6
+    if nsSec then nsSec.height = h end
+    nsPane:SetHeight(h)
+    if current == nsSec then body:SetHeight(math.max(10, h)) end
+end
+
+local nsEvents = CreateFrame("Frame")
+nsEvents:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+nsEvents:SetScript("OnEvent", function()
+    if nsWaiting and nsPane:IsVisible() then nsWaiting = false; FillNeverSell() end
+end)
+
+---------------------------------------------------------------------------
 -- The error log as text to copy (Problems > Copy, /mo errors)
 ---------------------------------------------------------------------------
 local errWin
@@ -1805,6 +1954,7 @@ local function ShowSection(sec)
         s.pane:SetShown(s == sec)
         s.button.selected:SetShown(s == sec)
     end
+    if sec.neverSell then FillNeverSell() end
     body:SetHeight(math.max(10, (sec.problems and probHeight or sec.height) or 10))
     scroll:SetVerticalScroll(0)
     menu:Hide()
@@ -1848,8 +1998,13 @@ local function BuildWindow()
             sec.opts[#sec.opts + 1] = opt
         end
     end
+    -- Never sell: right after Vendor and bank (or last)
+    nsSec = { name = "Never sell", pane = nsPane, neverSell = true, height = 50, opts = {} }
+    local at = #sections + 1
+    for i, s in ipairs(sections) do if s.name == "Vendor and bank" then at = i + 1 end end
+    table.insert(sections, at, nsSec)
     for i, s in ipairs(sections) do
-        if not s.problems then
+        if not s.problems and not s.neverSell then
             s.pane = CreateFrame("Frame", nil, body)
             s.pane:SetPoint("TOPLEFT")
             s.pane:SetSize(PANE_W, 10)
@@ -1864,6 +2019,9 @@ local function BuildWindow()
     local want = MasterOptionsDB and MasterOptionsDB.lastSection
     local first = sections[2] or sections[1]
     for _, s in ipairs(sections) do if s.name == want then first = s end end
+    -- the list changed (in another addon, or by /mo never): shown again if it's open
+    local ns = _G.MasterOptions_NeverSell
+    if ns then ns.OnChange = function() if nsPane:IsVisible() then FillNeverSell() end end end
     ShowSection(first)
     -- the window where it was left
     local pos = MasterOptionsDB and MasterOptionsDB.winPos
@@ -1880,6 +2038,10 @@ RefreshProblems = function()
         if b then
             if s.problems then
                 b.badge:SetText(probCount > 0 and ("|cffff5555" .. probCount .. "|r") or "")
+            elseif s.neverSell then
+                local ns = _G.MasterOptions_NeverSell
+                local n = ns and #ns.List() or 0
+                b.badge:SetText(n > 0 and ("|cff9d9d9d" .. n .. "|r") or "")
             else
                 local n = 0
                 for _, opt in ipairs(s.opts) do if IsConflict(opt) then n = n + 1 end end
@@ -2218,9 +2380,9 @@ local function NeverSellCommand(rest)
     local where = ns.Sources()
     print(head .. #list .. " item" .. (#list == 1 and "" or "s") .. " on the never-sell list, kept in sync with "
         .. (#where > 0 and table.concat(where, ", ") or "no installed addon") .. ":")
-    for i, id in ipairs(list) do
+    for i, itemID in ipairs(list) do
         if i > 40 then print(("  ... and %d more"):format(#list - 40)) break end
-        print("  " .. Name(id))
+        print("  " .. Name(itemID))
     end
 end
 

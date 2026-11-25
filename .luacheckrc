@@ -39,6 +39,7 @@ read_globals = {
     "HideUIPanel", "InCombatLockdown", "IsAddOnLoadOnDemand", "IsAddOnLoaded", "IsEquippableItem", "IsInInstance",
     "IsModifierKeyDown", "IsResting", "ReloadUI", "UnitClass", "UnitGUID", "UnitName", "UseContainerItem",
     "GameTooltip_Hide", "QuestInfoItem_OnClick", "QuestInfo_GetRewardButton",
+    "GetCursorInfo", "ClearCursor", "GetItemIcon", "ChatEdit_InsertLink", "ChatFrameUtil",
     "CreateSettingsButtonInitializer", "CreateSettingsListSectionHeaderInitializer",
     -- frames and other game objects
     "AuctionFrame", "AuctionHouseFrame", "BankFrame", "ChatFontNormal", "ChatFrame1", "GameTooltip", "ItemLocation",

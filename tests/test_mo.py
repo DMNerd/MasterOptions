@@ -90,6 +90,17 @@ GearMatic = {
 Baganator = { API = { RequestItemButtonsRefresh = function() end } }
 CheapUpgrades = {}
 SlashCmdList.PAWN_FOREVER = function(m) print("/pff " .. m) end
+-- the NeverSell module's API (Modules\NeverSell.lua), faked: its own sync is tested in test_neversell.py
+NS_LIST = { [2589] = true, [2770] = true, [4306] = true }
+NS_SET = {}
+MasterOptions_NeverSell = {
+  List = function() local o = {} for id in pairs(NS_LIST) do o[#o + 1] = id end table.sort(o) return o end,
+  Sources = function() return { "GearMatic", "Mastercraft" } end,
+  Set = function(id, on) NS_SET[#NS_SET + 1] = tostring(id) .. "=" .. tostring(on); NS_LIST[id] = on or nil end,
+  Sync = function() end,
+}
+C_Item = { GetItemInfo = function(id) if id == 2589 then return "Linen Cloth", "|cffffffff|Hitem:2589|h[Linen Cloth]|h|r" end end,
+           GetItemIconByID = function() return 132889 end }
 ''')
 
 loader = lua.eval("function(src, name) local f, e = load(src, '=' .. name); if not f then error(e) end; return f end")
@@ -124,6 +135,21 @@ L(r'''
   end
   Fire("PLAYER_LOGOUT")
 ''')
+# the Never sell section: its rows (clicking every button above pressed their Remove), the header, adding from the box
+ns_header = lua.eval('(function() for _, f in ipairs(FRAMES) do if type(f._text) == "string" and f._text:find("never sold") then return f._text end end end)()')
+ns_removed = lua.eval('table.concat(NS_SET, ",")')
+print("never sell: header", repr((ns_header or "")[:60]), "| set calls:", ns_removed)
+lua.execute(r'''
+  NS_LIST[999] = nil
+  for _, f in ipairs(FRAMES) do
+    if f.scripts.OnEnterPressed and f.SetText then f:SetText("|cff9d9d9d|Hitem:999::::|h[Thing]|h|r"); f.scripts.OnEnterPressed(f) end
+  end
+''')
+ns_added = lua.eval("NS_LIST[999] == true")
+print("never sell: add from the box (item link)", ns_added)
+if not (ns_header and "item" in ns_header and "2589=false" in ns_removed and ns_added):
+    lua.execute('ERRORS[#ERRORS+1] = "Never sell section wrong"')
+
 # Pawn without Pawn Forever shows up under Problems (not installed: no button; disabled: Enable)
 lua.execute(r'''
   function ProblemText(pat)

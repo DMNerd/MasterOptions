@@ -169,15 +169,25 @@ local function Sync()
     end
 end
 
+local API = {}
+local function Signature()
+    local master = DB()
+    local ids = {}
+    for id in pairs(master) do ids[#ids + 1] = id end
+    table.sort(ids)
+    return table.concat(ids, ",")
+end
 local function SafeSync()
+    local before = Signature()
     local ok, err = pcall(Sync)
     if not ok then Report("syncing the never-sell lists", err) end
+    -- (the list changed - in another addon, or here: Master Options' window shows it again)
+    if API.OnChange and Signature() ~= before then pcall(API.OnChange) end
 end
 
 ---------------------------------------------------------------------------
 -- The list from Master Options (window, slash command)
 ---------------------------------------------------------------------------
-local API = {}
 function API.Sync() SafeSync() end
 function API.List()
     local master = DB()
