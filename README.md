@@ -69,29 +69,35 @@ The workflow checks that the tag matches the `.toc` version, builds the pack, an
 ## Supported addons
 
 Every one is optional: Master Options works with whatever is installed and greys out the rest.
+Links go to each addon's CurseForge page and, where it has a public one, its source repository; "—" means none
+was found.
 
-| Addon | What Master Options does with it |
-|---|---|
-| Pawn | Stat weights that GearMatic, CheapUpgrades, the quest reward pick and Baganator's arrows all follow; Quest reward marker (Pawn's or GearMatic's, not both on one button) |
-| **Pawn Forever** | **Strongly recommended with Pawn.** Stat weights made for WoW Forever. Without it everything above uses Pawn's stock Classic scales, and /mo > Problems says so |
-| GearMatic | Junk selling, never-sell list, auto-equip, stat weights |
-| CheapUpgrades | Upgrade badges and tooltip lines |
-| Mastercraft | Gathering nodes, VENDOR / KEEP advice, tooltips, bank materials, fishing view |
-| OpenMap, OpenMap_Tweaks, OpenMap_MiniMap | Gathering pins, dungeon entrances, square minimap and border |
-| ForeverDungeonJournal | Dungeon maps opened from OpenMap |
-| Baganator (with Syndicator) | Junk coin and upgrade arrows in bags, counts on your characters |
-| Auctionator | Price tooltips, Mastercraft's scan button |
-| Chattynator | Keeps Mastercraft's /played out of chat; Details chat-tab clash check |
-| Questie | Town NPC icons, quest icons on nameplates and the target frame |
-| BetterBlizzPlates, BetterBlizzFrames | Quest icons, dark mode, Minimap (OpenMap_MiniMap or BetterBlizzFrames' classic minimap, not both), chat clash check |
-| DeleteCheapestItem | Protects upgrades, sets, tools and needed materials |
-| DialogKey (Numy's DialogKey_Numy) | Pre-selects the best quest reward |
-| Details | Chat-tab clash check with Chattynator |
-| Sparkles_Forever | Fishing bobber mark (Sparkles / both with Mastercraft's); Problems flags a bobber left unmarked and tracking switching that makes "While tracking" node pins blink |
-| ForeverLootRollMover | Works alongside: its moved loot rolls stay visible in Mastercraft's fishing view |
-| STBU_OpenMapFlightmap | Works alongside: flight master window only, no overlap with OpenMap's or Questie's map icons |
-| WhatsTraining | Works alongside; no shared settings |
-| ShortestPathForever | Draws on OpenMap's stitched map itself (OpenMapAPI); its minimap goal kept visible by a module. While TomTom isn't installed it answers TomTom calls, so waypoints from Questie, Mastercraft and OpenMap's Ctrl-click start a journey (its own setting) |
+| Addon | Get it | What Master Options does with it |
+|---|---|---|
+| Pawn | [CurseForge](https://www.curseforge.com/wow/addons/pawn) · — | Stat weights that GearMatic, CheapUpgrades, the quest reward pick and Baganator's arrows all follow; Quest reward marker (Pawn's or GearMatic's, not both on one button) |
+| **Pawn Forever** | [CurseForge](https://www.curseforge.com/wow/addons/pawn-forever) · [GitHub](https://github.com/turlockmike/pawn-forever) | **Strongly recommended with Pawn.** Stat weights made for WoW Forever. Without it everything above uses Pawn's stock Classic scales, and /mo > Problems says so |
+| GearMatic | [CurseForge](https://www.curseforge.com/wow/addons/gearmatic) · — | Junk selling, never-sell list, auto-equip, stat weights |
+| CheapUpgrades | [CurseForge](https://www.curseforge.com/wow/addons/cheap-upgrades) · — | Upgrade badges and tooltip lines |
+| Mastercraft | [CurseForge](https://www.curseforge.com/wow/addons/mastercraft-forever) · — | Gathering nodes, VENDOR / KEEP advice, tooltips, bank materials, fishing view |
+| OpenMap | [CurseForge](https://www.curseforge.com/wow/addons/openmap) · [GitHub](https://github.com/openmap-world/openmap) | Dungeon entrances, the stitched map our modules draw on |
+| OpenMap_Tweaks | [CurseForge](https://www.curseforge.com/wow/addons/openmap-tweaks) · — | Gathering pins (filtered by Mastercraft's node rule) |
+| OpenMap_MiniMap | [CurseForge](https://www.curseforge.com/wow/addons/openmap-minimap-the-openmap-companion) · — | Square minimap and its border; Minimap (it or BetterBlizzFrames' classic minimap, not both) |
+| ForeverDungeonJournal (Exehn's "DungeonJournal") | [CurseForge](https://www.curseforge.com/wow/addons/dungeonjournal) · — | Dungeon maps opened from OpenMap |
+| Baganator | [CurseForge](https://www.curseforge.com/wow/addons/baganator) · [GitHub](https://github.com/TheMouseNest/Baganator) | Junk coin and upgrade arrows in bags |
+| Syndicator (Baganator's backend) | [CurseForge](https://www.curseforge.com/wow/addons/syndicator) · [GitHub](https://github.com/TheMouseNest/Syndicator) | Counts on your characters |
+| Auctionator | [CurseForge](https://www.curseforge.com/wow/addons/auctionator) · [GitHub](https://github.com/TheMouseNest/Auctionator) | Price tooltips, Mastercraft's scan button |
+| Chattynator | [CurseForge](https://www.curseforge.com/wow/addons/chattynator) · [GitHub](https://github.com/TheMouseNest/Chattynator) | Keeps Mastercraft's /played out of chat; Details chat-tab clash check |
+| Questie | [CurseForge](https://www.curseforge.com/wow/addons/questie) · [GitHub](https://github.com/Questie/Questie) | Town NPC icons, quest icons on nameplates and the target frame |
+| BetterBlizzPlates | [CurseForge](https://www.curseforge.com/wow/addons/betterblizzplates) · — | Quest icons on nameplates |
+| BetterBlizzFrames | [CurseForge](https://www.curseforge.com/wow/addons/betterblizzframes) · — | Quest icon on the target frame, dark mode, Minimap (OpenMap_MiniMap or its classic minimap, not both), chat clash check |
+| DeleteCheapestItem (Reloaded) | [CurseForge](https://www.curseforge.com/wow/addons/delete-cheapest-item-reloaded) · [GitHub](https://github.com/sandervspl/DeleteCheapestItemReloaded) | Protects upgrades, sets, tools and needed materials |
+| DialogKey (Numy Edition, DialogKey_Numy) | [CurseForge](https://www.curseforge.com/wow/addons/dialogkey-numy-edition) · [GitHub](https://github.com/NumyAddon/DialogKey_Numy) | Pre-selects the best quest reward |
+| Details | [CurseForge](https://www.curseforge.com/wow/addons/details) · [GitHub](https://github.com/Tercioo/Details-Damage-Meter) | Chat-tab clash check with Chattynator |
+| Sparkles_Forever | [CurseForge](https://www.curseforge.com/wow/addons/sparkles) · — | Fishing bobber mark (Sparkles / both with Mastercraft's); Problems flags a bobber left unmarked and tracking switching that makes "While tracking" node pins blink |
+| ForeverLootRollMover | [CurseForge](https://www.curseforge.com/wow/addons/foreverlootrollmover) · — | Works alongside: its moved loot rolls stay visible in Mastercraft's fishing view |
+| STBU_OpenMapFlightmap ("OpenMap Flightmap \| Forever") | [CurseForge search](https://www.curseforge.com/wow/search?search=OpenMap%20Flightmap) · — | Works alongside: flight master window only, no overlap with OpenMap's or Questie's map icons |
+| WhatsTraining ("What's Training?") | [CurseForge](https://www.curseforge.com/wow/addons/whats-training) · [GitHub](https://github.com/fusionpit/WhatsTraining) | Works alongside; no shared settings |
+| ShortestPathForever | [CurseForge](https://www.curseforge.com/wow/addons/shortest-path-forever) · [GitHub](https://github.com/cjber/shortest-path-forever) | Draws on OpenMap's stitched map itself (OpenMapAPI); its minimap goal kept visible by a module. While TomTom isn't installed it answers TomTom calls, so waypoints from Questie, Mastercraft and OpenMap's Ctrl-click start a journey (its own setting) |
 
 ## Client facts worth knowing
 
