@@ -214,11 +214,13 @@ end
 -- Visible flags are set (Pawn's best-item scan reads that flag itself) and put back right after. Nothing is
 -- shown differently; Pawn drops best-item data of hidden scales at logout anyway.
 -- Used by Mastercraft_VendorSell, DeleteCheapestItem_Protect and GearMatic_SellGuard.
-function MasterOptions_PawnKeeps(link)
-    if type(_G.PawnGetItemData) ~= "function" or type(_G.PawnIsItemAnUpgrade) ~= "function" then return false end
-    local ok, item = pcall(_G.PawnGetItemData, link)
-    if not ok or type(item) ~= "table" then return false end
-    local widened = {}
+-- (MasterOptions_PawnKeepsMany: the same for many links at once, the scales widened once for all of them)
+local function PawnReady()
+    return type(_G.PawnGetItemData) == "function" and type(_G.PawnIsItemAnUpgrade) == "function"
+end
+
+-- (fills widened as it goes, so a stop half-way is still put back)
+local function WidenPawn(widened)
     local pw, who = PAWN(), _G.PawnPlayerFullName
     if FollowSpecOn() and GMSpec() and pw and type(pw.Scales) == "table" and who then
         local _, _, classID = UnitClass("player")
@@ -238,13 +240,42 @@ function MasterOptions_PawnKeeps(link)
             end
         end
     end
-    local ok2, up, _, best, second = pcall(_G.PawnIsItemAnUpgrade, item)
+end
+
+local function RestorePawn(widened)
     for _, w in ipairs(widened) do w.o.Visible = w.was end
-    if not ok2 then return false end
-    for _, t in ipairs({ up or false, best or false, second or false }) do
-        if type(t) == "table" and next(t) ~= nil then return true end
+end
+
+local function NonEmpty(t) return type(t) == "table" and next(t) ~= nil end
+
+-- (the scales already widened)
+local function PawnKeepsOne(link)
+    local ok, item = pcall(_G.PawnGetItemData, link)
+    if not ok or type(item) ~= "table" then return false end
+    local ok2, up, _, best, second = pcall(_G.PawnIsItemAnUpgrade, item)
+    return ok2 and (NonEmpty(up) or NonEmpty(best) or NonEmpty(second)) or false
+end
+
+function MasterOptions_PawnKeeps(link)
+    if not PawnReady() then return false end
+    local widened = {}
+    pcall(WidenPawn, widened)
+    local keeps = PawnKeepsOne(link)
+    RestorePawn(widened)
+    return keeps
+end
+
+-- links: a list of item links -> { [link] = true } for each one kept
+function MasterOptions_PawnKeepsMany(links)
+    local out = {}
+    if not PawnReady() or #links == 0 then return out end
+    local widened = {}
+    pcall(WidenPawn, widened)
+    for _, link in ipairs(links) do
+        if PawnKeepsOne(link) then out[link] = true end
     end
-    return false
+    RestorePawn(widened)
+    return out
 end
 
 local function ClearPawnHidden()
@@ -1444,7 +1475,12 @@ local function Problems()
     end
 
     -- addons a newer patch of ours now does the job of
+    -- (the ones without the MasterOptions_ prefix are older "local patch" addons: the loader doesn't
+    -- see them, so their module would run as well)
     for old, new in pairs({ OpenMap_NoDungeonMap = "MasterOptions_DungeonJournal_OpenMap",
+                            OpenMapTweaks_Mastercraft = "MasterOptions_OpenMapTweaks_Mastercraft",
+                            CheapUpgrades_Baganator = "MasterOptions_CheapUpgrades_Baganator",
+                            Mastercraft_Baganator = "MasterOptions_Mastercraft_FishingView",
                             MasterOptions_Mastercraft_Baganator = "MasterOptions_Mastercraft_FishingView" }) do
         local mods2 = _G.MasterOptions_Modules
         if Exists(old) and (Exists(new) or (mods2 and mods2.Has(new))) then

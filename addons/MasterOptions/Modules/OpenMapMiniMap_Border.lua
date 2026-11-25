@@ -234,12 +234,13 @@ local function TabBuild()
     tab.bg = tab:CreateTexture(nil, "BACKGROUND")
     tab.bg:SetColorTexture(0.07, 0.055, 0.04, 1) -- (OpenMap's zone bar colour)
     tab.text = tab:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    local wait = 0
+    local wait, shown = 0, nil
     tab:SetScript("OnUpdate", function(self, elapsed)
         wait = wait - elapsed
         if wait > 0 then return end
         wait = 0.2
-        self.text:SetText(PlayerXY())
+        local xy = PlayerXY()
+        if xy ~= shown then shown = xy; self.text:SetText(xy) end -- (standing still: nothing redrawn)
     end)
     return tab
 end

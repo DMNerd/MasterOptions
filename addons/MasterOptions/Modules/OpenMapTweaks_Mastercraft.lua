@@ -232,17 +232,27 @@ end
 ---------------------------------------------------------------------------
 -- Events
 ---------------------------------------------------------------------------
-local lastState
-local function StateKey()
-    local s = MC()
-    return table.concat({ tostring(s.nodesFilter), tostring(s.nodesWhen), tostring(Farming()),
-        tostring(Active(MINE)), tostring(Active(HERB)), tostring(ranks[MINE]), tostring(ranks[HERB]) }, "|")
+-- what decides which pins show, as it was at the last refresh (compared value by value: the twice-a-second
+-- look builds nothing)
+local last, seenOnce = {}, false
+local function Same(i, v)
+    if last[i] == v then return true end
+    last[i] = v
+    return false
 end
 
 local function RefreshAll()
-    local key = StateKey()
-    if key == lastState then return end
-    lastState = key
+    local s = MC()
+    local same = seenOnce
+    if not Same(1, s.nodesFilter) then same = false end
+    if not Same(2, s.nodesWhen) then same = false end
+    if not Same(3, Farming()) then same = false end
+    if not Same(4, Active(MINE)) then same = false end
+    if not Same(5, Active(HERB)) then same = false end
+    if not Same(6, ranks[MINE]) then same = false end
+    if not Same(7, ranks[HERB]) then same = false end
+    if same then return end
+    seenOnce = true
     RefreshMinimap()
     RefreshWorldMap()
 end

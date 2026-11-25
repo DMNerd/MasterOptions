@@ -210,6 +210,17 @@ lua.execute(r'''
 ''')
 follow["keeping while following: an off-spec (Assassination) upgrade is still kept"] = lua.eval("KEEPS") is True
 follow["keeping: nothing left shown after the check (still only Subtlety)"] = lua.eval('ShownRogue()') == '"PawnForever":ROGUE3'
+# many at once (DeleteCheapestItem_Protect's bag scan): the same answers, scales widened once, nothing left shown
+lua.execute(r'''
+  local real = PawnIsItemAnUpgrade
+  function PawnIsItemAnUpgrade(item) if item.Link == "item:9999" then return nil end return real(item) end
+  MANY = MasterOptions_PawnKeepsMany({ "item:1234", "item:9999", "item:5678" })
+  MANY_EMPTY = next(MasterOptions_PawnKeepsMany({})) == nil
+  PawnIsItemAnUpgrade = real
+''')
+follow["keeping many: off-spec upgrades kept, the rest not"] = (lua.eval('MANY["item:1234"]') is True and lua.eval('MANY["item:5678"]') is True
+    and lua.eval('MANY["item:9999"]') is None and lua.eval("MANY_EMPTY") is True)
+follow["keeping many: nothing left shown afterwards"] = lua.eval('ShownRogue()') == '"PawnForever":ROGUE3'
 lua.execute('FOLLOW.set("Your own choice"); PawnSetScaleVisible(\'"PawnForever":ROGUE1\', true); GearMatic.ScaleImport.GetActiveSpecIndex = function() return 2 end; Fire("PLAYER_TALENT_UPDATE"); RunTimers(); RunTimers()')
 follow["'Your own choice': nothing follows"] = lua.eval('ShownRogue()') == '"PawnForever":ROGUE1, "PawnForever":ROGUE3'
 lua.execute('PawnSetScaleVisible(\'"PawnForever":ROGUE1\', false); KEEPS2 = MasterOptions_PawnKeeps("item:1234")')

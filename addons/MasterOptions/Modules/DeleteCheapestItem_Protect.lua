@@ -95,6 +95,8 @@ local function Protected()
     local keep = _G.MasterOptions_MastercraftKeep
     local loadouts = LoadoutIDs()
     local numSlots = C_Container.GetContainerNumSlots
+    -- 1. what's protected by itself; gear goes on a list for Pawn and GearMatic
+    local gear, gearLinks = {}, {}
     for bag = 0, (NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4) do
         for slot = 1, (numSlots(bag) or 0) do
             local info = C_Container.GetContainerItemInfo(bag, slot)
@@ -106,9 +108,20 @@ local function Protected()
                 elseif keep and keep.IsNeeded and keep.IsNeeded(id) then
                     want[id] = true
                 elseif link and (info.quality or 1) > 0 and IsEquippable(link) then
-                    if PawnUpgrade(link) or GearMaticKeeps(link, bag, slot, id) then want[id] = true end
+                    gear[#gear + 1] = { link = link, bag = bag, slot = slot, id = id }
+                    gearLinks[#gearLinks + 1] = link
                 end
             end
+        end
+    end
+    -- 2. the gear: Pawn all at once (Master Options widens its scales once for the lot), then GearMatic
+    local many = _G.MasterOptions_PawnKeepsMany
+    local pawnKeeps = type(many) == "function" and many(gearLinks) or nil
+    for _, g in ipairs(gear) do
+        if not want[g.id] then
+            local up
+            if pawnKeeps then up = pawnKeeps[g.link] == true else up = PawnUpgrade(g.link) end
+            if up or GearMaticKeeps(g.link, g.bag, g.slot, g.id) then want[g.id] = true end
         end
     end
     return want

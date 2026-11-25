@@ -232,11 +232,61 @@ f:RegisterEvent("PLAYER_LOGIN")
 f:RegisterEvent("MERCHANT_SHOW")
 f:RegisterEvent("BANKFRAME_OPENED")
 local ready, wait = false, 0
+-- The few-seconds look is cheap: each list's table, size and sum of its IDs (plus which addons are loaded and
+-- DeleteCheapestItem's list version), compared with how they were after the last sync. Only a difference runs
+-- the full sync. (Nothing is built for the look itself: no garbage every few seconds.)
+local fp = {}
+local function Put(i, v)
+    if fp[i] ~= v then fp[i] = v; return true end
+    return false
+end
+local function SumKeys(t, i)
+    local n, sum = 0, 0
+    if type(t) == "table" then
+        for k in pairs(t) do n = n + 1; sum = sum + (tonumber(k) or 0) end
+    end
+    local a = Put(i, t); local b = Put(i + 1, n); local c = Put(i + 2, sum)
+    return a or b or c
+end
+local function SumValues(t, i)
+    local n, sum = 0, 0
+    if type(t) == "table" then
+        for _, v in ipairs(t) do n = n + 1; sum = sum + (tonumber(v) or 0) end
+    end
+    local a = Put(i, t); local b = Put(i + 1, n); local c = Put(i + 2, sum)
+    return a or b or c
+end
+-- true when anything differs from the last look (and remembers this one)
+local function Moved()
+    local g, mc, c = _G.GearMaticDB, _G.MastercraftDB, _G.DCI_CharDB
+    local ms = type(mc) == "table" and mc.settings
+    local changed = false
+    if Put(1, Loaded("GearMatic")) then changed = true end
+    if Put(2, Loaded("Mastercraft")) then changed = true end
+    if Put(3, Loaded("DeleteCheapestItem")) then changed = true end
+    if Put(4, c) then changed = true end
+    if Put(5, type(c) == "table" and c.schemaVersion or nil) then changed = true end
+    if SumKeys(type(g) == "table" and g.sellIgnore or nil, 6) then changed = true end
+    if SumKeys(type(ms) == "table" and ms.lootNever or nil, 9) then changed = true end
+    if SumValues(type(c) == "table" and c.IgnoredItems or nil, 12) then changed = true end
+    if SumKeys(MasterOptionsDB and MasterOptionsDB.neverSell or nil, 15) then changed = true end
+    return changed
+end
+
+-- (from Master Options' window and slash command too: the look after it then finds nothing new)
+local function SyncAndRemember()
+    SafeSync()
+    Moved() -- (the lists as the sync left them: the next look compares with these)
+end
+API.Sync = SyncAndRemember
+local set = API.Set
+API.Set = function(id, on) local r = set(id, on); Moved(); return r end
+
 f:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
-        C_Timer.After(5, function() ready = true; SafeSync() end)
+        C_Timer.After(5, function() ready = true; SyncAndRemember() end)
     elseif ready then
-        SafeSync()
+        SyncAndRemember()
     end
 end)
 f:SetScript("OnUpdate", function(_, dt)
@@ -245,6 +295,6 @@ f:SetScript("OnUpdate", function(_, dt)
     if wait < 3 then return end
     wait = 0
     if InCombatLockdown and InCombatLockdown() then return end
-    SafeSync()
+    if Moved() then SyncAndRemember() end
 end)
 end)
