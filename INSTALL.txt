@@ -1,4 +1,4 @@
-Master Options 2.4 - install on Windows
+Master Options 2.5 - install on Windows
 =======================================
 
 1. Close World of Warcraft.

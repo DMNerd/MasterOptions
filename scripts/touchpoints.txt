@@ -245,3 +245,11 @@ OpenMap|config-key|entranceClick|DungeonJournal_OpenMap.lua (Dungeon entrance cl
 OpenMap|config-key|d.townsfolk|MasterOptions.lua (Town NPC icons)
 OpenMap|method|function mod:RefreshTownsfolk|MasterOptions.lua (Town NPC icons)
 OpenMap|config-value|key = "stable"|MasterOptions.lua (Town NPC icons)
+
+# --- added in 2.5.0 (Spec for Pawn and CheapUpgrades)
+CheapUpgrades|global|CU.Scoring = Scoring|MasterOptions.lua (FollowSpec)
+CheapUpgrades|config-key|Scoring.SPECS = {|MasterOptions.lua (FollowSpec)
+CheapUpgrades|function|function CU:SetSpec(|MasterOptions.lua (FollowSpec)
+CheapUpgrades|function|function CU:GetClass(|MasterOptions.lua (FollowSpec)
+CheapUpgrades|config-key|watchSpecs|MasterOptions.lua (FollowSpec)
+CheapUpgrades|config-value|"SVMELEE"|MasterOptions.lua (hunters' melee Survival kept)

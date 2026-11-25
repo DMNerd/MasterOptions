@@ -141,6 +141,73 @@ local function SetPawnScales(useForever)
     end
 end
 
+-- "Spec for Pawn and CheapUpgrades" (MasterOptionsDB.specFollow ~= false: Follow GearMatic). GearMatic works the
+-- spec out from your talents (ScaleImport.GetActiveSpecIndex, the talent tab; its own Cat/Bear choice for Feral);
+-- Pawn has no spec (it judges by every scale you show) and CheapUpgrades uses the one picked in its settings.
+-- Following: Pawn shows only that spec's scale of each set in use, and CheapUpgrades' spec (and ticked specs)
+-- is that one. Pawn and CheapUpgrades number druids Balance 1, Cat 2, Bear 3, Resto 4 (DruidPawnSpec).
+local function GMSpec()
+    local gm = _G.GearMatic
+    local si = Loaded("GearMatic") and type(gm) == "table" and gm.ScaleImport
+    if not (si and si.GetActiveSpecIndex) then return nil end
+    local ok, tab = pcall(si.GetActiveSpecIndex)
+    if not ok or type(tab) ~= "number" then return nil end
+    local _, class = UnitClass("player")
+    return (class == "DRUID") and DruidPawnSpec() or tab, tab
+end
+local function FollowSpecOn() return not (MasterOptionsDB and MasterOptionsDB.specFollow == false) end
+
+local function FollowSpecPawn(spec)
+    local pw = PAWN()
+    if not (pw and type(pw.Scales) == "table" and type(_G.PawnSetScaleVisible) == "function" and _G.PawnPlayerFullName) then return end
+    local _, _, classID = UnitClass("player")
+    -- per set (provider) in use - one with a shown scale of this class - and only if it has this spec's scale
+    local inUse, hasSpec = {}, {}
+    for _, s in pairs(pw.Scales) do
+        if type(s) == "table" and s.ClassID == classID and s.Provider then
+            if PawnShows(s) then inUse[s.Provider] = true end
+            if s.SpecID == spec then hasSpec[s.Provider] = true end
+        end
+    end
+    for name, s in pairs(pw.Scales) do
+        if type(s) == "table" and s.ClassID == classID and s.SpecID and inUse[s.Provider] and hasSpec[s.Provider] then
+            local want = (s.SpecID == spec)
+            if PawnShows(s) ~= want then pcall(_G.PawnSetScaleVisible, name, want) end
+        end
+    end
+end
+
+local function FollowSpecCheapUpgrades(spec, tab)
+    local cu = _G.CheapUpgrades
+    if not (Loaded("CheapUpgrades") and type(cu) == "table" and type(cu.chardb) == "table" and cu.Scoring
+        and type(cu.Scoring.SPECS) == "table" and cu.GetClass) then return end
+    local okC, class = pcall(cu.GetClass, cu)
+    local list = okC and cu.Scoring.SPECS[class]
+    if type(list) ~= "table" then return end
+    local _, myClass = UnitClass("player")
+    local key
+    if myClass == "DRUID" then key = list[spec] and list[spec].key
+    else
+        key = list[tab] and list[tab].key
+        -- (hunters: Survival has a melee build too - kept if that's the one picked)
+        if myClass == "HUNTER" and tab == 3 and cu.chardb.spec == "SVMELEE" then key = "SVMELEE" end
+    end
+    if not key then return end
+    local watch = cu.chardb.watchSpecs
+    local onlyThis = type(watch) == "table" and watch[key] and next(watch, next(watch)) == nil
+    if cu.chardb.spec == key and onlyThis then return end
+    cu.chardb.watchSpecs = { [key] = true }
+    if cu.SetSpec then pcall(cu.SetSpec, cu, key) else cu.chardb.spec = key end
+end
+
+local function FollowSpec()
+    if not FollowSpecOn() then return end
+    local spec, tab = GMSpec()
+    if not spec then return end
+    FollowSpecPawn(spec)
+    FollowSpecCheapUpgrades(spec, tab)
+end
+
 local function ClearPawnHidden()
     local pw = PAWN()
     if not (pw and type(pw.Scales) == "table") then return end
@@ -838,7 +905,18 @@ local OPTIONS = {
             if forever and stock then return "Both (conflict)" end
             return stock and "Pawn stock" or "Pawn Forever"
         end,
-        set = function(v) SetPawnScales(v ~= "Pawn stock") end,
+        set = function(v) SetPawnScales(v ~= "Pawn stock"); pcall(FollowSpec) end,
+    },
+    {
+        kind = "choice", label = "Spec for Pawn and CheapUpgrades", rec = "Follow GearMatic", since = 26,
+        needs = "GearMatic", choices = { "Follow GearMatic", "Your own choice" },
+        tip = "GearMatic works out your spec from your talents (and its own Cat / Bear choice for Feral). Follow GearMatic: Pawn shows only that spec's scale (of the set you use - Pawn Forever's or stock; scales for no particular spec stay as they are), and CheapUpgrades' spec and ticked specs are that spec - so upgrade arrows, tooltips, quest rewards and the auction house all judge by one spec, and follow a talent change. Your own choice: Pawn shows the scales you tick (upgrades for any of them, off-spec too), CheapUpgrades the specs you pick. Note: Pawn judges only the scales it shows - following one spec, off-spec gear is no longer kept from selling or deleting as Pawn's \"best item\" (put pieces you keep for another spec on the never-sell list).",
+        get = function() return FollowSpecOn() and "Follow GearMatic" or "Your own choice" end,
+        set = function(v)
+            -- (not `(v ~= ...) and false or nil`: that is always nil)
+            if v == "Follow GearMatic" then MasterOptionsDB.specFollow = nil else MasterOptionsDB.specFollow = false end
+            pcall(FollowSpec)
+        end,
     },
     {
         kind = "choice", label = "GearMatic stat weights", rec = "Pawn", since = 5, scope = "character",
@@ -1403,7 +1481,7 @@ local Available
 
 -- Recommended setup, applied once per character on first load (and by the button).
 -- Skips anything whose addon isn't loaded; returns how many rows it set.
-local DEFAULTS_VERSION = 25
+local DEFAULTS_VERSION = 26
 local Remember -- set below
 local function ApplyRecommended(after, manual) -- after: only options added after this defaults version
     local n = 0
@@ -2375,7 +2453,7 @@ bridge:RegisterEvent("PLAYER_LOGOUT")
 bridge:RegisterEvent("PLAYER_LEVEL_UP")
 -- druids: a talent change can change which Pawn scale GearMatic should use (see DruidPawnSpec)
 for _, e in ipairs({ "CHARACTER_POINTS_CHANGED", "PLAYER_TALENT_UPDATE" }) do pcall(bridge.RegisterEvent, bridge, e) end
-local resyncPending = false
+local resyncPending, specPending = false, false
 local function Resync()
     resyncPending = false
     SyncPawnHidden()
@@ -2388,6 +2466,8 @@ bridge:SetScript("OnEvent", function(_, event)
         SyncPawnHidden()
         C_Timer.After(1, SyncPawnHidden)
         C_Timer.After(3, function() if GMUsesPawn() then Resync() end end)
+        -- Pawn and CheapUpgrades follow GearMatic's spec (after GearMatic and Pawn are set up)
+        C_Timer.After(3.5, function() pcall(FollowSpec) end)
         -- showing or hiding a scale in Pawn (or /pff stock|forever) changes what GearMatic uses
         local function QueueResync()
             if resyncPending then return end
@@ -2397,7 +2477,10 @@ bridge:SetScript("OnEvent", function(_, event)
         if type(_G.PawnSetScaleVisible) == "function" then hooksecurefunc("PawnSetScaleVisible", QueueResync) end
         -- GearMatic's Cat/Bear choice (/gm feral) picks the druid's Feral scale
         local gm = _G.GearMatic
-        if type(gm) == "table" and type(gm.SetFeralRole) == "function" then hooksecurefunc(gm, "SetFeralRole", QueueResync) end
+        if type(gm) == "table" and type(gm.SetFeralRole) == "function" then
+            hooksecurefunc(gm, "SetFeralRole", QueueResync)
+            hooksecurefunc(gm, "SetFeralRole", function() C_Timer.After(0.3, function() pcall(FollowSpec) end) end)
+        end
     elseif event == "PLAYER_LEVEL_UP" then
         -- Pawn Forever switches to its level-60 values 1 s after the level-up
         if GMUsesPawn() then C_Timer.After(2, RefreshGearMatic) end
@@ -2405,6 +2488,11 @@ bridge:SetScript("OnEvent", function(_, event)
         if select(2, UnitClass("player")) == "DRUID" and GMUsesPawn() and not resyncPending then
             resyncPending = true
             C_Timer.After(0.5, Resync)
+        end
+        -- a spec change: Pawn and CheapUpgrades follow (once GearMatic has seen the new talents)
+        if not specPending then
+            specPending = true
+            C_Timer.After(0.6, function() specPending = false; pcall(FollowSpec) end)
         end
     elseif event == "PLAYER_LOGOUT" then
         ClearPawnHidden()

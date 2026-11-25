@@ -79,7 +79,7 @@ was found.
 |---|---|---|
 | Pawn | [CurseForge](https://www.curseforge.com/wow/addons/pawn) · — | Stat weights that GearMatic, CheapUpgrades, the quest reward pick and Baganator's arrows all follow; Quest reward marker (Pawn's or GearMatic's, not both on one button) |
 | **Pawn Forever** | [CurseForge](https://www.curseforge.com/wow/addons/pawn-forever) · [GitHub](https://github.com/turlockmike/pawn-forever) | **Strongly recommended with Pawn.** Stat weights made for WoW Forever. Without it everything above uses Pawn's stock Classic scales, and /mo > Problems says so |
-| GearMatic | [CurseForge](https://www.curseforge.com/wow/addons/gearmatic) · — | Junk selling, never-sell list, auto-equip, stat weights |
+| GearMatic | [CurseForge](https://www.curseforge.com/wow/addons/gearmatic) · — | Junk selling, never-sell list, auto-equip, stat weights; its spec (from your talents) is the one Pawn and CheapUpgrades follow ("Spec for Pawn and CheapUpgrades") |
 | CheapUpgrades | [CurseForge](https://www.curseforge.com/wow/addons/cheap-upgrades) · — | Upgrade badges and tooltip lines |
 | Mastercraft | [CurseForge](https://www.curseforge.com/wow/addons/mastercraft-forever) · — | Gathering nodes, VENDOR / KEEP advice, tooltips, bank materials, fishing view |
 | OpenMap | [CurseForge](https://www.curseforge.com/wow/addons/openmap) · [GitHub](https://github.com/openmap-world/openmap) | Dungeon entrances, the stitched map our modules draw on |

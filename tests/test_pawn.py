@@ -174,6 +174,37 @@ L(r'''
   SlashCmdList.MASTEROPTIONS("options")
   print("/mo options opened category id:", tostring(OPENED))
 ''')
+# Spec for Pawn and CheapUpgrades: following GearMatic's spec (rogue, talent tab 2 = Combat)
+lua.execute(r'''
+  PLAYER = { "Testchar", "Alpha", "ROGUE", 4 }
+  GearMatic.ScaleImport.GetActiveSpecIndex = function() return 2 end
+  for i = 1, 3 do PawnSetScaleVisible('"PawnForever":ROGUE' .. i, true) end
+  CU_SET = nil
+  CheapUpgrades = { chardb = { spec = "ASSA", watchSpecs = { ASSA = true, SUB = true } },
+                    Scoring = { SPECS = { ROGUE = { { key = "ASSA" }, { key = "COMBAT" }, { key = "SUB" } } } },
+                    GetClass = function() return "ROGUE" end,
+                    SetSpec = function(self, k) self.chardb.spec = k; CU_SET = k end }
+  for _, s in ipairs(SETTINGS) do if s.name:find("^Spec for Pawn and CheapUpgrades") then FOLLOW = s end end
+  -- (Follow GearMatic is the default: it runs at login, a moment after the rest)
+  Fire("PLAYER_LOGIN"); RunTimers(); RunTimers()
+''')
+follow = {
+    "row on the Options page": lua.eval("FOLLOW ~= nil"),
+    "Pawn: only Combat (spec 2) of Pawn Forever's shown": lua.eval('ShownRogue()') == '"PawnForever":ROGUE2',
+    "CheapUpgrades: spec and ticked specs = COMBAT": lua.eval('CheapUpgrades.chardb.spec == "COMBAT" and CU_SET == "COMBAT" and CheapUpgrades.chardb.watchSpecs.COMBAT and not CheapUpgrades.chardb.watchSpecs.ASSA') is True,
+}
+lua.execute(r'''
+  GearMatic.ScaleImport.GetActiveSpecIndex = function() return 3 end
+  Fire("PLAYER_TALENT_UPDATE"); RunTimers(); RunTimers()
+''')
+follow["talent change to Subtlety: both follow"] = (lua.eval('ShownRogue()') == '"PawnForever":ROGUE3' and lua.eval('CheapUpgrades.chardb.spec') == "SUB")
+lua.execute('FOLLOW.set("Your own choice"); PawnSetScaleVisible(\'"PawnForever":ROGUE1\', true); GearMatic.ScaleImport.GetActiveSpecIndex = function() return 2 end; Fire("PLAYER_TALENT_UPDATE"); RunTimers(); RunTimers()')
+follow["'Your own choice': nothing follows"] = lua.eval('ShownRogue()') == '"PawnForever":ROGUE1, "PawnForever":ROGUE3'
+print("spec follow:", follow)
+if not all(follow.values()):
+    lua.execute('ERRORS[#ERRORS+1] = "Spec follow wrong"')
+lua.execute('CheapUpgrades = {}; GearMatic.ScaleImport.GetActiveSpecIndex = nil')
+
 # the Fishing bobber mark row (Sparkles_Forever + Mastercraft), through the Options page's own control
 lua.execute('SparklesDB = { sparkleBobber = true }; MastercraftDB.settings.fishMarker = true')
 lua.execute(r'''
