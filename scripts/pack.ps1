@@ -6,7 +6,7 @@ $stage = Join-Path $dist "stage"
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage -Confirm:$false }
 New-Item -ItemType Directory -Force $stage | Out-Null
 Copy-Item (Join-Path $root "INSTALL.txt") $stage
-Get-ChildItem (Join-Path $root "addons") -Directory | % { Copy-Item -Recurse $_.FullName (Join-Path $stage $_.Name) }
+Get-ChildItem (Join-Path $root "addons") -Directory | ForEach-Object { Copy-Item -Recurse $_.FullName (Join-Path $stage $_.Name) }
 $zip = Join-Path $dist "MasterOptionsPack.zip"
 if (Test-Path $zip) { Remove-Item $zip -Confirm:$false }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
