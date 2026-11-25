@@ -44,6 +44,10 @@ local function PAWN()
     local db = _G.PawnCommon
     return Loaded("Pawn") and type(db) == "table" and db or nil
 end
+local function SPK() -- Sparkles_Forever: SparklesDB (flat, account-wide; Sparkles reads it live)
+    local db = _G.SparklesDB
+    return Loaded("Sparkles_Forever") and type(db) == "table" and db or nil
+end
 
 ---------------------------------------------------------------------------
 -- Pawn's weights in GearMatic
@@ -407,6 +411,20 @@ end
 local function gmOn(key) local s = GM(); return s ~= nil and s[key] ~= false end
 local function mcOn(key) local s = MC(); return s ~= nil and s[key] == true end
 local function mcNotOff(key) local s = MC(); return s ~= nil and s[key] ~= false end
+-- Mastercraft's Settings > Modules (2.1.2): settings.modules[key] = false turns a whole part off ("tip": every
+-- tooltip line, "loot": the KEEP / VENDOR advice, "ah": the Scan prices button)
+local function mcModule(key)
+    local s = MC(); local m = s and s.modules
+    return s ~= nil and not (type(m) == "table" and m[key] == false)
+end
+local function mcModuleOn(key) local s = MC(); if s and type(s.modules) == "table" then s.modules[key] = nil end end
+-- a Mastercraft tooltip line: its own switch and Tooltip extras both on
+local function mcTip(key) return mcNotOff(key) and mcModule("tip") end
+local function mcSetTip(key, on)
+    local m = MC(); if not m then return end
+    m[key] = on
+    if on then mcModuleOn("tip") end
+end
 
 ---------------------------------------------------------------------------
 -- Bag icons that follow your other choices (MasterOptionsDB.iconsMatch = { arrow = true, junk = true }):
@@ -616,14 +634,17 @@ local OPTIONS = {
     },
     {
         kind = "choice", label = "When nodes show", rec = "While tracking", since = 2,
-        tip = "While tracking: only with Find Minerals / Find Herbs on, not in towns, instances or combat.",
+        tip = "While tracking: with Find Minerals / Find Herbs on (or while farming), not in towns, instances or combat. While farming: only after Mastercraft's Start farming (/mc farm). Never: no nodes at all.",
         needs = "Mastercraft",
-        choices = { "While tracking", "Always" },
+        choices = { "While tracking", "While farming", "Always", "Never" },
         get = function()
             local w = (MC() or {}).nodesWhen or "tracking"
-            return w == "always" and "Always" or w == "never" and "Never" or "While tracking"
+            return w == "always" and "Always" or w == "never" and "Never" or w == "farming" and "While farming" or "While tracking"
         end,
-        set = function(v) local m = MC(); if m then m.nodesWhen = (v == "Always") and "always" or "tracking" end end,
+        set = function(v)
+            local m = MC(); if not m then return end
+            m.nodesWhen = v == "Always" and "always" or v == "Never" and "never" or v == "While farming" and "farming" or "tracking"
+        end,
     },
 
     { header = "Maps" },
@@ -697,11 +718,12 @@ local OPTIONS = {
               local m = MC(); if on and m then m.hideAuctionatorTips = false end
           end },
         { "Mastercraft",
-          function() return MC() and mcNotOff("tipPrice") end,
-          function(on) local m = MC(); if m then m.tipPrice = on end end },
+          function() return mcTip("tipPrice") end,
+          function(on) mcSetTip("tipPrice", on) end },
         { "CheapUpgrades",
           function() local c = CU(); return c and c.tooltip ~= false and c.tooltipPrice ~= false end,
-          function(on) local c = CU(); if c then c.tooltipPrice = on end end },
+          -- (its master switch "Item tooltips" too: off, the line would never show)
+          function(on) local c = CU(); if c then c.tooltipPrice = on; if on then c.tooltip = true end end end },
     }, "Off"),
     Multi("Vendor sell price", "Game's own line", 4,
         "The game already shows \"Sell Price\" on every item. Auctionator and Mastercraft can add a second vendor line.", {
@@ -712,8 +734,8 @@ local OPTIONS = {
               local m = MC(); if on and m then m.hideAuctionatorTips = false end
           end },
         { "Mastercraft",
-          function() return MC() and mcNotOff("tipVendor") end,
-          function(on) local m = MC(); if m then m.tipVendor = on end end },
+          function() return mcTip("tipVendor") end,
+          function(on) mcSetTip("tipVendor", on) end },
     }, "Game's own line"),
     Multi("Upgrade % per spec", "Pawn", 4,
         "Pawn, GearMatic and CheapUpgrades can each list an upgrade size for every spec. With \"Stat weights\" below set to Pawn they all value items with Pawn's scales; Pawn's own line is the most compact and matches Baganator's bag arrows.", {
@@ -725,7 +747,7 @@ local OPTIONS = {
           function(on) local g = GM(); if g then g.showInTooltip = on end end },
         { "CheapUpgrades",
           function() local c = CU(); return c and c.tooltip ~= false and c.tooltipUpgrades ~= false end,
-          function(on) local c = CU(); if c then c.tooltipUpgrades = on end end },
+          function(on) local c = CU(); if c then c.tooltipUpgrades = on; if on then c.tooltip = true end end end },
     }, "Off"),
     {
         kind = "choice", label = "Counts on your characters", since = 3, rec = "Syndicator",
@@ -733,13 +755,13 @@ local OPTIONS = {
         choices = { "Syndicator", "Mastercraft", "Off" },
         get = function()
             local sy = SYN() and SYN().show_inventory_tooltips ~= false
-            local m = MC() and mcNotOff("tipOwnersList")
+            local m = mcTip("tipOwnersList")
             if sy and m then return "Both (conflict)" end
             return sy and "Syndicator" or m and "Mastercraft" or "Off"
         end,
         set = function(v)
             local sy = SYN(); if sy then sy.show_inventory_tooltips = (v == "Syndicator") end
-            local m = MC(); if m then m.tipOwnersList = (v == "Mastercraft") end
+            mcSetTip("tipOwnersList", v == "Mastercraft")
         end,
     },
 
@@ -793,7 +815,7 @@ local OPTIONS = {
     {
         kind = "toggle", label = "CheapUpgrades: use Pawn's weights", rec = true, since = 5,
         needs = { "CheapUpgrades", "Pawn" },
-        tip = "CheapUpgrades asks Pawn what each item is worth, with the Pawn scale shown for your spec.",
+        tip = "CheapUpgrades asks Pawn what each item is worth, with the Pawn scale shown for your spec. A weights profile of your own in CheapUpgrades still comes first, and a Pawn scale picked for a spec in CheapUpgrades' Stat weights is used instead of the one Pawn shows.",
         get = function() local c = CU(); return c ~= nil and c.usePawn == true end,
         set = function(v)
             local c = CU(); if not c then return end
@@ -878,12 +900,90 @@ local OPTIONS = {
             MasterOptions_DialogKeyPawnDB.mode = (v == "GearMatic" and "gearmatic") or (v == "Off" and "off") or "pawn"
         end,
     },
+    {
+        -- Pawn (PawnUI.lua: its arrow, bottom-left of the reward icon) and GearMatic (QuestRewardHook.lua: its
+        -- chevron top-right, or a gold $ on the best vendor choice) both mark rewards - on the same buttons, and with
+        -- GearMatic's own weights not always the same one. Only the markers: GearMatic's autoDetect (bag arrows,
+        -- tooltips) and the pre-select above stay as they are.
+        kind = "choice", label = "Quest reward marker", rec = "Pawn", since = 23,
+        needs = { "Pawn", "GearMatic" }, choices = { "Pawn", "GearMatic", "Both", "Off" },
+        tip = "Pawn and GearMatic both mark the best quest reward, so the same reward button can get two markers (and, with GearMatic's own weights, on different rewards). Pick one - the same as Pre-select best quest reward above, so the selected reward and its marker agree. Pawn's setting is its \"quest upgrade advisor\" (also its world quest upgrade marks); GearMatic's only its quest reward marks.",
+        get = function()
+            local pw, g = PAWN(), GM()
+            local p = pw ~= nil and pw.ShowQuestUpgradeAdvisor ~= false
+            local m = g ~= nil and g.autoDetectQuestReward ~= false
+            return (p and m and "Both") or (p and "Pawn") or (m and "GearMatic") or "Off"
+        end,
+        set = function(v)
+            local pw, g = PAWN(), GM()
+            if pw then pw.ShowQuestUpgradeAdvisor = (v == "Pawn" or v == "Both") end
+            if g then g.autoDetectQuestReward = (v == "GearMatic" or v == "Both") end
+        end,
+    },
+
+    { header = "Fishing" },
+    {
+        -- Sparkles_Forever: its bobber effect off also turns the bobber's nameplate off (SoftTargetNameplateInteract 0,
+        -- SoftTarget.lua SetNameplateGate) - and Mastercraft's mark sits on that nameplate. So "Mastercraft only"
+        -- isn't offered: with Sparkles installed it wouldn't show (Problems says so if it's set that way).
+        kind = "choice", label = "Fishing bobber mark", rec = "Sparkles", since = 23,
+        needs = { "Mastercraft", "Sparkles_Forever" },
+        choices = { "Sparkles", "Both", "Off" },
+        tip = "Sparkles and Mastercraft both mark your fishing bobber. Sparkles: its effect only. Both: its effect and Mastercraft's mark above it. Mastercraft's mark alone isn't offered while Sparkles is installed: turning Sparkles' bobber effect off also turns off the bobber's nameplate, which Mastercraft's mark sits on.",
+        get = function()
+            local s, m = SPK(), MC()
+            local sp = s and s.sparkleBobber ~= false
+            local mc = m and m.fishMarker ~= false
+            if sp and mc then return "Both" end
+            return sp and "Sparkles" or "Off"
+        end,
+        set = function(v)
+            local s, m = SPK(), MC()
+            if s then s.sparkleBobber = (v ~= "Off") end
+            if m then m.fishMarker = (v == "Both") end
+        end,
+    },
 
     { header = "Look" },
     {
         kind = "choice", label = "UI style", rec = "WoW", reload = true, scope = "character",
         needs = "MasterOptions", choices = { "WoW", "Dark" },
         tip = UIStyleTip, get = UIStyleGet, set = UIStyleSet,
+    },
+    {
+        -- BetterBlizzFrames' minimap options move, re-skin or hide the same Minimap / MinimapCluster pieces
+        -- OpenMap_MiniMap does (its classic minimap is applied as it loads: forever\modules\classicMinimap.lua)
+        -- (shown, and recommended, only while both are loaded - when they fight: picking BetterBlizzFrames disables
+        -- OpenMap_MiniMap, and after the reload this row is gone; turn it on again in the AddOns list)
+        kind = "choice", label = "Minimap", rec = "OpenMap_MiniMap", since = 23, reload = true,
+        needs = { "BetterBlizzFrames", "OpenMap_MiniMap" }, choices = { "OpenMap_MiniMap", "BetterBlizzFrames classic" },
+        tip = "OpenMap_MiniMap and BetterBlizzFrames' minimap options (Classic minimap, Minimap tweaks, Hide minimap buttons, Hide minimap) work on the same frames and fight. OpenMap_MiniMap: those BetterBlizzFrames options off. BetterBlizzFrames classic: its classic minimap on and the OpenMap_MiniMap addon disabled (turn it on again in the AddOns list). Takes a reload.",
+        get = function()
+            local b = type(_G.BetterBlizzFramesDB) == "table" and _G.BetterBlizzFramesDB or {}
+            local AO = C_AddOns or {}
+            local state = AO.GetAddOnEnableState and AO.GetAddOnEnableState("OpenMap_MiniMap", UnitName("player"))
+            if state == 0 and b.classicMinimap == true then return "BetterBlizzFrames classic" end -- (after the reload)
+            local bbfOn = b.classicMinimap == true or b.foreverMinimapTweaks == true or b.hideMinimapButtons == true or b.hideMinimap == true
+            return bbfOn and "Both (conflict)" or "OpenMap_MiniMap"
+        end,
+        set = function(v)
+            local b = _G.BetterBlizzFramesDB
+            local AO = C_AddOns or {}
+            local enable, disable = AO.EnableAddOn or EnableAddOn, AO.DisableAddOn or DisableAddOn
+            if v == "BetterBlizzFrames classic" then
+                if type(b) == "table" then b.classicMinimap = true; b.SkipMinimapForeverTint = nil end
+                if disable then pcall(disable, "OpenMap_MiniMap") end
+            else
+                if type(b) == "table" then
+                    b.classicMinimap, b.foreverMinimapTweaks, b.hideMinimapButtons, b.hideMinimap = false, false, false, false
+                    -- (BBF.TintForeverMinimap, at every login whatever the options: the minimap buttons' rings
+                    -- tinted bronze - on OpenMap_MiniMap's map, its own look instead. A BetterBlizzFrames key with no
+                    -- checkbox of its own.)
+                    b.SkipMinimapForeverTint = true
+                end
+                if enable then pcall(enable, "OpenMap_MiniMap") end
+            end
+        end,
     },
     {
         kind = "choice", label = "Minimap border", rec = "Action bar", since = 19,
@@ -948,7 +1048,8 @@ local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions
                       MasterOptions_DungeonJournal_OpenMap = 11, MasterOptions_Mastercraft_FishingView = 12,
                       MasterOptions_Mastercraft_Chattynator = 14, MasterOptions_Mastercraft_VendorSell = 17,
                       MasterOptions_Mastercraft_BankMats = 18,
-                      MasterOptions_OpenMapMiniMap_Border = 19 }
+                      MasterOptions_OpenMapMiniMap_Border = 19,
+                      MasterOptions_ShortestPathForever_OpenMapMiniMap = 23 }
 local PATCH_TIP = {
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
     MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
@@ -963,6 +1064,7 @@ local PATCH_TIP = {
     MasterOptions_Mastercraft_VendorSell = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank.",
     MasterOptions_Mastercraft_BankMats = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank.",
     MasterOptions_OpenMapMiniMap_Border = "OpenMap's square minimap framed with the action bar buttons' border (Look > Minimap border).",
+    MasterOptions_ShortestPathForever_OpenMapMiniMap = "Shortest Path's journey goal on the minimap stays visible over OpenMap's painted minimap (it faded with the game's terrain, and was gone at far zoom).",
     MasterOptions_DungeonJournal_OpenMap = "Dungeon Journal's Show on Map also puts a blue OpenMap pin there (named, followed like a pin you drop), gone again when Dungeon Journal clears its mark. And the map inside dungeons (Maps > Map inside dungeons). Replaces OpenMap_NoDungeonMap.",
 }
 -- the modules (Modules\*.lua, once separate addons): on / off for the next load, and what each is doing now
@@ -970,7 +1072,8 @@ local MODULE_STATE_TEXT = { on = "|cff66dd66running|r", off = "|cff9d9d9doff|r",
     ["old folder"] = "|cffffd200standing aside: the old separate addon of the same name is still installed (Problems)|r" }
 local MODULE_ORDER = { "Mastercraft_FishingView", "CheapUpgrades_Baganator", "OpenMapTweaks_Mastercraft", "GearMatic_Baganator",
     "GearMatic_Forever", "DialogKey_Pawn", "Mastercraft_Auctionator", "DeleteCheapestItem_Protect", "Mastercraft_Keep",
-    "DungeonJournal_OpenMap", "Mastercraft_Chattynator", "Mastercraft_VendorSell", "Mastercraft_BankMats", "OpenMapMiniMap_Border" }
+    "DungeonJournal_OpenMap", "Mastercraft_Chattynator", "Mastercraft_VendorSell", "Mastercraft_BankMats", "OpenMapMiniMap_Border",
+    "ShortestPathForever_OpenMapMiniMap" }
 for _, short in ipairs(MODULE_ORDER) do
     local name = "MasterOptions_" .. short
     local function M() return _G.MasterOptions_Modules end
@@ -1177,6 +1280,33 @@ local function Problems()
         end
     end
 
+    -- Pawn without Pawn Forever: GearMatic's weights, CheapUpgrades' badges, the quest reward pick and Baganator's
+    -- upgrade arrow all follow the scales Pawn shows, and Pawn's stock Classic scales aren't made for WoW Forever
+    -- (enabled but not loaded yet is left to the "didn't load" check above, or to the reload after Enable)
+    if Loaded("Pawn") and not Exists("Pawn_Forever") then
+        add("pawnforever:missing", "Pawn is installed without Pawn Forever, so stat weights (GearMatic, CheapUpgrades, quest rewards, bag upgrade arrows) come from Pawn's stock Classic scales. Install Pawn Forever for weights made for WoW Forever.")
+    elseif Loaded("Pawn") and not AddonEnabled("Pawn_Forever") then
+        add("pawnforever:off", "Pawn Forever is disabled, so stat weights (GearMatic, CheapUpgrades, quest rewards, bag upgrade arrows) come from Pawn's stock Classic scales.",
+            "Enable", function() SetAddonEnabled("Pawn_Forever", true) end)
+    end
+
+    -- Sparkles_Forever with Mastercraft
+    local spk, mcs = SPK(), MC()
+    if spk and mcs then
+        -- Mastercraft's bobber mark on, Sparkles' bobber effect off: Sparkles then turns the bobber's nameplate off,
+        -- and Mastercraft's mark sits on it - so neither shows
+        if spk.sparkleBobber == false and mcs.fishMarker ~= false then
+            add("sparkles:bobber", "Mastercraft's fishing bobber mark is on but Sparkles' bobber effect is off - Sparkles then turns off the bobber's nameplate that Mastercraft's mark sits on, so your bobber isn't marked at all.",
+                "Use Sparkles'", function() spk.sparkleBobber = true; mcs.fishMarker = false end)
+        end
+        -- "Switch Herbs and Ore for me" swaps your tracking every few seconds: with nodes shown "While tracking",
+        -- Mastercraft's (and OpenMap_Tweaks', through the module) node pins blink in and out with it
+        if spk.minimapAutoAlternate == true and spk.minimapResources == true and (mcs.nodesWhen or "tracking") == "tracking" then
+            add("sparkles:alternate", "Sparkles' \"Switch Herbs and Ore for me\" swaps your tracking every few seconds, so gathering node pins shown \"While tracking\" blink in and out. Turn the switching off, or set When nodes show to Always.",
+                "Turn off", function() spk.minimapAutoAlternate = false end)
+        end
+    end
+
     -- 4. Baganator settings pointing at addons that aren't loaded
     local p = BAG()
     if p then
@@ -1215,7 +1345,7 @@ local Available
 
 -- Recommended setup, applied once per character on first load (and by the button).
 -- Skips anything whose addon isn't loaded; returns how many rows it set.
-local DEFAULTS_VERSION = 22
+local DEFAULTS_VERSION = 23
 local Remember -- set below
 local function ApplyRecommended(after, manual) -- after: only options added after this defaults version
     local n = 0

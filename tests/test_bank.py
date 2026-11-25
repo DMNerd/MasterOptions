@@ -24,7 +24,7 @@ BAG = {
   { itemID = 2592, adv = { "AUCTION", "Pays 40s more than vendoring." } },
   { itemID = 2321, adv = { "VENDOR", "Keep 2 for your Tailoring guide - you have 8, the other 6 can go." } },
   { itemID = 6256, adv = { "KEEP", "You use it for fishing." } },
-  { itemID = 2772, adv = { "KEEP", "You're tracking it: 4 / 20." } },
+  { itemID = 2772, adv = { "KEEP", "You're tracking it: 4 / 20." }, tracked = true },
   { itemID = 4338, adv = { "KEEP", "Testchar's Tailoring guide still needs 10." } },
 }
 MastercraftDB = { settings = { depositNever = { [4338] = true } } }
@@ -46,7 +46,12 @@ function GameTooltip:GetItem() return nil end
 function GameTooltip:Hide() end
 function GameTooltip:SetBagItem(b, s)
   local a = BAG[s].adv
-  LEFT, RIGHT = { "Item", " ", "|cff4da6ffMastercraft|r", a[2] }, { nil, nil, "|cffaaaaaa" .. a[1] .. "|r" }
+  if BAG[s].tracked then
+    -- Mastercraft 2.1.2, an item you track: its header first without the verdict, the Tracking row, then the reason
+    LEFT, RIGHT = { "Item", " ", "|cff4da6ffMastercraft|r", "Tracking", a[2] }, { nil, nil, nil, "4 / 20" }
+  else
+    LEFT, RIGHT = { "Item", " ", "|cff4da6ffMastercraft|r", a[2] }, { nil, nil, "|cffaaaaaa" .. a[1] .. "|r" }
+  end
 end
 for i = 1, 10 do
   _G["GameTooltipTextLeft" .. i] = { GetText = function() return LEFT[i] end }

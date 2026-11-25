@@ -39,18 +39,33 @@ local function Mode() return DB and DB.mode or "guide" end
 ---------------------------------------------------------------------------
 local function Strip(s) return (s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")) end
 
+-- Mastercraft's KEEP reasons (Loot.lua): only ever written under a KEEP verdict
+local KEEP_REASONS = { "guide still needs", "guide uses all", "^You're tracking it:" }
+local function KeepReason(t)
+    for _, p in ipairs(KEEP_REASONS) do if t:find(p) then return true end end
+end
+
 local function ReadTooltip(tip)
     local name = tip:GetName()
+    local header
     for i = 1, tip:NumLines() do
         local left = _G[name .. "TextLeft" .. i]
         local text = left and left:GetText()
-        if type(text) == "string" and text:find("Mastercraft", 1, true) then
-            local right = _G[name .. "TextRight" .. i]
-            local r = right and right:IsShown() and right:GetText()
-            if type(r) == "string" and r ~= "" then
-                local reason = _G[name .. "TextLeft" .. (i + 1)]
-                reason = reason and reason:GetText()
-                return Strip(r):upper(), type(reason) == "string" and Strip(reason) or ""
+        if type(text) == "string" then
+            if not header and text:find("Mastercraft", 1, true) then
+                header = i
+                local right = _G[name .. "TextRight" .. i]
+                local r = right and right:IsShown() and right:GetText()
+                if type(r) == "string" and r ~= "" then
+                    local reason = _G[name .. "TextLeft" .. (i + 1)]
+                    reason = reason and reason:GetText()
+                    return Strip(r):upper(), type(reason) == "string" and Strip(reason) or ""
+                end
+            elseif header then
+                -- an item you track: Mastercraft's header comes first, without the verdict (its "Tracking" row
+                -- under it), and the advice's reason line further down - known by its wording
+                local t = Strip(text)
+                if KeepReason(t) then return "KEEP", t end
             end
         end
     end

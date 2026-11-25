@@ -21,6 +21,16 @@ jobs:
         shell: pwsh
         run: .\scripts\test.ps1
 
+  # luacheck (.luacheckrc). Not a gate for releases yet: its first runs tune the config.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: luacheck
+        uses: lunarmodules/luacheck@v1
+        with:
+          args: addons/MasterOptions --config .luacheckrc
+
   release:
     needs: test
     if: startsWith(github.ref, 'refs/tags/v')

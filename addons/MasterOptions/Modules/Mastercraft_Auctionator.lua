@@ -36,7 +36,18 @@ local function FindMastercraft(ah)
     return scan(ah, 1)
 end
 
+-- Mastercraft's Settings > Modules (2.1.2): "AH prices" off = no Scan prices button (its old one stays hidden)
+local function AHPricesOn()
+    local s = type(_G.MastercraftDB) == "table" and _G.MastercraftDB.settings
+    local m = type(s) == "table" and s.modules
+    return not (type(m) == "table" and m.ah == false)
+end
+
 local function Setup()
+    if not AHPricesOn() then
+        if ours then ours:Hide() end
+        return
+    end
     local ah = AuctionHouseFrame or AuctionFrame
     local cfg = _G.AuctionatorConfigFrame
     if not (ah and cfg and cfg.OptionsButton) then return end -- Auctionator's page not there: leave Mastercraft's
@@ -61,6 +72,7 @@ local function Setup()
         ours:SetScript("OnLeave", function() GameTooltip:Hide() end)
     end
     ours:SetText(main:GetText() or "Scan prices")
+    ours:Show()
 end
 
 local f = CreateFrame("Frame")

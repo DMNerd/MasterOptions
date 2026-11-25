@@ -21,6 +21,7 @@ for _, n in ipairs(ADDON_LIST) do loaded[n] = true end
 loaded["FakeOutdated"] = false; loaded["CheapUpgrades_Baganator"] = false -- an old copy: exists, enabled, not loaded
 local enabled = {}
 for _, n in ipairs(ADDON_LIST) do enabled[n] = true end
+LOADED, ENABLED = loaded, enabled
 C_AddOns = {
   IsAddOnLoaded = function(n) return loaded[n] == true end,
   GetNumAddOns = function() return #ADDON_LIST end,
@@ -123,6 +124,35 @@ L(r'''
   end
   Fire("PLAYER_LOGOUT")
 ''')
+# Pawn without Pawn Forever shows up under Problems (not installed: no button; disabled: Enable)
+lua.execute(r'''
+  function ProblemText(pat)
+    for _, f in ipairs(FRAMES) do if type(f._text) == "string" and f._text:find(pat) then return f end end
+  end
+  function Reopen() MasterOptionsFrame:Hide(); for _, f in ipairs(FRAMES) do f._text = nil end; MasterOptionsFrame:Show() end
+  function ShowsProblem(pat) Reopen(); return ProblemText(pat) ~= nil end
+''')
+pf_before = lua.eval('ShowsProblem("Pawn Forever is disabled") or ShowsProblem("installed without Pawn Forever")')
+lua.execute('LOADED.Pawn_Forever = nil; ENABLED.Pawn_Forever = nil')
+pf_missing = lua.eval('ShowsProblem("installed without Pawn Forever")')
+lua.execute('ENABLED.Pawn_Forever = false')
+pf_off = lua.eval('ShowsProblem("Pawn Forever is disabled")')
+print("Pawn Forever problem: installed+loaded", pf_before, "/ missing", pf_missing, "/ disabled", pf_off)
+if pf_before or not pf_missing or not pf_off:
+    lua.execute('ERRORS[#ERRORS+1] = "Pawn Forever problem row wrong"')
+lua.execute('LOADED.Pawn_Forever = true; ENABLED.Pawn_Forever = true')
+# Sparkles_Forever with Mastercraft: the bobber mark that can't show, and tracking switching under "While tracking" pins
+lua.execute('LOADED.Sparkles_Forever = true; SparklesDB = { sparkleBobber = true, minimapResources = true, minimapAutoAlternate = false }; MastercraftDB.settings.fishMarker = true; MastercraftDB.settings.nodesWhen = nil')
+sp_ok = not lua.eval('ShowsProblem("bobber isn\'t marked") or ShowsProblem("Switch Herbs and Ore")')
+lua.execute('SparklesDB.sparkleBobber = false; SparklesDB.minimapAutoAlternate = true')
+sp_bob = lua.eval('ShowsProblem("bobber isn\'t marked")')
+sp_alt = lua.eval('ShowsProblem("Switch Herbs and Ore")')
+lua.execute('MastercraftDB.settings.nodesWhen = "always"')
+sp_alt_always = lua.eval('ShowsProblem("Switch Herbs and Ore")')
+print("Sparkles problems: none when fine", sp_ok, "/ bobber", sp_bob, "/ switching", sp_alt, "/ switching with Always", sp_alt_always)
+if not (sp_ok and sp_bob and sp_alt and not sp_alt_always):
+    lua.execute('ERRORS[#ERRORS+1] = "Sparkles problem rows wrong"')
+lua.execute('SparklesDB = nil; MastercraftDB.settings.nodesWhen = nil')
 print("synced:", lua.eval("MasterOptionsDB.syncChars"), "shared:", lua.eval("(function() local o = {} for k, v in pairs(MasterOptionsDB.shared or {}) do o[#o+1] = k .. '=' .. tostring(v) end table.sort(o) return table.concat(o, '; ') end)()"))
 print("errlog rows:", lua.eval("MasterOptions_ErrorLog and MasterOptions_ErrorLog.Count()"), "copy window:", lua.eval("MasterOptionsErrorFrame ~= nil"))
 errs = lua.eval("ERRORS")

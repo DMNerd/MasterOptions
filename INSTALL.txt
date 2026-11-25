@@ -1,4 +1,4 @@
-Master Options 2.0 - install on Windows
+Master Options 2.1 - install on Windows
 =======================================
 
 1. Close World of Warcraft.
@@ -14,6 +14,10 @@ Master Options 2.0 - install on Windows
      C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns
    (Battle.net > WoW > gear icon > Show in Explorer, then _forever_\Interface\AddOns)
 4. Start WoW. Type /mo for the Master Options window, or find it in Options > AddOns > Master Options.
+
+Using Pawn? Install Pawn Forever too (strongly recommended). Without it, stat weights for GearMatic, CheapUpgrades,
+quest rewards and bag upgrade arrows come from Pawn's stock Classic scales, which aren't made for WoW Forever.
+/mo > Problems reminds you if it's missing or disabled.
 
 Modules - each runs only when the addons it works with are loaded, and can be turned off under /mo > Modules:
   Mastercraft / FishingView     Mastercraft (+ Baganator, Chattynator, DeleteCheapestItem)

@@ -20,6 +20,7 @@ $tests = @(
     @("module loader",               "test_modules.py", @((Join-Path $a "MasterOptions\Modules.lua"))),
     @("error log",                   "test_errlog.py", @((Join-Path $a "MasterOptions\ErrorLog.lua"))),
     @("Pawn scales / stat weights",  "test_pawn.py",   @($mo)),
+    @("recommended defaults: upgrade", "test_defaults.py", @($mo)),
     @("GearMatic_Forever",           "test_forever.py", @((Join-Path $t "fixtures\GearMatic_sv_copy.lua"), (F "MasterOptions_GearMatic_Forever"))),
     @("Mastercraft_Keep",            "test_keep.py",   @((F "MasterOptions_Mastercraft_Keep"))),
     @("DeleteCheapestItem_Protect",  "test_protect.py", @((F "MasterOptions_Mastercraft_Keep"), (F "MasterOptions_DeleteCheapestItem_Protect"))),
@@ -28,6 +29,8 @@ $tests = @(
     @("OpenMapMiniMap_Border",       "test_border.py", @((F "MasterOptions_OpenMapMiniMap_Border"))),
     @("DungeonJournal_OpenMap pins", "test_djpin.py",  @((F "MasterOptions_DungeonJournal_OpenMap"))),
     @("DungeonJournal_OpenMap map",  "test_dmap.py",   @((F "MasterOptions_DungeonJournal_OpenMap"))),
+    @("OpenMapTweaks_Mastercraft stitched map", "test_omtstitch.py", @((F "MasterOptions_OpenMapTweaks_Mastercraft"))),
+    @("ShortestPathForever_OpenMapMiniMap", "test_spfgoal.py", @((F "MasterOptions_ShortestPathForever_OpenMapMiniMap"))),
     @("Mastercraft_FishingView",     "test_fish.py",   @((F "MasterOptions_Mastercraft_FishingView"))),
     @("Mastercraft_Chattynator",     "test_played.py", @((F "MasterOptions_Mastercraft_Chattynator")))
 )

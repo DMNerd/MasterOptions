@@ -8,6 +8,7 @@ MasterOptions_Module("OpenMapTweaks_Mastercraft", { "OpenMap_Tweaks", "Mastercra
 -- OpenMap_Tweaks as the one drawing pins, and applies Mastercraft's own node settings to them:
 --   Settings > Nodes "Show" filter : skillups (default) / gatherable / all
 --   Settings > Nodes "When"        : tracking (default) / farming / always / never
+--   the profession's own map switch (settings.nodes.Mining / .Herbalism = false)
 -- Change those in Mastercraft (or Master Options) and the OpenMap_Tweaks pins follow.
 -- Turn Mastercraft's own map/minimap pins off to avoid two pins per node (Master Options does this).
 
@@ -82,12 +83,24 @@ end
 ---------------------------------------------------------------------------
 -- Mastercraft's rules (Nodes.lua: ns.NodesActive and Wanted), applied to an OpenMap_Tweaks node
 ---------------------------------------------------------------------------
+local PROF_KEY = { [MINE] = "Mining", [HERB] = "Herbalism" } -- (Mastercraft's settings.nodes[prof] keys)
+
+-- Mastercraft's farm session (Farm.lua: saved per character GUID while it runs, cleared at a real login)
+local function Farming()
+    local farm = type(_G.MastercraftDB) == "table" and _G.MastercraftDB.farm
+    local s = type(farm) == "table" and UnitGUID and farm[UnitGUID("player") or ""]
+    return type(s) == "table" and type(s.start) == "number"
+end
+
 local function Active(sl)
-    local when = MC().nodesWhen or "tracking"
+    local s = MC()
+    if type(s.nodes) == "table" and s.nodes[PROF_KEY[sl]] == false then return false end -- (the profession's map switch)
+    local when = s.nodesWhen or "tracking"
     if when == "never" then return false end
     if when == "always" then return true end
     if (IsResting and IsResting()) or (IsInInstance and IsInInstance()) or InCombatLockdown() then return false end
-    return Tracking(sl) -- ("farming" is Mastercraft-only state: treated as tracking here)
+    if when == "farming" then return Farming() end -- (after Start farming only)
+    return Tracking(sl) or Farming()
 end
 
 local function Wanted(e)
@@ -112,18 +125,54 @@ if type(Mixin) == "table" and type(Mixin.OnAcquired) == "function" then
     local orig = Mixin.OnAcquired
     Mixin.OnAcquired = function(self, spot, x, y)
         orig(self, spot, x, y)
-        local show = false
-        for _, item in ipairs(spot and spot.list or {}) do
-            if Wanted(item.e) then show = true break end
-        end
-        self:SetShown(show)
+        self:SetShown(SpotWanted(spot))
     end
 end
+
+local function SpotWanted(spot)
+    for _, item in ipairs(spot and spot.list or {}) do
+        if Wanted(item.e) then return true end
+    end
+    return false
+end
+
+---------------------------------------------------------------------------
+-- World map with OpenMap's stitched map on: OpenMap_Tweaks skips the data provider above and adds its
+-- pins through OpenMap.MapStitch.AddPin to the pin set "omt_gather" (each pin's .data is the spot).
+-- AddPin shows the pin last and nothing after it shows it again, so hiding it right after sticks.
+---------------------------------------------------------------------------
+local STITCH_SET = "omt_gather"
+local stitchHooked = false
+local function Stitch()
+    local om = rawget(_G, "OpenMap")
+    local S = type(om) == "table" and om.MapStitch
+    if type(S) == "table" and type(S.AddPin) == "function" and type(S.GetPinSet) == "function" then return S end
+end
+local function HookStitch()
+    if stitchHooked then return end
+    local S = Stitch()
+    if not S then return end
+    stitchHooked = true
+    hooksecurefunc(S, "AddPin", function(set, u, v, look, data)
+        if set ~= S.GetPinSet(STITCH_SET) then return end
+        local pin = set.pins and set.pins[#set.pins]
+        if pin and pin.data == data and not SpotWanted(data) then pin:Hide() end
+    end)
+end
+local function RefreshStitched()
+    local S = stitchHooked and Stitch()
+    local set = S and S.GetPinSet(STITCH_SET)
+    for _, pin in ipairs(set and set.pins or {}) do
+        if type(pin.data) == "table" then pin:SetShown(SpotWanted(pin.data)) end
+    end
+end
+HookStitch()
 
 local function RefreshWorldMap()
     if WorldMapFrame and WorldMapFrame:IsShown() and WorldMapFrame.RefreshAllDataProviders then
         pcall(WorldMapFrame.RefreshAllDataProviders, WorldMapFrame)
     end
+    RefreshStitched()
 end
 
 ---------------------------------------------------------------------------
@@ -186,7 +235,7 @@ end
 local lastState
 local function StateKey()
     local s = MC()
-    return table.concat({ tostring(s.nodesFilter), tostring(s.nodesWhen),
+    return table.concat({ tostring(s.nodesFilter), tostring(s.nodesWhen), tostring(Farming()),
         tostring(Active(MINE)), tostring(Active(HERB)), tostring(ranks[MINE]), tostring(ranks[HERB]) }, "|")
 end
 
@@ -214,6 +263,7 @@ ev:SetScript("OnUpdate", function(_, dt)
     wait = wait + dt
     if wait < 0.5 then return end
     wait = 0
+    HookStitch() -- (OpenMap builds its stitched map late: hooked once it exists)
     HookNewPins()
     RefreshAll()
 end)

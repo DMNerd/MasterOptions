@@ -331,6 +331,18 @@ local function Money(c)
     return ("%dg %ds %dc"):format(c / 10000, (c / 100) % 100, c % 100)
 end
 
+-- a grey with a vendor price still in the bags: Mastercraft's own junk pass isn't done
+local function GreysLeft()
+    for bag = 0, (NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4) do
+        for slot = 1, (numSlots(bag) or 0) do
+            local info = slotInfo(bag, slot)
+            -- (a locked one is a sale on its way: still waiting)
+            if info and info.quality == 0 and not info.hasNoValue then return true end
+        end
+    end
+    return false
+end
+
 local function SellOurselves(list)
     run = run + 1
     local me, i, sold, value = run, 0, 0, 0
@@ -371,8 +383,19 @@ local function OnMerchant(tries)
     if seller == "gearmatic" then
         SellWithGearMatic(list)
     else
-        -- after Mastercraft's own grey pass has started (different items, but the server drops sales sent at once)
-        C_Timer.After(1, function() if merchantOpen then SellOurselves(list) end end)
+        -- after Mastercraft's own grey sales (different items, but the server drops sales sent at once): since
+        -- 2.1.2 it sells them in up to 3 passes, 0.15 s apart - so wait until no grey with a price is left in the
+        -- bags (checked every 0.5 s, at most ~8 s)
+        local waited = 0
+        local function AfterGreys()
+            if not merchantOpen then return end
+            if GreysLeft() and waited < 16 then
+                waited = waited + 1
+                return C_Timer.After(0.5, AfterGreys)
+            end
+            SellOurselves(list)
+        end
+        C_Timer.After(1, AfterGreys)
     end
 end
 

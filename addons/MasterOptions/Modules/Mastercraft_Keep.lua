@@ -121,9 +121,17 @@ local function GuideLinesOn()
     return not (type(s) == "table" and s.tipGuide == false)
 end
 
+-- Mastercraft's Settings > Modules (2.1.2): "Tooltip extras" off = no Mastercraft lines at all. Then a tooltip
+-- says nothing about the item, and reading it would forget what's needed: learn nothing until it's back on.
+local function TooltipLinesOn()
+    local s = type(_G.MastercraftDB) == "table" and _G.MastercraftDB.settings
+    local m = type(s) == "table" and s.modules
+    return not (type(m) == "table" and m.tip == false)
+end
+
 local pending = false
 local function Learn(tooltip, data)
-    if tooltip ~= GameTooltip or not DB then return end
+    if tooltip ~= GameTooltip or not DB or not TooltipLinesOn() then return end
     local itemID = data and type(data.id) == "number" and data.id
     if not itemID then
         local _, link = tooltip:GetItem()

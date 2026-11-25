@@ -11,7 +11,7 @@ MasterOptions_Module("Mastercraft_FishingView", { "Mastercraft" }, function(ADDO
 -- Mastercraft does for its own; given back when the view ends or the window closes):
 --   * Baganator's bag, bank and guild bank windows (was MasterOptions_Mastercraft_Baganator)
 --   * DeleteCheapestItem's window (fishing fills your bags: it pops up then)
---   * confirmation pop-ups (StaticPopup) and loot rolls (GroupLootFrame)
+--   * confirmation pop-ups (StaticPopup) and loot rolls (GroupLootFrame, the controller UI's too)
 -- And Chattynator: its windows ignore their parent's alpha anyway (they need to), so Mastercraft's own chat
 -- setting never reached them. With Mastercraft's "hide chat while fishing" they are hidden now too; with
 -- "only after a whisper", shown again for a while when one comes in.
@@ -19,7 +19,7 @@ MasterOptions_Module("Mastercraft_FishingView", { "Mastercraft" }, function(ADDO
 -- Event-driven: only while the interface is hidden does a watcher run (5 times a second, to catch a window
 -- opened then); the rest of the time this does nothing.
 
-local WHISPER_SHOW = 15 -- seconds Chattynator's chat shows after a whisper ("only after a whisper")
+local WHISPER_SHOW = 30 -- seconds Chattynator's chat shows after a whisper ("only after a whisper"), as Mastercraft's own chat
 
 local kept = {}         -- [frame] = its IsIgnoringParentAlpha before
 local chatHidden = {}   -- [chat window] = its alpha before
@@ -58,10 +58,11 @@ local function Keepers()
     local list = {}
     BaganatorFrames(list)
     list[#list + 1] = _G.DCIFrame
-    for i = 1, 4 do
-        list[#list + 1] = _G["StaticPopup" .. i]
-        list[#list + 1] = _G["GroupLootFrame" .. i]
-    end
+    for i = 1, 4 do list[#list + 1] = _G["StaticPopup" .. i] end
+    -- (up to 8 rolls at once, as ForeverLootRollMover handles them, and the controller UI's roll frame;
+    -- a frame this client doesn't have is nil and left out)
+    for i = 1, 8 do list[#list + 1] = _G["GroupLootFrame" .. i] end
+    list[#list + 1] = _G.GamepadGroupLootRollFrame
     return list
 end
 

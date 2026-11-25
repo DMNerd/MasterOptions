@@ -174,6 +174,22 @@ L(r'''
   SlashCmdList.MASTEROPTIONS("options")
   print("/mo options opened category id:", tostring(OPENED))
 ''')
+# the Fishing bobber mark row (Sparkles_Forever + Mastercraft), through the Options page's own control
+lua.execute('SparklesDB = { sparkleBobber = true }; MastercraftDB.settings.fishMarker = true')
+lua.execute(r'''
+  for _, s in ipairs(SETTINGS) do if s.name == "Fishing bobber mark" then BOBBER = s end end
+''')
+if lua.eval("BOBBER") is None:
+    print("bobber row: not on the Options page")
+    lua.execute('ERRORS[#ERRORS+1] = "Fishing bobber mark row missing"')
+else:
+    got = [lua.eval("BOBBER.get()")]
+    for v in ("Sparkles", "Off", "Both"):
+        lua.execute('BOBBER.set("%s")' % v)
+        got.append((v, lua.eval("BOBBER.get()"), lua.eval("SparklesDB.sparkleBobber"), lua.eval("MastercraftDB.settings.fishMarker")))
+    print("bobber row:", got)
+    if got != ["Both", ("Sparkles", "Sparkles", True, False), ("Off", "Off", False, False), ("Both", "Both", True, True)]:
+        lua.execute('ERRORS[#ERRORS+1] = "Fishing bobber mark row wrong"')
 print("synced:", lua.eval("MasterOptionsDB.syncChars"), "shared:", lua.eval("(function() local o = {} for k, v in pairs(MasterOptionsDB.shared or {}) do o[#o+1] = k .. '=' .. tostring(v) end table.sort(o) return table.concat(o, '; ') end)()"))
 errs = lua.eval("ERRORS")
 print("ERRORS:", len(errs))
