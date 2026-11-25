@@ -1,0 +1,16 @@
+# Patch addons that are now modules inside MasterOptions (scripts\migrate.ps1 moves their saved data and
+# removes their folders from AddOns)
+MasterOptions_DeleteCheapestItem_Protect
+MasterOptions_DialogKey_Pawn
+MasterOptions_DungeonJournal_OpenMap
+MasterOptions_GearMatic_Baganator
+MasterOptions_GearMatic_Forever
+MasterOptions_CheapUpgrades_Baganator
+MasterOptions_Mastercraft_Auctionator
+MasterOptions_Mastercraft_BankMats
+MasterOptions_Mastercraft_FishingView
+MasterOptions_Mastercraft_Chattynator
+MasterOptions_Mastercraft_Keep
+MasterOptions_Mastercraft_VendorSell
+MasterOptions_OpenMapMiniMap_Border
+MasterOptions_OpenMapTweaks_Mastercraft

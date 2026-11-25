@@ -1,0 +1,33 @@
+Master Options 2.0 - install on Windows
+=======================================
+
+1. Close World of Warcraft.
+2. If you have an older version, delete these old folders from your AddOns folder. Master Options 2.0 does
+   their job itself, as modules:
+     every folder whose name starts with "MasterOptions_" (MasterOptions_Mastercraft_Keep and so on)
+     Mastercraft_Baganator, CheapUpgrades_Baganator, OpenMapTweaks_Mastercraft, GearMatic_Baganator
+     OpenMap_NoDungeonMap
+   (Master Options also lists any it finds under "Problems" in /mo. Your settings from the old patches start
+   over unless you move their saved data - scripts\migrate.ps1 in the source does that.)
+3. Copy the MasterOptions folder into your AddOns folder.
+   AddOns folder is usually:
+     C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns
+   (Battle.net > WoW > gear icon > Show in Explorer, then _forever_\Interface\AddOns)
+4. Start WoW. Type /mo for the Master Options window, or find it in Options > AddOns > Master Options.
+
+Modules - each runs only when the addons it works with are loaded, and can be turned off under /mo > Modules:
+  Mastercraft / FishingView     Mastercraft (+ Baganator, Chattynator, DeleteCheapestItem)
+  Mastercraft / Chattynator     Mastercraft + Chattynator
+  Mastercraft / Auctionator     Mastercraft + Auctionator
+  Mastercraft / Keep            Mastercraft (+ GearMatic)
+  Mastercraft / VendorSell      Mastercraft (+ GearMatic, Pawn)
+  Mastercraft / BankMats        Mastercraft
+  CheapUpgrades / Baganator     CheapUpgrades + Baganator
+  OpenMapTweaks / Mastercraft   OpenMap_Tweaks + Mastercraft
+  OpenMapMiniMap / Border       OpenMap_MiniMap
+  GearMatic / Baganator         GearMatic + Baganator
+  GearMatic / Forever           GearMatic
+  DialogKey / Pawn              DialogKey_Numy (+ Pawn or GearMatic)
+  DeleteCheapestItem / Protect  DeleteCheapestItem (+ Pawn, GearMatic, Mastercraft)
+  DungeonJournal / OpenMap      ForeverDungeonJournal + OpenMap
+Master Options works with whatever is installed and greys out the rest.

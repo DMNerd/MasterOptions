@@ -1,0 +1,220 @@
+-- Master Options module (was the addon MasterOptions_OpenMapTweaks_Mastercraft): runs when OpenMap_Tweaks and Mastercraft are loaded.
+MasterOptions_Module("OpenMapTweaks_Mastercraft", { "OpenMap_Tweaks", "Mastercraft" }, function(ADDON)
+
+-- OpenMap_Tweaks <-> Mastercraft compatibility patch.
+--
+-- Both addons can draw ore and herb spawn points. OpenMap_Tweaks' pins are built for OpenMap's
+-- stitched map and painted minimap; Mastercraft's have the smarter filter. This patch keeps
+-- OpenMap_Tweaks as the one drawing pins, and applies Mastercraft's own node settings to them:
+--   Settings > Nodes "Show" filter : skillups (default) / gatherable / all
+--   Settings > Nodes "When"        : tracking (default) / farming / always / never
+-- Change those in Mastercraft (or Master Options) and the OpenMap_Tweaks pins follow.
+-- Turn Mastercraft's own map/minimap pins off to avoid two pins per node (Master Options does this).
+
+local HERB, MINE = 182, 186
+local MAX_SKILL = 300
+local TRACK_SPELL = { [MINE] = 2580, [HERB] = 2383 }             -- Find Minerals, Find Herbs
+local TRACK_ICON  = { [MINE] = 136025, [HERB] = 133939 }
+local PROF_NAMES = {
+    [HERB] = { Herbalism = true, Herboristerie = true, ["Kräuterkunde"] = true, ["Herboristería"] = true, Erbalismo = true, Herborismo = true },
+    [MINE] = { Mining = true, Minage = true, Bergbau = true, ["Minería"] = true, Estrazione = true, ["Mineração"] = true },
+}
+
+local function MC() local db = _G.MastercraftDB; return type(db) == "table" and db.settings or {} end
+
+---------------------------------------------------------------------------
+-- Player state
+---------------------------------------------------------------------------
+local ranks = {}
+local function ScanRanks()
+    local found = {}
+    if GetProfessions and GetProfessionInfo then
+        local res = { pcall(GetProfessions) }
+        if res[1] then
+            for i = 2, 6 do
+                local idx = res[i]
+                if idx then
+                    local ok, _, _, rank, _, _, _, sl = pcall(GetProfessionInfo, idx)
+                    if ok and (sl == HERB or sl == MINE) then found[sl] = rank or 0 end
+                end
+            end
+        end
+    end
+    if next(found) == nil and GetNumSkillLines and GetSkillLineInfo then
+        for i = 1, GetNumSkillLines() do
+            local name, header, _, rank = GetSkillLineInfo(i)
+            if name and not header then
+                for sl, names in pairs(PROF_NAMES) do
+                    if names[name] then found[sl] = rank or 0 end
+                end
+            end
+        end
+    end
+    ranks = found
+end
+
+local trackName = {}
+local function SpellName(id)
+    if trackName[id] == nil then
+        local n = (C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(id)) or (GetSpellInfo and GetSpellInfo(id))
+        trackName[id] = n or false
+    end
+    return trackName[id] or nil
+end
+
+local function Tracking(sl)
+    local id = TRACK_SPELL[sl]
+    if C_Minimap and C_Minimap.GetNumTrackingTypes and C_Minimap.GetTrackingInfo then
+        local name = SpellName(id)
+        for i = 1, C_Minimap.GetNumTrackingTypes() or 0 do
+            local info = C_Minimap.GetTrackingInfo(i)
+            if type(info) == "table" and info.active
+                and (info.spellID == id or (name and info.name == name)) then return true end
+        end
+    end
+    if GetTrackingTexture then
+        local tex = GetTrackingTexture()
+        if tex == TRACK_ICON[sl] then return true end
+    end
+    return false
+end
+
+---------------------------------------------------------------------------
+-- Mastercraft's rules (Nodes.lua: ns.NodesActive and Wanted), applied to an OpenMap_Tweaks node
+---------------------------------------------------------------------------
+local function Active(sl)
+    local when = MC().nodesWhen or "tracking"
+    if when == "never" then return false end
+    if when == "always" then return true end
+    if (IsResting and IsResting()) or (IsInInstance and IsInInstance()) or InCombatLockdown() then return false end
+    return Tracking(sl) -- ("farming" is Mastercraft-only state: treated as tracking here)
+end
+
+local function Wanted(e)
+    if type(e) ~= "table" or (e.sl ~= HERB and e.sl ~= MINE) then return true end
+    if not Active(e.sl) then return false end
+    local filter = MC().nodesFilter or "skillups"
+    if filter == "all" then return true end
+    local skill = ranks[e.sl]
+    if not skill then return false end
+    local req = tonumber(e.l)
+    if not req then return true end
+    if skill < req then return false end
+    if filter == "gatherable" or skill >= MAX_SKILL then return true end
+    return skill - req < 100
+end
+
+---------------------------------------------------------------------------
+-- World map: filter each pin as OpenMap_Tweaks acquires it
+---------------------------------------------------------------------------
+local Mixin = _G.OpenMapTweaksNodePinMixin
+if type(Mixin) == "table" and type(Mixin.OnAcquired) == "function" then
+    local orig = Mixin.OnAcquired
+    Mixin.OnAcquired = function(self, spot, x, y)
+        orig(self, spot, x, y)
+        local show = false
+        for _, item in ipairs(spot and spot.list or {}) do
+            if Wanted(item.e) then show = true break end
+        end
+        self:SetShown(show)
+    end
+end
+
+local function RefreshWorldMap()
+    if WorldMapFrame and WorldMapFrame:IsShown() and WorldMapFrame.RefreshAllDataProviders then
+        pcall(WorldMapFrame.RefreshAllDataProviders, WorldMapFrame)
+    end
+end
+
+---------------------------------------------------------------------------
+-- Minimap: OpenMap_Tweaks calls :Show() on each pin every update; hide the unwanted ones
+---------------------------------------------------------------------------
+local hooked, hiddenByUs = {}, {}
+local childCount = 0
+
+local function IsOMTPin(f)
+    return type(f) == "table" and f.Icon and f.mode ~= nil and f.e ~= nil
+end
+
+local ourHide = false
+local function HideOurs(f)
+    ourHide = true
+    f:Hide()
+    ourHide = false
+    hiddenByUs[f] = true
+end
+
+local function CheckPin(f)
+    if Wanted(f.e) then
+        if hiddenByUs[f] then hiddenByUs[f] = nil; f:Show() end
+    elseif f:IsShown() then
+        HideOurs(f)
+    end
+end
+
+local function HookNewPins()
+    if not Minimap then return end
+    local n = Minimap:GetNumChildren()
+    if n == childCount then return end
+    childCount = n
+    for _, f in ipairs({ Minimap:GetChildren() }) do
+        if not hooked[f] and IsOMTPin(f) then
+            hooked[f] = true
+            hooksecurefunc(f, "Show", function(self)
+                hiddenByUs[self] = nil
+                if not Wanted(self.e) then HideOurs(self) end
+            end)
+            -- OpenMap_Tweaks retiring a pin: it's no longer ours to bring back
+            hooksecurefunc(f, "Hide", function(self)
+                if not ourHide then hiddenByUs[self] = nil end
+            end)
+            CheckPin(f)
+        end
+    end
+end
+
+local function RefreshMinimap()
+    for f in pairs(hooked) do
+        -- a pin OpenMap_Tweaks itself retired (not ours to bring back) stays hidden
+        if f:IsShown() or hiddenByUs[f] then CheckPin(f) end
+    end
+end
+
+---------------------------------------------------------------------------
+-- Events
+---------------------------------------------------------------------------
+local lastState
+local function StateKey()
+    local s = MC()
+    return table.concat({ tostring(s.nodesFilter), tostring(s.nodesWhen),
+        tostring(Active(MINE)), tostring(Active(HERB)), tostring(ranks[MINE]), tostring(ranks[HERB]) }, "|")
+end
+
+local function RefreshAll()
+    local key = StateKey()
+    if key == lastState then return end
+    lastState = key
+    RefreshMinimap()
+    RefreshWorldMap()
+end
+
+local ev = CreateFrame("Frame")
+for _, e in ipairs({ "PLAYER_LOGIN", "SKILL_LINES_CHANGED", "MINIMAP_UPDATE_TRACKING", "PLAYER_UPDATE_RESTING",
+    "ZONE_CHANGED_NEW_AREA", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
+    pcall(ev.RegisterEvent, ev, e)
+end
+ev:SetScript("OnEvent", function(_, event)
+    if event == "PLAYER_LOGIN" or event == "SKILL_LINES_CHANGED" then ScanRanks() end
+    RefreshAll()
+end)
+
+-- New minimap pins appear as you move; settings can change in Mastercraft's window. A light look twice a second.
+local wait = 0
+ev:SetScript("OnUpdate", function(_, dt)
+    wait = wait + dt
+    if wait < 0.5 then return end
+    wait = 0
+    HookNewPins()
+    RefreshAll()
+end)
+end)

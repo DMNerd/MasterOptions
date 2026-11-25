@@ -1,0 +1,18 @@
+SYNDICATOR_CONFIG = {
+	["auction_value_source"] = "auctionator-latest",
+	["debug"] = false,
+	["debug_timers"] = false,
+	["no_auction_value_source"] = false,
+	["show_blank_line_before_inventory"] = false,
+	["show_character_race_icons"] = true,
+	["show_currency_tooltips"] = true,
+	["show_equipped_items_in_tooltips"] = true,
+	["show_guild_banks_in_tooltips"] = true,
+	["show_inventory_tooltips"] = true,
+	["show_tooltips_on_shift"] = false,
+	["show_total_line_after_characters"] = false,
+	["tooltips_character_limit"] = 4,
+	["tooltips_connected_realms_only_2"] = true,
+	["tooltips_faction_only"] = false,
+	["tooltips_sort_by_name"] = false,
+}
