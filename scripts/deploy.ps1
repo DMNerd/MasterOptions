@@ -1,6 +1,6 @@
 # Copies the addons in this repo into the game's AddOns folder (replacing those folders only).
 # Then /reload in game. Pass -AddOns to use another folder.
-param([string]$AddOns = "D:\World of Warcraft\_forever_\Interface\AddOns")
+param([string]$AddOns = $(if ($IsMacOS) { "/Applications/World of Warcraft/_forever_/Interface/AddOns" } else { "D:\World of Warcraft\_forever_\Interface\AddOns" }))
 $ErrorActionPreference = "Stop"
 $src = Join-Path (Split-Path $PSScriptRoot -Parent) "addons"
 # (once: the old patch addons' saved data into MasterOptions, their folders out of AddOns - see migrate.ps1)

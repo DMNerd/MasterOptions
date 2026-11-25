@@ -2,7 +2,7 @@
 # still in the installed copies - functions, frames, settings keys, tooltip texts. A missing one means that
 # addon renamed or removed something we use: look closer before playing (and tell Claude which).
 # It reads the addons' files only. Exit code 1 if anything is missing.
-param([string]$AddOns = "D:\World of Warcraft\_forever_\Interface\AddOns")
+param([string]$AddOns = $(if ($IsMacOS) { "/Applications/World of Warcraft/_forever_/Interface/AddOns" } else { "D:\World of Warcraft\_forever_\Interface\AddOns" }))
 $ErrorActionPreference = "Stop"
 $list = Join-Path $PSScriptRoot "touchpoints.txt"
 if (-not (Test-Path $AddOns)) { throw "AddOns folder not found: $AddOns" }

@@ -2,10 +2,12 @@
 # First run creates .venv and installs lupa. Exit code 1 if any test fails.
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
-$py = Join-Path $root ".venv\Scripts\python.exe"
+$py = if ($IsMacOS -or $IsLinux) { Join-Path $root ".venv/bin/python" } else { Join-Path $root ".venv\Scripts\python.exe" }
 if (-not (Test-Path $py)) {
     Write-Host "Creating .venv ..."
-    python -m venv (Join-Path $root ".venv")
+    # macOS: prefer Homebrew python3 (the system one is 3.9); Windows: python
+    $base = if ($IsMacOS -or $IsLinux) { (Get-Command python3.13, python3.12, python3 -ErrorAction SilentlyContinue | Select-Object -First 1).Source } else { "python" }
+    & $base -m venv (Join-Path $root ".venv")
     & $py -m pip install --quiet lupa==2.8
 }
 $a = Join-Path $root "addons"
@@ -37,6 +39,9 @@ $tests = @(
     @("Mastercraft_Chattynator",     "test_played.py", @((F "MasterOptions_Mastercraft_Chattynator")))
 )
 
+# macOS/Linux: run Lua in the C locale, as WoW does. Under a UTF-8 locale macOS treats bytes 0x80-0x9F as
+# %c (control) in Lua patterns, which breaks multi-byte characters such as long dashes.
+if ($IsMacOS -or $IsLinux) { $env:LC_ALL = "C"; $env:PYTHONCOERCECLOCALE = "0" }
 $failed = @()
 foreach ($x in $tests) {
     $name, $script, $args2 = $x

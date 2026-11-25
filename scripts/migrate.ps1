@@ -5,12 +5,12 @@
 #  2. the old patch folders in AddOns: zipped to backups\ (outside git), then removed - while one is installed,
 #     its module stands aside.
 # WoW must be closed: it rewrites the saved-variables files when you log out.
-param([string]$Game = "D:\World of Warcraft\_forever_")
+param([string]$Game = $(if ($IsMacOS) { "/Applications/World of Warcraft/_forever_" } else { "D:\World of Warcraft\_forever_" }))
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $old = Get-Content (Join-Path $PSScriptRoot "retired.txt") | Where-Object { $_ -and -not $_.StartsWith("#") }
 
-if (Get-Process -Name "Wow" -ErrorAction SilentlyContinue) {
+if (Get-Process -Name "Wow", "World of Warcraft" -ErrorAction SilentlyContinue) {
     throw "WoW is running. Close it first: it rewrites the saved-variables files when you log out."
 }
 
