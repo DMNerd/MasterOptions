@@ -29,6 +29,19 @@ public data and settings; the third-party addons themselves are never edited.
 
 Edit in `addons/`, run the tests, deploy, then check in game.
 
+## Releases
+
+GitHub Actions (`.github/workflows/release.yml`) runs the tests on every push to `main` and on pull requests.
+To publish a release, bump `## Version:` in `MasterOptions.toc`, commit, then tag that commit with the same version:
+
+```powershell
+git tag v2.0.1
+git push origin main v2.0.1
+```
+
+The workflow checks that the tag matches the `.toc` version, builds the pack, and attaches
+`MasterOptions-<version>.zip` to a new GitHub Release with notes generated from the commits.
+
 **Test data:** `tests/fixtures/` holds anonymised settings tables (characters renamed Testchar Alpha / Testchar Beta, realm
 "Test Realm", logs and other players' names removed).
 

@@ -1,0 +1,57 @@
+# Tests every push to main and every pull request.
+# Pushing a tag vX.Y.Z (matching "## Version: X.Y.Z" in MasterOptions.toc) also builds the pack and publishes a GitHub Release.
+name: Test and release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run sandbox tests
+        shell: pwsh
+        run: .\scripts\test.ps1
+
+  release:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches .toc version
+        id: version
+        shell: pwsh
+        run: |
+          $toc = Get-Content addons\MasterOptions\MasterOptions.toc -Raw
+          if ($toc -notmatch '(?m)^## Version:\s*(\S+)') { throw "No '## Version:' line in MasterOptions.toc" }
+          $version = $Matches[1]
+          $tag = "${{ github.ref_name }}"
+          if ($tag -ne "v$version") { throw "Tag $tag does not match .toc version $version (expected v$version)" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build pack
+        shell: pwsh
+        run: |
+          .\scripts\pack.ps1
+          Move-Item dist\MasterOptionsPack.zip "dist\MasterOptions-${{ steps.version.outputs.version }}.zip"
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" "dist\MasterOptions-${{ steps.version.outputs.version }}.zip" `
+            --title "Master Options ${{ steps.version.outputs.version }}" `
+            --generate-notes
