@@ -6,6 +6,12 @@ exclude_files = { "addons/MasterOptions/Libs/**", ".venv/**", ".tools/**", "dist
 -- WoW callbacks get arguments they don't use (self, event, ...); not worth a warning each
 unused_args = false
 
+-- Deliberate, one name in one file each:
+-- WoW's Lua 5.1 has unpack; the sandbox tests' newer Lua only table.unpack (`unpack or table.unpack`)
+files["addons/MasterOptions/Modules/OpenMapMiniMap_Border.lua"] = { ignore = { "143/table" } }
+-- the reward pre-select writes the game's own choice field, QuestInfoFrame.itemChoice
+files["addons/MasterOptions/Modules/DialogKey_Pawn.lua"] = { ignore = { "122/QuestInfoFrame" } }
+
 -- Globals Master Options defines (saved variables, its slash command, what modules share)
 globals = {
     "MasterOptionsDB", "MasterOptions_DialogKeyPawnDB", "MasterOptions_DJOpenMapDB", "MasterOptions_GearMaticForeverDB",

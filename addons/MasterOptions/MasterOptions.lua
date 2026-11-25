@@ -2,7 +2,6 @@
 -- It reads and writes each addon's own settings, so nothing here fights them: change a setting
 -- in the addon itself and this window shows the new state next time it opens.
 
-local ADDON = ...
 local AddonLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
 -- loaded: an addon - or one of our modules (Modules.lua: what were MasterOptions_* patch addons), running
 local function Loaded(name)

@@ -28,6 +28,14 @@ lua.execute(r'''
                 GetTrackingInfo = function() return { active = TRACKING, spellID = 2580 } end }
   MastercraftDB = { settings = { nodesFilter = "skillups", nodesWhen = "tracking" } }
   OpenMap = nil -- built late, as in game: the module hooks it on a later tick
+  -- the normal world map (stitched map off): OpenMap_Tweaks' pin mixin, whose OnAcquired the module wraps
+  OpenMapTweaksNodePinMixin = { OnAcquired = function(self, spot, x, y) self.spot = spot; self:Show() end }
+  function Acquire(l)
+    local pin = setmetatable({}, Frame)
+    local ok, err = pcall(OpenMapTweaksNodePinMixin.OnAcquired, pin, { list = { { e = { sl = 186, l = l } } } }, 0.5, 0.5)
+    pin.err = not ok and tostring(err) or nil
+    return pin
+  end
 
   function Fire(ev) for _, f in ipairs(FRAMES) do if f.OnEvent then f.OnEvent(f, ev) end end end
   function Tick() for _, f in ipairs(FRAMES) do if f.OnUpdate then f.OnUpdate(f, 1) end end end
@@ -55,9 +63,14 @@ res = {}
 L('LOW, MID, HIGH = AddOMT(1), AddOMT(100), AddOMT(175)')
 L('OTHER = OpenMap.MapStitch.AddPin(OpenMap.MapStitch.PinSet("questie"), 0.1, 0.1, {}, { list = { { e = { sl = 186, l = 100 } } } })')
 res["not tracking: all ore pins hidden"] = E("not LOW.shown and not MID.shown and not HIGH.shown")
+L('WM = Acquire(100)')
+res["normal world map pin: no error"] = E("WM.err == nil")
+res["normal world map pin, not tracking: hidden"] = E("WM.shown == false")
 res["other pin sets untouched"] = E("OTHER.shown == true")
 L('TRACKING = true; Tick()')
 res["tracking, skill-ups: only 100 shows (1 is grey, 175 too high)"] = E("not LOW.shown and MID.shown and not HIGH.shown")
+L('WM1, WM100 = Acquire(1), Acquire(100)')
+res["normal world map, tracking: same rule (100 shows, 1 doesn't)"] = E("WM100.shown == true and WM1.shown == false")
 L('MastercraftDB.settings.nodesFilter = "gatherable"; Tick()')
 res["gatherable: 1 and 100 show"] = E("LOW.shown and MID.shown and not HIGH.shown")
 L('MastercraftDB.settings.nodesFilter = "all"; Tick()')

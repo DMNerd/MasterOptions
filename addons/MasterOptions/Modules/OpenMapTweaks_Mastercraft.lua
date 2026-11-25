@@ -117,6 +117,13 @@ local function Wanted(e)
     return skill - req < 100
 end
 
+local function SpotWanted(spot)
+    for _, item in ipairs(spot and spot.list or {}) do
+        if Wanted(item.e) then return true end
+    end
+    return false
+end
+
 ---------------------------------------------------------------------------
 -- World map: filter each pin as OpenMap_Tweaks acquires it
 ---------------------------------------------------------------------------
@@ -127,13 +134,6 @@ if type(Mixin) == "table" and type(Mixin.OnAcquired) == "function" then
         orig(self, spot, x, y)
         self:SetShown(SpotWanted(spot))
     end
-end
-
-local function SpotWanted(spot)
-    for _, item in ipairs(spot and spot.list or {}) do
-        if Wanted(item.e) then return true end
-    end
-    return false
 end
 
 ---------------------------------------------------------------------------
