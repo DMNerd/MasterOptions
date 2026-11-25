@@ -1799,7 +1799,8 @@ nsAdd:SetScript("OnClick", NeverSellAddFromBox)
 nsBox:SetScript("OnEnterPressed", NeverSellAddFromBox)
 nsBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
 local function DropItem()
-    local kind, id = GetCursorInfo and GetCursorInfo()
+    if not GetCursorInfo then return end
+    local kind, id = GetCursorInfo() -- (not `GetCursorInfo and GetCursorInfo()`: that keeps only the first value)
     if kind == "item" and id then
         nsBox:SetText(tostring(id))
         if ClearCursor then ClearCursor() end
@@ -1868,19 +1869,19 @@ FillNeverSell = function()
     nsBox:SetPoint("TOPLEFT", 14, y)
     y = y - 30
     -- by name; items not cached yet last, by ID
-    local rows = {}
+    local items = {}
     for _, id in ipairs(list) do
         local name, link
         if ItemInfo then name, link = ItemInfo(id) end
         if not name then nsWaiting = true end
-        rows[#rows + 1] = { id = id, name = name, link = link }
+        items[#items + 1] = { id = id, name = name, link = link }
     end
-    table.sort(rows, function(a, b)
+    table.sort(items, function(a, b)
         if (a.name ~= nil) ~= (b.name ~= nil) then return a.name ~= nil end
         if a.name and b.name and a.name ~= b.name then return a.name < b.name end
         return a.id < b.id
     end)
-    for i, r in ipairs(rows) do
+    for i, r in ipairs(items) do
         local l = NeverSellLine(i)
         l.id = r.id
         l:ClearAllPoints()

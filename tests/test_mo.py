@@ -147,7 +147,17 @@ lua.execute(r'''
 ''')
 ns_added = lua.eval("NS_LIST[999] == true")
 print("never sell: add from the box (item link)", ns_added)
-if not (ns_header and "item" in ns_header and "2589=false" in ns_removed and ns_added):
+# an item dragged onto the box (GetCursorInfo returns "item", itemID)
+lua.execute(r'''
+  CURSOR_CLEARED = false
+  function GetCursorInfo() return "item", 777 end
+  function ClearCursor() CURSOR_CLEARED = true end
+  for _, f in ipairs(FRAMES) do if f.scripts.OnReceiveDrag then f.scripts.OnReceiveDrag(f) end end
+  GetCursorInfo, ClearCursor = nil, nil
+''')
+ns_dragged = lua.eval("NS_LIST[777] == true and CURSOR_CLEARED")
+print("never sell: item dragged onto the box", ns_dragged)
+if not (ns_header and "item" in ns_header and "2589=false" in ns_removed and ns_added and ns_dragged):
     lua.execute('ERRORS[#ERRORS+1] = "Never sell section wrong"')
 
 # Pawn without Pawn Forever shows up under Problems (not installed: no button; disabled: Enable)
