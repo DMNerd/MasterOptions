@@ -1,6 +1,6 @@
 # Names Master Options relies on in other addons, checked by scripts\check-addons.ps1 against the installed copies.
 # Addon folder | kind | literal text that would disappear if the addon renamed or removed it | our file using it
-# Verified against the installed versions on 2026-11-25 (Mastercraft 2.1.2, OpenMap_Tweaks 1.5.4, CheapUpgrades 0.18.11
+# Verified against the installed versions on 2026-11-26 (GearMatic 6.10.1, Mastercraft 2.1.2, OpenMap_Tweaks 1.5.4, CheapUpgrades 0.18.11
 # and the rest as audited).
 
 # --- Mastercraft (2.1.2)
@@ -105,7 +105,7 @@ Baganator|method|GetBankType()|Mastercraft_BankMats.lua
 Syndicator|global|SYNDICATOR_CONFIG|MasterOptions.lua
 Syndicator|config-key|show_inventory_tooltips|MasterOptions.lua (Counts on your characters)
 
-# --- GearMatic (6.9.1)
+# --- GearMatic (6.10.1)
 GearMatic|global|GearMaticDB|MasterOptions.lua, modules
 GearMatic|config-key|autoSellJunk|MasterOptions.lua, Mastercraft_VendorSell.lua
 GearMatic|config-key|autoRepair|MasterOptions.lua

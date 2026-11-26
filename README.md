@@ -31,6 +31,8 @@ public data and settings; the third-party addons themselves are never edited.
 
 Edit in `addons/`, run the tests, deploy, then check in game.
 
+After other addons update, follow [UPDATING.md](UPDATING.md).
+
 **macOS:** the same scripts run under PowerShell 7. One-time setup: `brew install powershell python luacheck`.
 Then run them as `pwsh scripts/test.ps1` and so on. On a Mac, the default AddOns folder is
 `/Applications/World of Warcraft/_forever_/Interface/AddOns` (pass `-AddOns` to use another one), and `lint.ps1`
