@@ -7,8 +7,7 @@ MasterOptions_Module("Baganator_Mastercraft", { "Baganator", "Mastercraft" }, fu
 --   * a corner icon with Mastercraft's advice on every slot it has advice for (Mastercraft_Advice): a green tick for
 --     KEEP, the vendor's bag for VENDOR, the auctioneer for AUCTION, the disenchant icon for DISENCHANT
 --   * one verdict per slot: while the advice icons show, GearMatic's three "best gold" badges (vendor $, auction
---     price tag, disenchant marker - the same verdicts, often disagreeing) and its Bind on Equip badge (the same price
---     tag, which it falls back to) stay off, checked at every login
+--     price tag, disenchant marker - the same verdicts, often disagreeing) stay off, checked at every login
 
 local S = MasterOptions_Shared
 local _, Check = S.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
@@ -81,9 +80,6 @@ local function OneVerdictPerSlot(force)
     for _, k in ipairs(BEST_GOLD) do
         if p[k] ~= false then p[k] = false; changed = true end
     end
-    -- with the best-gold badges off, GearMatic falls back to its Bind on Equip badge - a gold price tag on every piece
-    -- still BoE, next to the AUCTION icon (Baganator's own "BoE" corner text still tells the binding, if you want it)
-    if p.boeBadgeMode ~= "off" then p.boeBadgeMode = "off"; changed = true end
     if changed and type(_G.MasterOptions_GMRefreshBagIcons) == "function" then pcall(_G.MasterOptions_GMRefreshBagIcons) end
 end
 
