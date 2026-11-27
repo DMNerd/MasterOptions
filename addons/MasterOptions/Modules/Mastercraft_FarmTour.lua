@@ -149,7 +149,11 @@ local function Start(only, quiet)
         return false
     end
     local stops = Order(nodes, mapID)
-    local ok, started = pcall(api.NavigateRoute, OWNER, stops, { policy = "walking" })
+    -- ShortestPathForever 1.49's calmer line for tours of many close stops (a solid line, softly rounded corners, the
+    -- leg you're on and the next four); before 1.49 an option it doesn't know makes the whole call invalid (nil):
+    -- asked again without it
+    local ok, started = pcall(api.NavigateRoute, OWNER, stops, { policy = "walking", tourLine = true })
+    if ok and started == nil then ok, started = pcall(api.NavigateRoute, OWNER, stops, { policy = "walking" }) end
     if not ok then Report("starting the farming tour", started) return false end
     if not started then
         if not quiet then Print("ShortestPathForever didn't take the tour (not ready yet, or no journey here).") end

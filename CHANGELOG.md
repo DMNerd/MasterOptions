@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.15.2] - 2026-11-27
+
+### Changed
+
+- **Farming tours use ShortestPathForever's calmer tour line** (new in its 1.49): a solid line with softly rounded
+  corners that shows the leg you're on and the next four, instead of every leg to every node. With an older
+  ShortestPathForever the tour starts as before.
+
 ## [2.15.1] - 2026-11-27
 
 ### Fixed

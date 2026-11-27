@@ -42,7 +42,10 @@ lua.execute(r'''
   } }, gmNodes = { [1411] = { [401] = { 5000005000 } } } }
   ROUTES, CANCELS = {}, 0
   ShortestPathForever = { API = {
-    NavigateRoute = function(owner, stops, opt) ROUTES[#ROUTES + 1] = { owner = owner, stops = stops, policy = opt.policy }; CURRENT = owner; return true end,
+    NavigateRoute = function(owner, stops, opt)
+      if OLD_SPF and opt.tourLine ~= nil then return nil end -- (before 1.49: an option it doesn't know: invalid)
+      ROUTES[#ROUTES + 1] = { owner = owner, stops = stops, policy = opt.policy, tourLine = opt.tourLine }
+      CURRENT = owner; return true end,
     Cancel = function(owner) CANCELS = CANCELS + 1; if CURRENT == owner then CURRENT = nil end; return true end,
     CurrentStop = function(owner) if CURRENT == owner then return 1 end end,
     Active = function() return CURRENT ~= nil end } }
@@ -81,6 +84,12 @@ L('CURRENT = nil; MastercraftDB.farm["Player-1"] = { start = 2 }; Fire("ZONE_CHA
 res["farming, no journey under way: a new zone gets a tour"] = E("#ROUTES") == 8
 L('CURRENT = "TomTom"; Stop = nil; MasterOptions_FarmTour.Stop(true); n = #ROUTES; Fire("ZONE_CHANGED_NEW_AREA")')
 res["farming, another journey under way: not replaced"] = E("#ROUTES") == E("n") and E("CURRENT") == "TomTom"
+res["ShortestPathForever 1.49+: the tour asks for its calmer tour line"] = E("ROUTES[1].tourLine") is True
+L('for i = 1, 3 do MastercraftDB.nodes[1411][i] = { n = "Copper Vein", p = "Mining", i = 2770, x = 0.5, y = 0.5 } end')
+L('CURRENT = nil; OLD_SPF = true; n = #ROUTES; MasterOptions_FarmTour.Command("")')
+res["older ShortestPathForever (doesn't know the option): the tour starts anyway, without it"] = (
+    E("#ROUTES") == E("n") + 1 and E("ROUTES[#ROUTES].tourLine") is None)
+L('OLD_SPF = nil')
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)
