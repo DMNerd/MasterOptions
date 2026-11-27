@@ -137,6 +137,12 @@ L(r'''
   Fire("PLAYER_LOGOUT")
 ''')
 # the Never sell section: its rows (clicking every button above pressed their Remove), the header, adding from the box
+# Thanks: its own section, last, with every author
+thanks = lua.eval('(function() for _, f in ipairs(FRAMES) do if type(f._text) == "string" and f._text:find("Shadowblade") and f._text:find("plusmouse") and f._text:find("Thank you") then return true end end end)()')
+side = lua.eval('(function() for _, f in ipairs(FRAMES) do if f._text == "Thanks" then return true end end end)()')
+print("thanks section:", thanks, "side button:", side)
+if not (thanks and side):
+    lua.execute('ERRORS[#ERRORS+1] = "Thanks section missing"')
 ns_header = lua.eval('(function() for _, f in ipairs(FRAMES) do if type(f._text) == "string" and f._text:find("never sold") then return f._text end end end)()')
 ns_removed = lua.eval('table.concat(NS_SET, ",")')
 print("never sell: header", repr((ns_header or "")[:60]), "| set calls:", ns_removed)

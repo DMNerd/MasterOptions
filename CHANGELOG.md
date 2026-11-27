@@ -7,6 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.8.1] - 2026-11-27
+
+### Added
+
+- **/mo > Thanks:** the authors of every addon Master Options works with, the libraries it uses and the data
+  behind GearMatic, CheapUpgrades and Mastercraft.
+
+### Changed
+
+- The addon list shows Master Options' author (DMNerd) and its new one-line description.
+- Released under the MIT license.
+
 ## [2.8.0] - 2026-11-27
 
 ### Added
@@ -158,7 +170,8 @@ Not released on its own: part of 2.6.0.
   them work together (until now separate `MasterOptions_<Addon>_<Addon>` addons). Each module runs only when the
   addons it works with are loaded.
 
-[Unreleased]: https://github.com/DMNerd/MasterOptions/compare/v2.8.0...HEAD
+[Unreleased]: https://github.com/DMNerd/MasterOptions/compare/v2.8.1...HEAD
+[2.8.1]: https://github.com/DMNerd/MasterOptions/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/DMNerd/MasterOptions/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/DMNerd/MasterOptions/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/DMNerd/MasterOptions/compare/v2.5.1...v2.6.0

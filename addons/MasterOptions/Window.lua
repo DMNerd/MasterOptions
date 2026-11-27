@@ -640,6 +640,46 @@ MO.ShowErrorText = function()
 end
 
 ---------------------------------------------------------------------------
+-- Thanks: its own section, last - the authors of every addon Master Options makes work together
+---------------------------------------------------------------------------
+local CREDITS = {
+    { "GearMatic", "the GearMatic team" },
+    { "Mastercraft", "Shadowblade" },
+    { "Questie, QuestieDB", "Aero, Logon, Muehe, TheCrux (BreakBB), Drejjmit, Dyaxler, Cheeq, TechnoHunter, Yttrium and everyone else" },
+    { "Baganator, Syndicator, Chattynator", "plusmouse" },
+    { "Auctionator", "plusmouse, Borjamacare" },
+    { "CheapUpgrades", "KanIkkeKodeUI" },
+    { "Pawn", "Vger" },
+    { "Pawn Forever", "turlockmike" },
+    { "OpenMap, OpenMap MiniMap", "the OpenMap contributors" },
+    { "OpenMap Tweaks", "Austin" },
+    { "Dungeon Journal", "Exehn" },
+    { "Shortest Path Forever", "cjber" },
+    { "DeleteCheapestItem Reloaded", "Sander Vispoel (sandervspl)" },
+    { "DialogKey - Numy Edition", "Numy (earlier versions: Foxthorn, N01ch, FuriousProgrammer)" },
+    { "Sparkles [Forever]", "Crogin / CGN" },
+    { "BetterBlizzFrames, BetterBlizzPlates", "Bodify" },
+    { "Details! Damage Meter", "Terciob" },
+}
+local thanksPane = CreateFrame("Frame", nil, body)
+thanksPane:SetPoint("TOPLEFT")
+thanksPane:SetSize(PANE_W, 50)
+local thanksText = thanksPane:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+thanksText:SetPoint("TOPLEFT", 8, -8)
+thanksText:SetWidth(PANE_W - 24)
+thanksText:SetJustifyH("LEFT")
+thanksText:SetSpacing(3)
+do
+    local lines = { "|cffffd200Thank you|r - Master Options only makes these addons work together: everything it connects is their authors' work.", " " }
+    for _, c in ipairs(CREDITS) do lines[#lines + 1] = ("|cffffd200%s|r  %s"):format(c[1], c[2]) end
+    lines[#lines + 1] = " "
+    lines[#lines + 1] = "And to the libraries Master Options uses - LibStub, CallbackHandler (the Ace3 team), LibDataBroker (tekkub), LibDBIcon (funkehdude), HereBeDragons (Nevcairiel) - and to the WoWSims Forever and Wowhead Forever data GearMatic, CheapUpgrades and Mastercraft are built on."
+    thanksText:SetText(table.concat(lines, "\n"))
+end
+local thanksHeight = math.ceil((thanksText:GetStringHeight() or 300) + 16)
+thanksPane:SetHeight(thanksHeight)
+
+---------------------------------------------------------------------------
 -- Sections and the side list
 ---------------------------------------------------------------------------
 local function ShowSection(sec)
@@ -697,8 +737,10 @@ local function BuildWindow()
     local at = #sections + 1
     for i, s in ipairs(sections) do if s.name == "Vendor and bank" then at = i + 1 end end
     table.insert(sections, at, nsSec)
+    -- Thanks: last
+    sections[#sections + 1] = { name = "Thanks", pane = thanksPane, thanks = true, height = thanksHeight, opts = {} }
     for i, s in ipairs(sections) do
-        if not s.problems and not s.neverSell then
+        if not s.problems and not s.neverSell and not s.thanks then
             s.pane = CreateFrame("Frame", nil, body)
             s.pane:SetPoint("TOPLEFT")
             s.pane:SetSize(PANE_W, 10)
