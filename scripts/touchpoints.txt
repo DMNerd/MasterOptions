@@ -1,9 +1,9 @@
 # Names Master Options relies on in other addons, checked by scripts\check-addons.ps1 against the installed copies.
 # Addon folder | kind | literal text that would disappear if the addon renamed or removed it | our file using it
-# Verified against the installed versions on 2026-11-27 (GearMatic 6.11.0, CheapUpgrades 0.18.12, Baganator 870, ShortestPathForever 1.48.1, Mastercraft 2.1.2, OpenMap_Tweaks 1.5.4
-# and the rest as audited).
+# Verified against the installed versions on 2026-11-27 (GearMatic 6.11.0, CheapUpgrades 0.18.12, Baganator 870, ShortestPathForever 1.48.1, Mastercraft 2.1.3, OpenMap_Tweaks 1.5.5,
+# Questie 12.15.0, BetterBlizzFrames 2.2.4, ForeverDungeonJournal 2.1.7 and the rest as audited).
 
-# --- Mastercraft (2.1.2)
+# --- Mastercraft (2.1.3)
 Mastercraft|global|MastercraftDB|MasterOptions.lua, Modules
 Mastercraft|config-key|autoJunk|MasterOptions.lua, Mastercraft_VendorSell.lua
 Mastercraft|config-key|autoRepair|MasterOptions.lua
@@ -40,7 +40,7 @@ Mastercraft|text|guide needs|Mastercraft_Keep.lua
 Mastercraft|text|Keep %d for your|Mastercraft_VendorSell.lua
 Mastercraft|event|TIME_PLAYED_MSG|Mastercraft_Chattynator.lua
 
-# --- OpenMap_Tweaks (1.5.4)
+# --- OpenMap_Tweaks (1.5.5)
 OpenMap_Tweaks|global|OpenMapTweaksDB|MasterOptions.lua
 OpenMap_Tweaks|global|OpenMapTweaksNodePinMixin|OpenMapTweaks_Mastercraft.lua
 OpenMap_Tweaks|method|OnAcquired|OpenMapTweaks_Mastercraft.lua
@@ -143,7 +143,7 @@ GearMatic|config-value|pawnScale.Hidden|MasterOptions.lua (Pawn scales)
 GearMatic|config-value|"gearmatic_upgrade_corner"|MasterOptions.lua
 GearMatic|config-value|"gearmatic_upgrade"|MasterOptions.lua
 
-# --- OpenMap (0.8.13) / OpenMap_MiniMap (1.3.1) / ForeverDungeonJournal (2.1.7) / Questie
+# --- OpenMap (0.8.13) / OpenMap_MiniMap (1.3.1) / ForeverDungeonJournal (2.1.7) / Questie (12.15.0)
 OpenMap|method|function ns:GetModule|DungeonJournal_OpenMap.lua
 OpenMap|text|NewModule("worldmap"|DungeonJournal_OpenMap.lua
 OpenMap|config-key|pinsHidden|DungeonJournal_OpenMap.lua
@@ -194,7 +194,7 @@ Questie|method|function QuestieMenu:OnLogin(|MasterOptions.lua
 Questie|config-key|nameplateEnabled|MasterOptions.lua
 Questie|config-key|nameplateTargetFrameEnabled|MasterOptions.lua
 
-# --- DialogKey_Numy / Chattynator / Auctionator / BetterBlizz* / Details / DeleteCheapestItem / Sparkles / ShortestPathForever
+# --- DialogKey_Numy (1.2.62) / Chattynator (241) / Auctionator (354) / BetterBlizzPlates (2.2.5c) / BetterBlizzFrames (2.2.4) / Details / DeleteCheapestItem (1.9.1) / Sparkles (0.6.0-beta) / ShortestPathForever
 DialogKey_Numy|config-key|itemChoice|DialogKey_Pawn.lua
 DialogKey_Numy|event|QUEST_COMPLETE|DialogKey_Pawn.lua
 DialogKey_Numy|function|QuestInfoItem_OnClick|DialogKey_Pawn.lua
