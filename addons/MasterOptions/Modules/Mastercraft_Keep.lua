@@ -17,30 +17,28 @@ MasterOptions_Module("Mastercraft_Keep", { "Mastercraft" }, function(ADDON)
 
 local DB -- MasterOptions_MastercraftKeepDB: { needed = { [itemID] = time last confirmed } }
 
-local _, Check = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
+local S = MasterOptions_Shared
 
--- every item tracked in Mastercraft's item tracker, as a set (for the sync to GearMatic below)
+-- every item tracked in Mastercraft's item tracker (MastercraftDB.goals[your GUID] = { { id = itemID, ... }, ... }),
+-- as a set. IsNeeded is asked for every bag slot on every bag update and Baganator redraw, and every Dungeon Journal
+-- row: the set is made again only when the list is another table or another length (tracking or untracking an item)
+local trackedSet, trackedFrom, trackedLen = {}, nil, -1
 local function TrackerIDs()
-    local out = {}
     local mc = _G.MastercraftDB
     local goals = type(mc) == "table" and type(mc.goals) == "table" and mc.goals[UnitGUID("player") or ""]
-    for _, g in ipairs(type(goals) == "table" and goals or {}) do
-        local id = type(g) == "table" and tonumber(g.id)
-        if id then out[id] = true end
+    if type(goals) ~= "table" then goals = nil end
+    local len = goals and #goals or 0
+    if goals ~= trackedFrom or len ~= trackedLen then
+        trackedSet, trackedFrom, trackedLen = {}, goals, len
+        for i = 1, len do
+            local id = type(goals[i]) == "table" and tonumber(goals[i].id)
+            if id then trackedSet[id] = true end
+        end
     end
-    return out
+    return trackedSet
 end
 
--- tracked in Mastercraft's item tracker (MastercraftDB.goals[your GUID] = { { id = itemID, ... }, ... }): read in
--- place, nothing built - IsNeeded is asked for every bag slot on every bag update, and every Dungeon Journal row
-local function Tracked(itemID)
-    local mc = _G.MastercraftDB
-    local goals = type(mc) == "table" and type(mc.goals) == "table" and mc.goals[UnitGUID("player") or ""]
-    for _, g in ipairs(type(goals) == "table" and goals or {}) do
-        if type(g) == "table" and tonumber(g.id) == itemID then return true end
-    end
-    return false
-end
+local function Tracked(itemID) return TrackerIDs()[itemID] == true end
 
 local function IsNeeded(itemID)
     itemID = tonumber(itemID)
@@ -59,7 +57,8 @@ local function SyncGearMatic()
     if type(g) ~= "table" then return end
     g.sellIgnore = g.sellIgnore or {}
     g.moKeep = g.moKeep or {}
-    local want = TrackerIDs()
+    local want = {}
+    for id in pairs(TrackerIDs()) do want[id] = true end
     for id in pairs(DB.needed) do want[id] = true end
     for id in pairs(DB.keep) do want[id] = true end
     local before = 0
@@ -88,81 +87,35 @@ local function SyncGearMatic()
 end
 
 ---------------------------------------------------------------------------
--- Learning from Mastercraft's tooltip (runs after Mastercraft has added its lines)
+-- Learning from Mastercraft's tooltip lines (MasterOptions_Shared reads every item tooltip once, for every module;
+-- not while Mastercraft's tooltip lines are off)
 ---------------------------------------------------------------------------
-local function GuideLineIn(tooltip)
-    local name = tooltip:GetName()
-    if not name then return false end
-    for i = 1, tooltip:NumLines() do
-        local fs = _G[name .. "TextLeft" .. i]
-        local text = fs and fs:GetText()
-        if type(text) == "string" and text:find("guide needs$") then return true end
-    end
-    return false
-end
-
--- Mastercraft's advice for the item: the right side of its "Mastercraft" header line ("KEEP", "VENDOR",
--- "AUCTION", "DISENCHANT", "NO PRICES"), or nil when the tooltip has no advice
-local function VerdictIn(tooltip)
-    local name = tooltip:GetName()
-    if not name then return nil end
-    for i = 1, tooltip:NumLines() do
-        local left = _G[name .. "TextLeft" .. i]
-        local text = left and left:GetText()
-        if type(text) == "string" and text:find("Mastercraft", 1, true) then
-            local right = _G[name .. "TextRight" .. i]
-            local r = right and right:IsShown() and right:GetText()
-            if type(r) == "string" and r ~= "" then
-                return (r:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):upper())
-            end
-        end
-    end
-end
-
+-- its guide section's "<Profession> guide needs  N more" lines (Mastercraft's Settings > Tooltip > guide lines)
 local function GuideLinesOn()
-    local s = type(_G.MastercraftDB) == "table" and _G.MastercraftDB.settings
-    return not (type(s) == "table" and s.tipGuide == false)
+    local s = S.MastercraftSettings()
+    return not (s and s.tipGuide == false)
 end
 
--- Mastercraft's Settings > Modules (2.1.2): "Tooltip extras" off = no Mastercraft lines at all. Then a tooltip
--- says nothing about the item, and reading it would forget what's needed: learn nothing until it's back on.
-local function TooltipLinesOn() return MasterOptions_Shared.MastercraftModuleOn("tip") end
-
-local SyncSoon = MasterOptions_Shared.Debounce(function() SyncGearMatic() end, 1)
-local function Learn(tooltip, data)
-    if tooltip ~= GameTooltip or not DB or not TooltipLinesOn() then return end
-    local itemID = data and type(data.id) == "number" and data.id
-    if not itemID then
-        local _, link = tooltip:GetItem()
-        itemID = link and tonumber(link:match("item:(%d+)"))
-    end
-    if not itemID then return end
+local SyncSoon = S.Debounce(function() SyncGearMatic() end, 1)
+local function Learn(itemID, verdict, _, _, guideNeeds)
+    if not DB then return end
     local changed = false
     -- Mastercraft's KEEP advice (tools, fishing things, what your recipes use ...): kept; another verdict lets go
-    local okV, verdict = Check("reading Mastercraft's advice", pcall(VerdictIn, tooltip))
-    if okV and verdict then
+    if verdict then
         local was = DB.keep[itemID] ~= nil
         local keep = verdict == "KEEP"
         DB.keep[itemID] = keep and time() or nil
-        changed = changed or (was ~= keep)
+        changed = was ~= keep
     end
     -- "<Profession> guide needs N more"
     if GuideLinesOn() then
-        local ok, needed = Check("reading Mastercraft's guide line", pcall(GuideLineIn, tooltip))
-        if ok then
-            local before = DB.needed[itemID] ~= nil
-            if needed then DB.needed[itemID] = time() else DB.needed[itemID] = nil end
-            changed = changed or (before ~= needed)
-        end
+        local before = DB.needed[itemID] ~= nil
+        if guideNeeds then DB.needed[itemID] = time() else DB.needed[itemID] = nil end
+        changed = changed or (before ~= guideNeeds)
     end
     if changed then SyncSoon() end
 end
-
-if TooltipDataProcessor and Enum and Enum.TooltipDataType then
-    TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
-        Check("learning from an item tooltip", pcall(Learn, tooltip, data))
-    end)
-end
+S.OnMastercraftAdvice(ADDON, Learn)
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("ADDON_LOADED")

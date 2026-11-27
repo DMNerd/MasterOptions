@@ -31,51 +31,10 @@ local _, Check = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to
 local function Mode() return DB and DB.mode or "guide" end
 
 ---------------------------------------------------------------------------
--- Mastercraft's advice for a bag slot: the verdict and the reason line under it
+-- Mastercraft's advice for a bag slot (MasterOptions_Shared.MastercraftSlotAdvice: the verdict and the reason line
+-- under it - for an item you track, KEEP with the reason found further down)
 ---------------------------------------------------------------------------
-local function Strip(s) return (s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")) end
-
--- Mastercraft's KEEP reasons (Loot.lua): only ever written under a KEEP verdict
-local KEEP_REASONS = { "guide still needs", "guide uses all", "^You're tracking it:" }
-local function KeepReason(t)
-    for _, p in ipairs(KEEP_REASONS) do if t:find(p) then return true end end
-end
-
-local function ReadTooltip(tip)
-    local name = tip:GetName()
-    local header
-    for i = 1, tip:NumLines() do
-        local left = _G[name .. "TextLeft" .. i]
-        local text = left and left:GetText()
-        if type(text) == "string" then
-            if not header and text:find("Mastercraft", 1, true) then
-                header = i
-                local right = _G[name .. "TextRight" .. i]
-                local r = right and right:IsShown() and right:GetText()
-                if type(r) == "string" and r ~= "" then
-                    local reason = _G[name .. "TextLeft" .. (i + 1)]
-                    reason = reason and reason:GetText()
-                    return Strip(r):upper(), type(reason) == "string" and Strip(reason) or ""
-                end
-            elseif header then
-                -- an item you track: Mastercraft's header comes first, without the verdict (its "Tracking" row
-                -- under it), and the advice's reason line further down - known by its wording
-                local t = Strip(text)
-                if KeepReason(t) then return "KEEP", t end
-            end
-        end
-    end
-end
-
-local function SlotAdvice(bag, slot)
-    local tip = GameTooltip
-    tip:SetOwner(WorldFrame, "ANCHOR_NONE")
-    local ok = pcall(tip.SetBagItem, tip, bag, slot)
-    local okR, verdict, reason = false
-    if ok then okR, verdict, reason = Check("reading Mastercraft's advice", pcall(ReadTooltip, tip)) end
-    tip:Hide()
-    if okR then return verdict, reason end
-end
+local SlotAdvice = MasterOptions_Shared.MastercraftSlotAdvice
 
 -- true: a guide (or, in "tracked" mode, your tracker) is what keeps it
 local function ForGuide(verdict, reason)
@@ -142,8 +101,8 @@ end
 -- What goes, and moving it
 ---------------------------------------------------------------------------
 local function Never()
-    local s = type(_G.MastercraftDB) == "table" and _G.MastercraftDB.settings
-    return type(s) == "table" and type(s.depositNever) == "table" and s.depositNever or {}
+    local s = MasterOptions_Shared.MastercraftSettings()
+    return s and type(s.depositNever) == "table" and s.depositNever or {}
 end
 
 local function Candidates(bankType)
@@ -198,7 +157,7 @@ local function OnBank(tries)
     if InCombatLockdown and InCombatLockdown() then return end
     -- an item's tooltip on screen: reading through GameTooltip would take it away - a moment later
     tries = tries or 0
-    if tries < 6 and GameTooltip:IsShown() and GameTooltip:GetOwner() ~= WorldFrame and GameTooltip:GetItem() then
+    if tries < 6 and MasterOptions_Shared.ItemTooltipShown() then
         C_Timer.After(0.5, function() Check("at the bank", pcall(OnBank, tries + 1)) end)
         return
     end

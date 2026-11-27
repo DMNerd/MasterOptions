@@ -176,12 +176,21 @@ end
 ---------------------------------------------------------------------------
 -- ShortestPathForever's goal marker hidden while the trip's OpenMap pin marks the spot
 ---------------------------------------------------------------------------
+-- asked every frame the minimap goal is shown: the answer kept for half a second (and worked out again whenever the
+-- trip changes - HideGoals)
+local marks, marksAt = false, -1
 local function PinMarks()
-    if not (trip and trip.pin) then return false end
-    local mod = WorldMap()
-    if not mod then return false end
-    for _, p in ipairs(mod.db.pins.list) do if p == trip.pin then return true end end
-    return false
+    local now = GetTime and GetTime() or 0
+    if now ~= 0 and marksAt >= 0 and now - marksAt < 0.5 then return marks end
+    marksAt = now
+    marks = false
+    if trip and trip.pin then
+        local mod = WorldMap()
+        if mod then
+            for _, p in ipairs(mod.db.pins.list) do if p == trip.pin then marks = true break end end
+        end
+    end
+    return marks
 end
 
 -- the minimap: its goal texture (UI\Route.lua: ShortestPathForeverMinimapRoute.Goal), shown every frame it's on
@@ -226,6 +235,7 @@ local function WorldGoals()
 end
 
 HideGoals = function()
+    marksAt = -1 -- (the trip changed)
     local goal, route = MinimapGoal()
     if goal and PinMarks() and not route.goalEdge then goal:Hide() end
     if _G.WorldMapFrame and WorldMapFrame:IsShown() then WorldGoals() end
@@ -251,19 +261,26 @@ f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function()
     Shared.WatchOpenMapFollow()
     if not Subscribe() then C_Timer.After(3, Subscribe) end
-    -- the world map: its goal pins are made as it opens and as you zoom - looked at while it's open
+    -- the world map: its goal pins are made as it opens and as you zoom - looked at while it's open. A pin found once
+    -- hides itself (its Show is hooked): later, only when the canvas has new frames (every map pin is one, Questie's
+    -- too - no list of them all built twice a second)
     local map = _G.WorldMapFrame
     if map and map.HookScript then
-        local wait = 0
-        map:HookScript("OnShow", function() Check("hiding the journey's goal pin", pcall(WorldGoals)) end)
+        local wait, seen = 0, -1
+        map:HookScript("OnShow", function() seen = -1; Check("hiding the journey's goal pin", pcall(WorldGoals)) end)
         map:HookScript("OnUpdate", function(_, dt)
             wait = wait + dt
             if wait < 0.5 then return end
             wait = 0
-            if PinMarks() then Check("hiding the journey's goal pin", pcall(WorldGoals)) end
+            if not PinMarks() then return end
+            local canvas = map.GetCanvas and map:GetCanvas()
+            local n = canvas and canvas.GetNumChildren and canvas:GetNumChildren() or 0
+            if n ~= seen then
+                seen = n
+                Check("hiding the journey's goal pin", pcall(WorldGoals))
+            end
         end)
     end
 end)
 
-MasterOptions_SPFOpenMapPins = { Changed = Changed, Tidy = Tidy, Trip = function() return trip end } -- (for the tests)
 end)

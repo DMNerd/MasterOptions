@@ -222,5 +222,5 @@ local function Command(args)
     Start(only, false)
 end
 
-MasterOptions_FarmTour = { Command = Command, Start = Start, Stop = Stop, Candidates = Candidates }
+MasterOptions_FarmTour = { Command = Command, Stop = Stop }
 end)

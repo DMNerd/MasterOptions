@@ -14,11 +14,21 @@ MO.needsReload = false
 local reloadBtn
 local RefreshProblems -- set once the window exists
 
+-- the rows on screen (another section's are refreshed as it's shown - ShowSection)
+local function RefreshVisibleRows()
+    for _, r in ipairs(rows) do
+        if r:IsVisible() then r:Refresh() end
+    end
+end
+
 local function RefreshAll()
     -- (every change in the window or Options ends here: matched bag icons follow it)
     local ok, changed = pcall(SyncIcons)
     if ok and changed then MO.needsReload = true end
-    for _, r in ipairs(rows) do r:Refresh() end
+    -- closed (a change from the game's Options page, the recommended setup at login): it's all done as it opens
+    local w = _G.MasterOptionsFrame
+    if w and not w:IsShown() then return end
+    RefreshVisibleRows()
     if RefreshProblems then RefreshProblems() end
     if reloadBtn then reloadBtn:SetShown(MO.needsReload) end
 end
@@ -34,7 +44,7 @@ local function RecOf(opt)
     return opt.rec
 end
 
-local DEFAULTS_VERSION = 36
+local DEFAULTS_VERSION = 37
 local Remember -- set below
 local function ApplyRecommended(after, manual) -- after: only options added after this defaults version
     local n = 0
@@ -730,6 +740,7 @@ local function ShowSection(sec)
         s.button.selected:SetShown(s == sec)
     end
     if sec.neverSell then FillNeverSell() end
+    RefreshVisibleRows() -- (only the rows on screen follow changes)
     body:SetHeight(math.max(10, (sec.problems and probHeight or sec.height) or 10))
     scroll:SetVerticalScroll(0)
     -- the side list scrolled so the chosen section's button is in sight

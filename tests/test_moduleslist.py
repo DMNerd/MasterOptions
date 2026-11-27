@@ -11,11 +11,11 @@ toc = open(os.path.join(root, "MasterOptions.toc"), encoding="utf-8").read()
 def names(text):
     return re.findall(r'"([^"]+)"', text)
 
-listed = {}
+listed, tips = {}, set()
 block = src[src.index("local MODULES = {"):src.index("local NICE = {")]
-for m in re.finditer(r'\{\s*"([A-Za-z_]+)",\s*"[^"]*",\s*\{([^}]*)\}\s*\}', block):
+for m in re.finditer(r'\{\s*"([A-Za-z_]+)",\s*"[^"]*",\s*\{([^}]*)\}(,\s*since = \d+,\s*tip = ")?', block):
     listed[m.group(1)] = names(m.group(2))
-tips = set(re.findall(r'^\s*MasterOptions_([A-Za-z_]+) = "', src[src.index("local PATCH_TIP = {"):], re.M))
+    if m.group(3): tips.add(m.group(1))
 
 in_toc = re.findall(r'^Modules\\([A-Za-z_]+)\.lua\s*$', toc, re.M)
 declared = {}
@@ -30,7 +30,7 @@ res = {
     "every module has a row in the options": set(declared) <= set(listed),
     "no row for a module that doesn't exist": set(listed) <= set(declared),
     "each row's needs are the ones its module declares": all(listed.get(k) == v for k, v in declared.items()),
-    "each module has an explanation (PATCH_TIP)": set(declared) <= tips,
+    "each module has its since and an explanation (tip)": set(declared) <= tips,
 }
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

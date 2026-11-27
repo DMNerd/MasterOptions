@@ -66,7 +66,7 @@ local methods = {
   IsShown = function(self) return self._shown end, Show = function(self) self._shown = true; if self.scripts.OnShow then self.scripts.OnShow(self) end end,
   Hide = function(self) self._shown = false end, SetShown = function(self, v) self._shown = v end,
   CreateFontString = function(self) return NewFrame() end, CreateTexture = function(self) return NewFrame() end,
-  IsVisible = function() return false end, GetName = function() return nil end,
+  IsVisible = function() return true end, GetName = function() return nil end, -- (every row counts as on screen)
 }
 Frame.__index = function(t, k) return methods[k] or function() end end
 function NewFrame() local f = setmetatable({ scripts = {}, events = {} }, Frame); FRAMES[#FRAMES+1] = f; return f end

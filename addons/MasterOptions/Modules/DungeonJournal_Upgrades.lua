@@ -151,6 +151,9 @@ end
 f:SetScript("OnEvent", function(_, event)
     if not next(rows) then return end
     if event == "GET_ITEM_INFO_RECEIVED" then
+        -- (thousands of these in an auction house scan: nothing to look at while Dungeon Journal's window is closed)
+        local journal = _G.ForeverDungeonJournalFrame
+        if journal and journal.IsVisible and not journal:IsVisible() then return end
         if AnyWaitingOnScreen() then retries = 0; MarkLater() end
     else
         retries = 0; MarkLater(false, true)

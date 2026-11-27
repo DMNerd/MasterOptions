@@ -41,8 +41,16 @@ local PawnUpgrade = Shared.KeepsGear           -- (Pawn or GearMatic: Master Opt
 local GearMaticKeeps = Shared.GearMaticKeeps   -- (GearMatic's bag verdict, equipment sets)
 local LoadoutIDs = Shared.GearMaticLoadoutIDs  -- (GearMatic loadouts: every item ID in them)
 
+-- Pawn's and GearMatic's word on each piece of gear, kept per link: this runs on every bag update (looting), and
+-- asking them about every piece each time is the costly part. Asked again after an equipment, level or talent
+-- change (Forget, below), and after 30 s anyway; a new item is asked at once.
+local gearVerdict, gearAt = {}, 0
+local function Forget() gearVerdict = {} end
+
 local function Protected()
     local want = {}
+    local now = GetTime and GetTime() or 0
+    if now == 0 or now - gearAt > 30 then gearVerdict, gearAt = {}, now end
     local keep = _G.MasterOptions_MastercraftKeep
     local loadouts = LoadoutIDs()
     local numSlots = C_Container.GetContainerNumSlots
@@ -59,21 +67,27 @@ local function Protected()
                 elseif keep and keep.IsNeeded and keep.IsNeeded(id) then
                     want[id] = true
                 elseif link and (info.quality or 1) > 0 and IsEquippable(link) then
-                    gear[#gear + 1] = { link = link, bag = bag, slot = slot, id = id }
-                    gearLinks[#gearLinks + 1] = link
+                    local known = gearVerdict[link]
+                    if known ~= nil then
+                        if known then want[id] = true end
+                    else
+                        gear[#gear + 1] = { link = link, bag = bag, slot = slot, id = id }
+                        gearLinks[#gearLinks + 1] = link
+                    end
                 end
             end
         end
     end
-    -- 2. the gear: Pawn all at once (Master Options widens its scales once for the lot), then GearMatic
+    -- 2. the gear not asked about yet: Pawn all at once (Master Options widens its scales once for the lot), then GearMatic
+    if #gear == 0 then return want end
     local many = _G.MasterOptions_GearKeepsMany
     local pawnKeeps = type(many) == "function" and many(gearLinks) or nil
     for _, g in ipairs(gear) do
-        if not want[g.id] then
-            local up
-            if pawnKeeps then up = pawnKeeps[g.link] == true else up = PawnUpgrade(g.link) end
-            if up or GearMaticKeeps(g.link, g.bag, g.slot, g.id) then want[g.id] = true end
-        end
+        local up
+        if pawnKeeps then up = pawnKeeps[g.link] == true else up = PawnUpgrade(g.link) end
+        local keeps = (up or GearMaticKeeps(g.link, g.bag, g.slot, g.id)) and true or false
+        gearVerdict[g.link] = keeps
+        if keeps then want[g.id] = true end
     end
     return want
 end
@@ -109,12 +123,16 @@ f:RegisterEvent("PLAYER_LOGIN")
 f:RegisterEvent("BAG_UPDATE_DELAYED")
 f:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 f:RegisterEvent("PLAYER_LEVEL_UP")
+for _, e in ipairs({ "PLAYER_TALENT_UPDATE", "ACTIVE_TALENT_GROUP_CHANGED", "CHARACTER_POINTS_CHANGED" }) do
+    pcall(f.RegisterEvent, f, e)
+end
 f:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         Queue(4) -- after Pawn, GearMatic and Mastercraft have set up
     elseif event == "BAG_UPDATE_DELAYED" then
         Sync() -- at once: new loot is protected before DeleteCheapestItem looks at the bags
     else
+        Forget() -- (what's an upgrade or your best changed)
         Queue(1)
     end
 end)

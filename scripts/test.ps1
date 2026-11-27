@@ -33,7 +33,7 @@ $tests = @(
     @("Mastercraft_FarmTour (farming tours)", "test_farmtour.py", @((F "MasterOptions_Mastercraft_FarmTour"))),
     @("Mastercraft_RecipeMap (vendors, trainers)", "test_recipemap.py", @((F "MasterOptions_Mastercraft_RecipeMap"))),
     @("OpenMapMiniMap_Border",       "test_border.py", @((F "MasterOptions_OpenMapMiniMap_Border"))),
-    @("DungeonJournal_OpenMap pins", "test_djpin.py",  @((F "MasterOptions_DungeonJournal_OpenMap"))),
+    @("DungeonJournal_ShowOnMap pins", "test_djpin.py",  @((F "MasterOptions_DungeonJournal_ShowOnMap"))),
     @("DungeonJournal_OpenMap map",  "test_dmap.py",   @((F "MasterOptions_DungeonJournal_OpenMap"))),
     @("DungeonJournal_Upgrades (loot marks)", "test_djupgrades.py", @((F "MasterOptions_DungeonJournal_Upgrades"))),
     @("DungeonJournal_SpokenBosses (stories)", "test_djspoken.py", @((F "MasterOptions_DungeonJournal_SpokenBosses"))),

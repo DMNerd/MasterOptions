@@ -229,8 +229,8 @@ local function ApplyUpgradeArrow(p, v)
 end
 local function ApplyJunk(p, v)
     if v == "GearMatic" and Loaded("MasterOptions_GearMatic_Baganator") then SetBagPlugin(p, "junk", "gearmatic")
-    elseif v == "Mastercraft" and Loaded("MasterOptions_Mastercraft_VendorSell") then SetBagPlugin(p, "junk", "mastercraft")
-    else SetBagPlugin(p, "junk", "poor_quality") end -- (Mastercraft without the VendorSell patch sells greys only)
+    elseif v == "Mastercraft" and Loaded("MasterOptions_Baganator_Mastercraft") then SetBagPlugin(p, "junk", "mastercraft")
+    else SetBagPlugin(p, "junk", "poor_quality") end -- (Mastercraft without our plugin: greys, Baganator's own rule)
 end
 local function ArrowState(p)
     local pw, gm = CornerHas(p, "pawn"), CornerHas(p, "gearmatic_upgrade_corner")

@@ -187,6 +187,7 @@ ev:SetScript("OnEvent", function()
     local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
     local DBI = LibStub and LibStub("LibDBIcon-1.0", true)
     if LDB and DBI then
+        local tipCounts = {} -- (the tooltip's doubled-up and problem counts, and when they were counted)
         local obj = LDB:NewDataObject("MasterOptions", {
             type = "launcher",
             label = "Master Options",
@@ -203,16 +204,21 @@ ev:SetScript("OnEvent", function()
             OnTooltipShow = function(tt)
                 local version, author = MasterOptions_Shared.About()
                 tt:AddDoubleLine("Master Options", ("%s - by %s"):format(version, author), 1, 0.82, 0, 0.6, 0.6, 0.6)
-                local n = 0
-                for _, opt in ipairs(OPTIONS) do
-                    if opt.kind == "choice" and Available(opt) and opt.get() == "Both (conflict)" then n = n + 1 end
+                -- (each hover asked every setting and ran the whole addon check: counted once per 10 s)
+                local now = GetTime()
+                if not tipCounts.at or now - tipCounts.at > 10 then
+                    local n = 0
+                    for _, opt in ipairs(OPTIONS) do
+                        if opt.kind == "choice" and Available(opt) and opt.get() == "Both (conflict)" then n = n + 1 end
+                    end
+                    tipCounts.at, tipCounts.n, tipCounts.np = now, n, #Problems()
                 end
+                local n, np = tipCounts.n, tipCounts.np
                 if n > 0 then
                     tt:AddLine(n .. " setting" .. (n > 1 and "s" or "") .. " doubled up", 1, 0.33, 0.33)
                 else
                     tt:AddLine("No doubled-up settings", 0.4, 1, 0.4)
                 end
-                local np = #Problems()
                 if np > 0 then tt:AddLine(np .. " addon problem" .. (np > 1 and "s" or ""), 1, 0.33, 0.33) end
                 tt:AddLine("|cffffffffClick|r to open, |cffffffffRight-click|r to hide this button", 0.7, 0.7, 0.7)
             end,

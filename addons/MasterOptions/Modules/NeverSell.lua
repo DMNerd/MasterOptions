@@ -189,9 +189,7 @@ local function SafeSync()
     -- (the list changed - in another addon, or here: Master Options' window shows it again)
     if Signature() ~= before then
         if API.OnChange then pcall(API.OnChange) end
-        -- (Baganator's lock icons follow)
-        local bag = _G.Baganator and _G.Baganator.API
-        if bag and bag.RequestItemButtonsRefresh then pcall(bag.RequestItemButtonsRefresh) end
+        MasterOptions_Shared.RefreshBagButtons() -- (Baganator's lock icons follow)
     end
 end
 
@@ -225,7 +223,7 @@ MasterOptions_NeverSell = API
 
 -- Baganator: a lock in the corner of every bag slot whose item is on the list (Baganator > Icons, or /mo >
 -- Bags: "Never-sell lock in bags"). First in the top-right corner, before GearMatic's skull.
-API.LOCK_TEXTURE = "Interface\\Buttons\\LockButton-Locked-Up"
+local LOCK_TEXTURE = "Interface\\Buttons\\LockButton-Locked-Up"
 local bagAPI = _G.Baganator and _G.Baganator.API
 if bagAPI and bagAPI.RegisterCornerWidget then
     local ok, err = pcall(bagAPI.RegisterCornerWidget, "Never sell (Master Options)", "masteroptions_never_sell",
@@ -235,7 +233,7 @@ if bagAPI and bagAPI.RegisterCornerWidget then
         end,
         function(button)
             local t = button:CreateTexture(nil, "OVERLAY")
-            t:SetTexture(API.LOCK_TEXTURE)
+            t:SetTexture(LOCK_TEXTURE)
             t:SetSize(16, 16)
             return t
         end, { corner = "top_right", priority = 1 })

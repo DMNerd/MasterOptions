@@ -29,6 +29,7 @@ SOLD = {}
 C_Container = {
   GetContainerNumSlots = function(b) return b == 0 and #BAG or 0 end,
   GetContainerItemInfo = function(b, s) local i = b == 0 and BAG[s]; if i and not i.sold then return i end end,
+  GetContainerItemID = function(b, s) local i = b == 0 and BAG[s]; if i and not i.sold then return i.itemID end end,
   UseContainerItem = function(b, s) SOLD[#SOLD+1] = BAG[s].itemID; BAG[s].sold = true end,
 }
 C_Item = {
@@ -78,7 +79,11 @@ function List(t) local o = {} for _, v in ipairs(t) do o[#o+1] = tostring(type(v
 ''')
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
 from shared_lua import load_shared; load_shared(lua, sys.argv[1])
-lua.eval("function(s) return load(s, '=vsell') end")(open(sys.argv[1], encoding="utf-8").read())("MasterOptions_Mastercraft_VendorSell")
+# (the advice store and the Baganator pieces are modules of their own, next to VendorSell)
+_mods = _os.path.dirname(_os.path.abspath(sys.argv[1]))
+for _name in ("Mastercraft_Advice", "Mastercraft_VendorSell", "Baganator_Mastercraft"):
+    _src = open(sys.argv[1] if _name == "Mastercraft_VendorSell" else _os.path.join(_mods, _name + ".lua"), encoding="utf-8").read()
+    lua.eval("function(s, n) return load(s, '=' .. n) end")(_src, _name)("MasterOptions_" + _name)
 L, E = lua.execute, lua.eval
 L('Fire("ADDON_LOADED", "MasterOptions_Mastercraft_VendorSell")')
 
@@ -107,7 +112,7 @@ L('MastercraftDB.settings.autoJunk = true; MasterOptions_MastercraftVendorDB.mod
 print("sold:", E("List(SOLD)"))
 
 print("== bag icons (WouldSell, no tooltip reads)")
-L('GMProf.autoSellJunk = true; MasterOptions_MastercraftVendorDB.mode = "goods"; Reset(); MasterOptions_MastercraftVendorDB.sell = {}; READS = 0; Fire("PLAYER_LOGIN"); Run()')
+L('GMProf.autoSellJunk = true; MasterOptions_MastercraftVendorDB.mode = "goods"; Reset(); READS = 0; Fire("MERCHANT_CLOSED"); Fire("PLAYER_LOGIN"); Run()')
 print("background reads after login:", E("READS"))
 L('READS = 0')
 print("coin on linen:", E("MasterOptions_MastercraftVendorSell.WouldSell(0, 1, 2589)"), "| silk:", E("MasterOptions_MastercraftVendorSell.WouldSell(0, 2, 4306)"),
@@ -166,7 +171,7 @@ check("VENDOR with the junk coin already: no second icon", E("I_LINEN_COIN") is 
 check("other advice still shows next to a junk coin", E("I_POLE_COIN") is True)
 L('ACTIVE = false; Baganator.API.IsCornerWidgetActive = function(id) return ACTIVE and id == "masteroptions_mc_advice" end; '
   'GMRefreshed = 0; MasterOptions_GMRefreshBagIcons = function() GMRefreshed = GMRefreshed + 1 end; '
-  'MasterOptions_MastercraftVendorSell.OneVerdictPerSlot()')
+  'MasterOptions_BaganatorMastercraft.OneVerdictPerSlot()')
 check("advice icons off: GearMatic's badges left alone", E("GMProf.bestGoldShowAuction") is None and E("GMRefreshed") == 0)
 L('ACTIVE = true; GMProf.bestGoldShowAuction = true; Fire("PLAYER_LOGIN"); Run()')
 check("advice icons on: at login all three GearMatic badges off, its bags redrawn",

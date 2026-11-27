@@ -35,7 +35,7 @@ local RENAMED = { "Mastercraft_Baganator", "CheapUpgrades_Baganator", "OpenMapTw
 
 -- Baganator plugin ids -> the addon(s) that register them
 local BAG_JUNK_OWNER = {
-    gearmatic = "MasterOptions_GearMatic_Baganator", mastercraft = "MasterOptions_Mastercraft_VendorSell", enhanceqol_vendor = { "EnhanceQoL", "EnhanceQoLVendor" },
+    gearmatic = "MasterOptions_GearMatic_Baganator", mastercraft = "MasterOptions_Baganator_Mastercraft", enhanceqol_vendor = { "EnhanceQoL", "EnhanceQoLVendor" },
     selljunk = "SellJunk", scrap = "Scrap", vendor = "Vendor", dejunk = "Dejunk", peddler = "Peddler",
 }
 local BAG_UPGRADE_OWNER = { pawn = "Pawn", gearmatic_upgrade = "GearMatic", simple_item_levels = "SimpleItemLevel" }
@@ -191,8 +191,7 @@ local function Problems()
                             CheapUpgrades_Baganator = "MasterOptions_CheapUpgrades_Baganator",
                             Mastercraft_Baganator = "MasterOptions_Mastercraft_FishingView",
                             MasterOptions_Mastercraft_Baganator = "MasterOptions_Mastercraft_FishingView" }) do
-        local mods2 = _G.MasterOptions_Modules
-        if Exists(old) and (Exists(new) or (mods2 and mods2.Has(new))) then
+        if Exists(old) and (Exists(new) or (mods and mods.Has(new))) then
             add("replaced:" .. old, ("%s is no longer needed: %s does the same. Disable it, then delete its folder."):format(old, new),
                 AddonEnabled(old) and "Disable" or nil,
                 function() SetAddonEnabled(old, false); if Exists(new) then SetAddonEnabled(new, true) end end)

@@ -7,6 +7,49 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.13.0] - 2026-11-27
+
+### Changed
+
+- **Modules reorganised**, each doing one job (/mo > Modules lists them):
+  - **Mastercraft's advice remembered** (new, split from Sell what Mastercraft says to vendor): what Mastercraft
+    advises for each item, for the junk coins and the advice icons. The icons now also work with VENDOR selling's
+    module turned off.
+  - **Mastercraft's junk coin and advice icons in bags** (new, split from the same): Baganator's "Mastercraft" junk
+    coin, the advice icons, and GearMatic's badges kept off while they show.
+  - **Dungeon Journal's Show on Map as an OpenMap pin** (new, split from Dungeon Journal on OpenMap's map, now
+    "Dungeon Journal's map inside dungeons").
+  - The module list's titles, tips and versions are now kept in one place.
+- **One reader for Mastercraft's tooltip.** Mastercraft's advice was read separately by the selling, keep and
+  bank modules, each its own way. Now one reader serves all three, once per tooltip.
+
+### Fixed
+
+- With Mastercraft's tooltip lines turned off (its Settings > Modules), every hover made Master Options forget what
+  Mastercraft had said about that item.
+- An item you track in Mastercraft now counts as KEEP for selling and the bag icons (the bank module already knew).
+
+### Performance
+
+- **DeleteCheapestItem protection** asks Pawn and GearMatic only about gear it hasn't seen yet. Before, it asked
+  about every piece on every bag update while looting.
+- **Baganator redraws ask much less of each bag slot:**
+  - the junk coin checks Mastercraft's advice first and reuses the slot data Baganator already has
+  - the Pawn / GearMatic keep check is cached until your bags, gear, level or talents change
+  - CheapUpgrades' badges are cached until CheapUpgrades re-evaluates
+  - Mastercraft's tracker list is read once per change, not per slot
+- **Bags redraw once** when several modules change things at once, and once at the end of the background advice
+  reads (not after every batch).
+- **Shortest Path:** its journey pin check no longer walks OpenMap's pin list every frame, and the world map's
+  pins are no longer listed twice a second. The minimap goal waits for a journey instead of checking once a second.
+- **Smaller savings:**
+  - the `/mo` window refreshes only the rows on screen, and nothing while it's closed
+  - the minimap button's tooltip counts problems once per 10 s
+  - Dungeon Journal's loot marks ignore item-info events while its window is closed
+  - addon whisper bursts are recorded once
+  - the dungeon chooser listens for clicks only while it's open
+  - another addon's error spam no longer makes Master Options read a call stack for every error
+
 ## [2.12.6] - 2026-11-27
 
 ### Fixed

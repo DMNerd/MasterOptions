@@ -175,5 +175,4 @@ f:SetScript("OnEvent", function(_, event)
     SyncSoon(event == "PLAYER_LOGIN" and 4 or 1) -- (login: after GearMatic and CheapUpgrades have set up)
 end)
 
-MasterOptions_CheapUpgradesGearMatic = { Sync = Sync, Convert = Convert, PROFILE = PROFILE }
 end)

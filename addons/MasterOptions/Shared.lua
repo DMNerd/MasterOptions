@@ -31,6 +31,37 @@ local function AddOnLoaded(name)
 end
 S.AddOnLoaded = AddOnLoaded
 
+-- Items: the C_Item function where the client has it, else the old global
+S.GetItemInfo = (C_Item and C_Item.GetItemInfo) or _G.GetItemInfo
+S.GetItemInfoInstant = (C_Item and C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
+
+-- GearMatic: its namespace (the global GearMatic), its AceDB profile, its account-wide table (GearMaticDB)
+function S.GearMatic() local g = _G.GearMatic; return type(g) == "table" and g or nil end
+function S.GearMaticProfile()
+    local g = S.GearMatic()
+    return g and type(g.db) == "table" and type(g.db.profile) == "table" and g.db.profile or nil
+end
+function S.GearMaticDB() local d = _G.GearMaticDB; return type(d) == "table" and d or nil end
+
+-- Mastercraft's settings (MastercraftDB.settings, the table it reads live), or nil
+function S.MastercraftSettings()
+    local db = _G.MastercraftDB
+    return type(db) == "table" and type(db.settings) == "table" and db.settings or nil
+end
+
+-- Baganator: redraw its item buttons (junk coins, corner icons). One for every caller, a moment after the first
+-- ask, so several changes at once redraw once.
+local bagRefreshPending = false
+function S.RefreshBagButtons()
+    if bagRefreshPending then return end
+    bagRefreshPending = true
+    C_Timer.After(0.2, function()
+        bagRefreshPending = false
+        local api = _G.Baganator and _G.Baganator.API
+        if api and type(api.RequestItemButtonsRefresh) == "function" then pcall(api.RequestItemButtonsRefresh) end
+    end)
+end
+
 -- fn once, a moment after the first of any number of calls: soon = Debounce(fn, 1); soon() / soon(0.2)
 function S.Debounce(fn, defaultDelay)
     local pending = false
@@ -104,10 +135,11 @@ end
 -- GearMatic's spec, or GearMatic's best / 2nd best for any spec); Pawn alone where that isn't loaded.
 function S.KeepsGear(link)
     if type(_G.MasterOptions_GearKeeps) == "function" then return _G.MasterOptions_GearKeeps(link) end
-    return S.PawnSaysKeep(link)
+    if S.PawnSaysKeep(link) then return true, "Pawn: an upgrade, or your best / 2nd best for a scale" end
+    return false
 end
 
-local function GM() local g = _G.GearMatic; return type(g) == "table" and g or nil end
+local GM = S.GearMatic
 
 -- Bound to you alone (soulbound, not account-bound): it can never go to an alt. nil = can't tell.
 function S.Soulbound(bag, slot, link)
@@ -116,13 +148,14 @@ function S.Soulbound(bag, slot, link)
     if not ok or type(info) ~= "table" or info.isBound == nil then return nil end
     if not info.isBound then return false end
     -- account-bound items (bind types 7-9) travel to alts
-    local okI, bindType = pcall(function() return select(14, ((C_Item and C_Item.GetItemInfo) or GetItemInfo)(link or info.hyperlink)) end)
-    if okI and type(bindType) == "number" and bindType >= 7 then return false end
+    local l = link or info.hyperlink
+    local bindType = l and select(14, S.GetItemInfo(l))
+    if type(bindType) == "number" and bindType >= 7 then return false end
     return true
 end
 
 -- GearMatic's own verdict on a bag slot: an upgrade (for you or an alt), best in slot, or in an equipment set.
--- An upgrade only for an alt doesn't keep a soulbound piece: it can't be sent to them.
+-- An upgrade only for an alt doesn't keep a soulbound piece: it can't be sent to them. true, and why (for /mo vendor)
 function S.GearMaticKeeps(link, bag, slot, itemID)
     local gm = GM()
     if not gm then return false end
@@ -130,14 +163,17 @@ function S.GearMaticKeeps(link, bag, slot, itemID)
     if bo and bo.MarkerVerdict then
         local ok, v = pcall(bo.MarkerVerdict, link, bag, slot)
         if ok and type(v) == "table" then
-            if v.upgrade or v.skull then return true end
-            if v.alt and S.Soulbound(bag, slot, link) ~= true then return true end
+            if v.upgrade then return true, "GearMatic: an upgrade for you" end
+            if v.skull then return true, "GearMatic: best in slot" end
+            if v.alt and S.Soulbound(bag, slot, link) ~= true then
+                return true, "GearMatic: an upgrade for one of your alts (not soulbound)"
+            end
         end
     end
     local va = gm.VendorAutomation
     if va and va.InEquipmentSet then
         local ok, inSet = pcall(va.InEquipmentSet, bag, slot, itemID)
-        if ok and inSet then return true end
+        if ok and inSet then return true, "in an equipment set" end
     end
     return false
 end
@@ -276,6 +312,113 @@ function S.MastercraftModuleOn(key)
 end
 
 ---------------------------------------------------------------------------
+-- Mastercraft's advice, as its item tooltip shows it. Its verdicts are worked out in private functions, but it writes
+-- them onto GameTooltip, and supports another addon reading items through a hidden GameTooltip (its Tooltip.lua,
+-- patch-479). One reader for every module (Mastercraft_Advice, _Keep, _VendorSell, _BankMats):
+--   verdict    the right side of its "Mastercraft" header: "KEEP", "VENDOR", "AUCTION", "DISENCHANT", "NO PRICES".
+--              An item you track has the header without one (its "Tracking" row under it) and the advice's reason
+--              further down: KEEP, known by the reason's wording (Mastercraft's Loot.lua writes those under KEEP only)
+--   reason     the line under the verdict ("Your Tailoring guide still needs 4." ...), "" when there's none
+--   keepSome   a line under it keeps some for a guide: "Keep 5 for your Tailoring guide - you have 8, the other 3
+--              can go." / "... guide needs ..." / "... guide uses ..."
+--   guideNeeds its guide section's "<Profession> guide needs  N more" line
+---------------------------------------------------------------------------
+local function StripColour(s) return (s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")) end
+local KEEP_REASONS = { "guide still needs", "guide uses all", "^You're tracking it:" }
+
+function S.ReadMastercraftAdvice(tip)
+    local name = tip:GetName()
+    if not name then return nil, "", false, false end
+    local verdict, reason, keepSome, guideNeeds, header, reasonNext = nil, "", false, false, false, false
+    for i = 1, tip:NumLines() do
+        local left = _G[name .. "TextLeft" .. i]
+        local text = left and left:GetText()
+        if type(text) == "string" then
+            if text:find("guide needs$") then guideNeeds = true end
+            if not header and text:find("Mastercraft", 1, true) then
+                header = true
+                local right = _G[name .. "TextRight" .. i]
+                local r = right and right:IsShown() and right:GetText()
+                if type(r) == "string" and r ~= "" then verdict, reasonNext = StripColour(r):upper(), true end
+            elseif header then
+                local t = StripColour(text)
+                if reasonNext then
+                    reason, reasonNext = t, false
+                elseif not verdict then
+                    for _, p in ipairs(KEEP_REASONS) do
+                        if t:find(p) then verdict, reason = "KEEP", t break end
+                    end
+                end
+                -- (the reason line itself may be the one: "Keep 5 for your Tailoring guide - ...")
+                if t:find("^Keep %d+ for") or t:find("guide needs") or t:find("guide uses") then keepSome = true end
+            end
+        end
+    end
+    return verdict, reason, keepSome, guideNeeds
+end
+
+-- Every item tooltip GameTooltip shows (yours and the hidden reads below) read once, after Mastercraft has added its
+-- lines (the hook is set by the first module that asks, at Master Options' own load: Mastercraft, an optional
+-- dependency, has set its own by then), and handed to each subscriber: fn(itemID, verdict, reason, keepSome,
+-- guideNeeds). Not while Mastercraft's tooltip lines are off (its Settings > Modules > Tooltip extras): then a tooltip
+-- says nothing about the item, and reading it would forget what was learned.
+local adviceSubs, adviceHooked = {}, false
+local lastRead = { id = nil }
+local function OnItemTooltip(tip, data)
+    if tip ~= GameTooltip then return end
+    local id = data and type(data.id) == "number" and data.id
+    if not id then
+        local _, link = tip:GetItem()
+        id = link and tonumber(link:match("item:(%d+)"))
+    end
+    if not id or not S.MastercraftModuleOn("tip") then return end
+    local ok, verdict, reason, keepSome, guideNeeds = pcall(S.ReadMastercraftAdvice, tip)
+    if not ok then
+        if _G.MasterOptions_ReportError then _G.MasterOptions_ReportError("MasterOptions", "reading Mastercraft's advice", verdict) end
+        return
+    end
+    lastRead.id, lastRead.verdict, lastRead.reason, lastRead.keepSome, lastRead.guideNeeds = id, verdict, reason, keepSome, guideNeeds
+    for i = 1, #adviceSubs do
+        local sub = adviceSubs[i]
+        local okS, err = pcall(sub.fn, id, verdict, reason, keepSome, guideNeeds)
+        if not okS and _G.MasterOptions_ReportError then _G.MasterOptions_ReportError(sub.name, "learning from an item tooltip", err) end
+    end
+end
+
+function S.OnMastercraftAdvice(name, fn)
+    adviceSubs[#adviceSubs + 1] = { name = name, fn = fn }
+    if not adviceHooked and TooltipDataProcessor and Enum and Enum.TooltipDataType then
+        adviceHooked = true
+        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, OnItemTooltip)
+    end
+end
+
+-- Mastercraft's advice for a bag slot, read now through the hidden GameTooltip (the subscribers learn from it too):
+-- verdict, reason, keepSome, guideNeeds - nil when there's nothing to read
+function S.MastercraftSlotAdvice(bag, slot)
+    local tip = GameTooltip
+    if not (tip and tip.SetBagItem) then return nil end
+    lastRead.id = nil
+    tip:SetOwner(WorldFrame, "ANCHOR_NONE")
+    local verdict, reason, keepSome, guideNeeds
+    if pcall(tip.SetBagItem, tip, bag, slot) then
+        if lastRead.id then -- (read by the hook just now)
+            verdict, reason, keepSome, guideNeeds = lastRead.verdict, lastRead.reason, lastRead.keepSome, lastRead.guideNeeds
+        elseif S.MastercraftModuleOn("tip") then -- (no tooltip data hook on this client)
+            local ok, v, r, k, g = pcall(S.ReadMastercraftAdvice, tip)
+            if ok then verdict, reason, keepSome, guideNeeds = v, r, k, g end
+        end
+    end
+    tip:Hide()
+    return verdict, reason, keepSome, guideNeeds
+end
+
+-- An item's tooltip is on screen (the mouse on a bag slot): a hidden read through GameTooltip would take it away
+function S.ItemTooltipShown()
+    return GameTooltip:IsShown() and GameTooltip:GetOwner() ~= WorldFrame and GameTooltip:GetItem() ~= nil
+end
+
+---------------------------------------------------------------------------
 -- OpenMap_MiniMap: the profile in use - this character's own (OpenMap keys it on the first name), or the shared one
 ---------------------------------------------------------------------------
 function S.OpenMapMiniMapProfile()
@@ -343,8 +486,8 @@ function S.OpenMapFollowed()
 end
 
 ---------------------------------------------------------------------------
--- Master Options' look for its own frames on others' maps (the minimap's zone bar and coordinates tab, the dungeon
--- chooser): the /mo window's header (the game's BasicFrameTemplate title bar - Details' title bar matches it),
+-- Master Options' look for its own frames on others' maps (the minimap's zone bar and coordinates tab; the dungeon
+-- chooser is the game's BasicFrameTemplate itself): the /mo window's header (the game's BasicFrameTemplate title bar - Details' title bar matches it),
 -- else a grey gradient like it, darker at the top
 ---------------------------------------------------------------------------
 local HEAD_TOP, HEAD_BOTTOM = { 0.06, 0.06, 0.06 }, { 0.18, 0.18, 0.175 }

@@ -24,7 +24,6 @@ function MasterOptions_Module(name, needs, body)
     local m = { name = name, full = "MasterOptions_" .. name, needs = needs or {}, body = body }
     list[#list + 1] = m
     byName[name] = m
-    m.full = "MasterOptions_" .. name
 end
 
 -- the old patch folder of a module: installed and enabled for this character
@@ -42,7 +41,6 @@ local function OldFolderOn(full)
     end
     return (state or 0) > 0
 end
-M.OldFolderOn = OldFolderOn
 
 local function Missing(m)
     local out = {}
@@ -74,7 +72,6 @@ local function Short(name) return (tostring(name):gsub("^MasterOptions_", "")) e
 function M.Has(name) return byName[Short(name)] ~= nil end
 function M.IsActive(name) return M.state[Short(name)] == "on" end
 function M.State(name) return M.state[Short(name)] end
-function M.Needs(name) local m = byName[Short(name)]; return m and m.needs or {} end
 -- on/off for the next load (hooks can't be taken back mid-session)
 function M.IsEnabled(name)
     local off = MasterOptionsDB and MasterOptionsDB.modulesOff

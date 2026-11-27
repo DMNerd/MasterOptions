@@ -37,8 +37,9 @@ if api.RegisterJunkPlugin then
             return not (VA.InEquipmentSet and VA.InEquipmentSet(bagID, slotID, itemID))
         end
         -- what Mastercraft says to VENDOR, when the MasterOptions_Mastercraft_VendorSell patch will sell it
+        -- (Mastercraft_VendorSell: it sells through GearMatic, so GearMatic's coin shows it)
         local vs = _G.MasterOptions_MastercraftVendorSell
-        if vs and vs.WouldSell and vs.WouldSell(bagID, slotID, itemID) then return true end
+        if vs and vs.WouldSell(bagID, slotID, itemID) then return true end
         -- items you marked to sell
         if VA.MarkSellCheck and VA.MarkSellCheck(bagID, slotID, itemID) then return true end
         if VA.IsSellMarked and VA.IsSellMarked(itemID) then return false end
@@ -77,7 +78,7 @@ end
 
 local function Changed()
     byItem, names = nil, nil
-    if api.RequestItemButtonsRefresh then api.RequestItemButtonsRefresh() end
+    MasterOptions_Shared.RefreshBagButtons()
 end
 
 if api.RegisterItemSetSource then

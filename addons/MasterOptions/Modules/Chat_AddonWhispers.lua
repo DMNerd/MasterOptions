@@ -52,13 +52,33 @@ local function Sender()
     return "?"
 end
 
+-- old entries out of the name lists, now and then (Filter prunes them too, but only when a line comes)
+local sinceTidy = 0
+local function Tidy(now)
+    sinceTidy = sinceTidy + 1
+    if sinceTidy < 64 then return end
+    sinceTidy = 0
+    for _, list in ipairs({ addonTo, typedTo }) do
+        for k, at in pairs(list) do if now - at > WINDOW then list[k] = nil end end
+    end
+end
+
 local function OnAddonMessage(prefix, text, channel, target)
     if channel == "WHISPER" then
         local k = Key(target)
         if k then
-            addonTo[k] = Now()
-            table.insert(recent, 1, { at = Now(), name = target, addon = Sender(), prefix = tostring(prefix) })
-            if #recent > 30 then recent[#recent] = nil end
+            local now = Now()
+            addonTo[k] = now
+            -- (an addon's sync sends many at once: the same whisper again within a second is the same entry - no
+            -- call stack read for it)
+            local top = recent[1]
+            if top and top.name == target and top.prefix == tostring(prefix) and now - top.at < 1 then
+                top.at = now
+            else
+                table.insert(recent, 1, { at = now, name = target, addon = Sender(), prefix = tostring(prefix) })
+                if #recent > 30 then recent[#recent] = nil end
+            end
+            Tidy(now)
         end
     end
 end
@@ -121,5 +141,5 @@ elseif ChatFrame_AddMessageEventFilter then
     ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", Filter)
 end
 
-MasterOptions_AddonWhispers = { Filter = Filter, List = List, Recent = function() return recent end }
+MasterOptions_AddonWhispers = { List = List, Recent = function() return recent end } -- (Recent: for the tests)
 end)

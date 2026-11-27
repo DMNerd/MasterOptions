@@ -599,12 +599,12 @@ local OPTIONS = {
         scope = "Baganator profile",
     },
     {
-        -- (Baganator corner widget "masteroptions_mc_advice", Modules\Mastercraft_VendorSell.lua; last in the top
+        -- (Baganator corner widget "masteroptions_mc_advice", Modules\Baganator_Mastercraft.lua; last in the top
         -- right, so the lock and GearMatic's skull win the corner)
         -- (since 35: turns GearMatic's vendor badge off - two verdicts on one slot; 36: its auction and disenchant
         -- badges too)
         kind = "toggle", label = "Mastercraft advice in bags", rec = true, since = 36, reload = true,
-        needs = { "Baganator", "MasterOptions_Mastercraft_VendorSell" },
+        needs = { "Baganator", "MasterOptions_Baganator_Mastercraft", "MasterOptions_Mastercraft_Advice" },
         tip = "Mastercraft's advice as an icon in the top-right corner of Baganator's bag slots: a green tick for KEEP (also \"keep some for a guide\"), the vendor's bag for VENDOR, the auctioneer for AUCTION and the disenchant icon for DISENCHANT. Learned from the item tooltips, and read for new items in the background. No vendor's bag where the junk coin already shows it goes at the next vendor. Turns GearMatic's best-gold badges off - the vendor $, the auction price tag and the disenchant marker say the same (one verdict per slot).",
         get = function() local p = BAG(); return p ~= nil and CornerHas(p, "masteroptions_mc_advice") end,
         set = function(v)
@@ -613,15 +613,9 @@ local OPTIONS = {
             if v then
                 p[CORNERS[2]] = type(p[CORNERS[2]]) == "table" and p[CORNERS[2]] or {}
                 table.insert(p[CORNERS[2]], "masteroptions_mc_advice")
-                -- GearMatic's three "best gold" badges (vendor $, auction price tag, disenchant) are the same verdicts
-                local s = GM()
-                if s then
-                    local changed = false
-                    for _, k in ipairs({ "bestGoldShowVendor", "bestGoldShowAuction", "bestGoldShowDisenchant" }) do
-                        if s[k] ~= false then s[k] = false; changed = true end
-                    end
-                    if changed then GMRefreshBagIcons() end
-                end
+                -- (one verdict per slot: GearMatic's three "best gold" badges off - the module's own rule)
+                local bm = _G.MasterOptions_BaganatorMastercraft
+                if bm then bm.OneVerdictPerSlot(true) end
             end
         end,
         scope = "Baganator profile",
@@ -848,89 +842,75 @@ local OPTIONS = {
     },
 
 }
--- MasterOptions' own compatibility patches (each is a separate addon named MasterOptions_<Addon>_<Addon>)
-local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions_GearMatic_Baganator = 6,
-                      MasterOptions_GearMatic_Forever = 7, MasterOptions_DialogKey_Pawn = 7,
-                      MasterOptions_Mastercraft_Auctionator = 9,
-                      MasterOptions_DeleteCheapestItem_Protect = 10, MasterOptions_Mastercraft_Keep = 10,
-                      MasterOptions_DungeonJournal_OpenMap = 11, MasterOptions_Mastercraft_FishingView = 12,
-                      MasterOptions_Mastercraft_Chattynator = 14, MasterOptions_Mastercraft_VendorSell = 17,
-                      MasterOptions_Mastercraft_BankMats = 18,
-                      MasterOptions_OpenMapMiniMap_Border = 19,
-                      MasterOptions_ShortestPathForever_OpenMapMiniMap = 23,
-                      MasterOptions_NeverSell = 24, MasterOptions_GearMatic_SellGuard = 25,
-                      MasterOptions_GearMatic_SpecKeep = 27, MasterOptions_CheapUpgrades_GearMatic = 27,
-                      MasterOptions_DungeonJournal_Upgrades = 29,
-                      MasterOptions_Mastercraft_FarmTour = 30,
-                      MasterOptions_Mastercraft_RecipeMap = 31,
-                      MasterOptions_DungeonJournal_SpokenBosses = 32,
-                      MasterOptions_ShortestPathForever_OpenMapPins = 32,
-                      MasterOptions_Chat_AddonWhispers = 33 }
-local PATCH_TIP = {
-    MasterOptions_Chat_AddonWhispers = "Hides \"No player named ... is currently playing\" when an addon's hidden whisper (OpenMap's map sharing, Questie's sync, Mastercraft's crafter search ...) went to someone who just logged off - you sent nothing. Your own whispers' answers always show. /mo whispers lists which addon whispered whom.",
-    MasterOptions_ShortestPathForever_OpenMapPins = "One trip, one pin: every ShortestPathForever journey (Shift-click, a pin you follow in OpenMap, Dungeon Journal's Show on Map, a quest or recipe waypoint) has an OpenMap pin at its destination, and ShortestPathForever's own goal marker is hidden meanwhile (at the minimap's rim it stays, pointing the way). Any end - arriving, clearing, stopping, a new journey - clears the pin and OpenMap's following. A pin you wrote a note on stays.",
-    MasterOptions_DungeonJournal_SpokenBosses = "Spoken_Bosses tells the dungeon's story beside the world map when Dungeon Journal's map of it is shown there (Map inside dungeons, Dungeon entrance click), and a boss's story when you click the boss on that map.",
-    MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
-    MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
-    MasterOptions_OpenMapTweaks_Mastercraft = "Mastercraft's node rule also filters OpenMap_Tweaks' gathering pins.",
-    MasterOptions_GearMatic_Baganator = "Baganator junk coins from GearMatic's vendor rules, and GearMatic loadouts shown as equipment sets on bag slots (GearMatic has loadouts on Vanilla / TBC clients only - not on Forever).",
-    MasterOptions_GearMatic_Forever = "Keeps GearMatic's data apart for characters that share a first name (Forever reports no realm, so GearMatic saved them as one). Turning it off later makes GearMatic go back to the shared record.",
-    MasterOptions_DialogKey_Pawn = "Pre-selects the best quest reward so DialogKey's key takes it (pick whose choice under Quests).",
-    MasterOptions_Mastercraft_Auctionator = "Mastercraft's Scan prices button on Auctionator's page (next to Full Scan) instead of the tab row or the bottom corner, where it covered Buyout.",
-    MasterOptions_DeleteCheapestItem_Protect = "DeleteCheapestItem never offers upgrades (Pawn, GearMatic), best-in-slot items, set or loadout pieces, profession tools or materials Mastercraft says you need. Kept as entries in its ignore list; only those it added are removed again.",
-    MasterOptions_Mastercraft_Keep = "Materials on your Mastercraft item tracker, or that Mastercraft's tooltip says a guide still needs, go on GearMatic's never-sell list (and are protected from DeleteCheapestItem with the Protect patch).",
-    MasterOptions_Mastercraft_Chattynator = "Mastercraft's own /played request (it records your play time) stays out of Chattynator's chat, as it already does in the game's chat. Your own /played still shows.",
-    MasterOptions_Mastercraft_VendorSell = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank.",
-    MasterOptions_Mastercraft_BankMats = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank.",
-    MasterOptions_OpenMapMiniMap_Border = "OpenMap's square minimap framed with the action bar buttons' border (Look > Minimap border).",
-    MasterOptions_Mastercraft_RecipeMap = "Map markers (world map and minimap) on the vendors selling patterns for recipes you haven't learned, the creatures and chests they drop from (a specific drop, with GearMatic's chance - world drops aren't marked), and on your profession's trainers when you're near your skill cap and can train the next rank. From Mastercraft's list of your recipes and QuestieDB's vendors and trainers. A pattern's own skill isn't known: its tooltip at the vendor tells.",
-    MasterOptions_Mastercraft_FarmTour = "Start farming in Mastercraft and ShortestPathForever walks you through this zone's herbs and veins worth it to you, nearest first (Mastercraft's own nodes and its Which nodes rule), and stops when you do. ShortestPathForever's own farming tour needs GatherMate2. /mo farm starts one without Mastercraft's session (/mo farm herbs, ores, stop).",
-    MasterOptions_DungeonJournal_Upgrades = "Dungeon Journal's loot marked: an upgrade arrow and how big (+23%) by whoever judges upgrades - Pawn with Pawn Forever, else GearMatic with CheapUpgrades' size - GearMatic's skull on what's best in slot for you, and a cog on what your Mastercraft guides need. No more hovering every item.",
-    MasterOptions_CheapUpgrades_GearMatic = "CheapUpgrades values items with GearMatic's stat weights: a \"GearMatic\" weights profile for every spec, kept up to date (level, talents) and used unless you picked a profile of your own in CheapUpgrades. Off: CheapUpgrades' own weights again.",
-    MasterOptions_GearMatic_SpecKeep = "Gear that is your best or 2nd best for any of your specs in GearMatic is kept from selling (Master Options' and GearMatic's own) and from DeleteCheapestItem - off-spec pieces too. GearMatic itself only looks at the spec you play now. Works with or without Pawn.",
-    MasterOptions_GearMatic_SellGuard = "GearMatic's gear and low-value selling keeps what Master Options protects: the never-sell list, materials your Mastercraft guides need, and gear Pawn calls an upgrade or your best for a spec, or GearMatic rates your best or 2nd best for any spec (with GearMatic_SpecKeep) - through GearMatic's own sell guard.",
-    MasterOptions_NeverSell = "One never-sell list, kept the same in GearMatic (never auto-sold), Mastercraft (no VENDOR / AUCTION advice) and DeleteCheapestItem (never offered for deletion): add or remove an item in any of them, or with /mo never <item>, and it changes in all. /mo never lists it.",
-    MasterOptions_ShortestPathForever_OpenMapMiniMap = "Shortest Path's journey goal on the minimap stays visible over OpenMap's painted minimap (it faded with the game's terrain, and was gone at far zoom).",
-    MasterOptions_DungeonJournal_OpenMap = "Dungeon Journal's Show on Map also puts a blue OpenMap pin there (named, followed like a pin you drop), gone again when Dungeon Journal clears its mark. And the map inside dungeons (Maps > Map inside dungeons). Replaces OpenMap_NoDungeonMap.",
-}
 -- the modules (Modules\*.lua, once separate addons): on / off for the next load, and what each is doing now
 local MODULE_STATE_TEXT = { on = "|cff66dd66running|r", off = "|cff9d9d9doff|r", error = "|cffff5555stopped by an error (Problems)|r",
     ["old folder"] = "|cffffd200standing aside: the old separate addon of the same name is still installed (Problems)|r" }
--- Every module (Modules\*.lua): a title, the addons it needs (as its MasterOptions_Module line declares them - the
--- registry is empty while this file loads; tests\test_modules.py checks the two agree, and that none is missing),
--- under the section it belongs in. Its row: the title, what it does (PATCH_TIP's first sentence) and what it needs
--- under it, the tick box greyed when a needed addon isn't loaded; the whole of PATCH_TIP and what it's doing now in
--- the tooltip.
+-- Every module (Modules\*.lua): its name, a title, the addons it needs (as its MasterOptions_Module line declares
+-- them - the registry is empty while this file loads; tests\test_moduleslist.py checks the two agree, and that none
+-- is missing), the defaults version it came with (since: turned on by Recommended on upgrading past it) and what it
+-- does (tip), under the section it belongs in. Its row: the title, the tip's first sentence and what it needs under
+-- it, the tick box greyed when a needed addon isn't loaded; the whole tip and what it's doing now in the tooltip.
 local MODULES = {
     { header = "Modules: maps (on / off after a reload)" },
-    { "DungeonJournal_OpenMap", "Dungeon Journal on OpenMap's map", { "ForeverDungeonJournal", "OpenMap" } },
-    { "DungeonJournal_SpokenBosses", "Spoken's stories on Dungeon Journal's map", { "ForeverDungeonJournal", "Spoken_Bosses" } },
-    { "ShortestPathForever_OpenMapPins", "One trip, one OpenMap pin", { "ShortestPathForever", "OpenMap" } },
-    { "ShortestPathForever_OpenMapMiniMap", "Journey goal visible on OpenMap's minimap", { "ShortestPathForever", "OpenMap_MiniMap" } },
-    { "Mastercraft_FarmTour", "Farming tours", { "Mastercraft", "ShortestPathForever" } },
-    { "Mastercraft_RecipeMap", "Recipe map markers", { "Mastercraft", "Questie" } },
-    { "OpenMapTweaks_Mastercraft", "Mastercraft's node rule for OpenMap_Tweaks' pins", { "OpenMap_Tweaks", "Mastercraft" } },
-    { "OpenMapMiniMap_Border", "Action bar border round the minimap", { "OpenMap_MiniMap" } },
+    { "DungeonJournal_OpenMap", "Dungeon Journal's map inside dungeons", { "ForeverDungeonJournal", "OpenMap" }, since = 11,
+      tip = "Dungeon Journal's map of the dungeon inside dungeons instead of OpenMap's (Maps > Map inside dungeons), and OpenMap's dungeon entrance icons opening it (Dungeon entrance click) - a list to pick from where several dungeons share an entrance. Replaces OpenMap_NoDungeonMap." },
+    { "DungeonJournal_ShowOnMap", "Dungeon Journal's Show on Map as an OpenMap pin", { "ForeverDungeonJournal", "OpenMap" }, since = 37,
+      tip = "Dungeon Journal's Show on Map also puts a blue OpenMap pin there (named, followed like a pin you drop), gone again when Dungeon Journal clears its mark. A pin you wrote your own note on stays." },
+    { "DungeonJournal_SpokenBosses", "Spoken's stories on Dungeon Journal's map", { "ForeverDungeonJournal", "Spoken_Bosses" }, since = 32,
+      tip = "Spoken_Bosses tells the dungeon's story beside the world map when Dungeon Journal's map of it is shown there (Map inside dungeons, Dungeon entrance click), and a boss's story when you click the boss on that map." },
+    { "ShortestPathForever_OpenMapPins", "One trip, one OpenMap pin", { "ShortestPathForever", "OpenMap" }, since = 32,
+      tip = "One trip, one pin: every ShortestPathForever journey (Shift-click, a pin you follow in OpenMap, Dungeon Journal's Show on Map, a quest or recipe waypoint) has an OpenMap pin at its destination, and ShortestPathForever's own goal marker is hidden meanwhile (at the minimap's rim it stays, pointing the way). Any end - arriving, clearing, stopping, a new journey - clears the pin and OpenMap's following. A pin you wrote a note on stays." },
+    { "ShortestPathForever_OpenMapMiniMap", "Journey goal visible on OpenMap's minimap", { "ShortestPathForever", "OpenMap_MiniMap" }, since = 23,
+      tip = "Shortest Path's journey goal on the minimap stays visible over OpenMap's painted minimap (it faded with the game's terrain, and was gone at far zoom)." },
+    { "Mastercraft_FarmTour", "Farming tours", { "Mastercraft", "ShortestPathForever" }, since = 30,
+      tip = "Start farming in Mastercraft and ShortestPathForever walks you through this zone's herbs and veins worth it to you, nearest first (Mastercraft's own nodes and its Which nodes rule), and stops when you do. ShortestPathForever's own farming tour needs GatherMate2. /mo farm starts one without Mastercraft's session (/mo farm herbs, ores, stop)." },
+    { "Mastercraft_RecipeMap", "Recipe map markers", { "Mastercraft", "Questie" }, since = 31,
+      tip = "Map markers (world map and minimap) on the vendors selling patterns for recipes you haven't learned, the creatures and chests they drop from (a specific drop, with GearMatic's chance - world drops aren't marked), and on your profession's trainers when you're near your skill cap and can train the next rank. From Mastercraft's list of your recipes and QuestieDB's vendors and trainers. A pattern's own skill isn't known: its tooltip at the vendor tells." },
+    { "OpenMapTweaks_Mastercraft", "Mastercraft's node rule for OpenMap_Tweaks' pins", { "OpenMap_Tweaks", "Mastercraft" }, since = 2,
+      tip = "Mastercraft's node rule also filters OpenMap_Tweaks' gathering pins." },
+    { "OpenMapMiniMap_Border", "Action bar border round the minimap", { "OpenMap_MiniMap" }, since = 19,
+      tip = "OpenMap's square minimap framed with the action bar buttons' border (Look > Minimap border)." },
     { header = "Modules: gear (on / off after a reload)" },
-    { "DungeonJournal_Upgrades", "Upgrade marks in Dungeon Journal's loot", { "ForeverDungeonJournal" } },
-    { "CheapUpgrades_GearMatic", "CheapUpgrades uses GearMatic's stat weights", { "CheapUpgrades", "GearMatic" } },
-    { "GearMatic_SpecKeep", "Keep your best gear for every spec", { "GearMatic" } },
-    { "GearMatic_Forever", "Separate GearMatic data per character", { "GearMatic" } },
-    { "DialogKey_Pawn", "Best quest reward pre-selected", { "DialogKey_Numy" } },
+    { "DungeonJournal_Upgrades", "Upgrade marks in Dungeon Journal's loot", { "ForeverDungeonJournal" }, since = 29,
+      tip = "Dungeon Journal's loot marked: an upgrade arrow and how big (+23%) by whoever judges upgrades - Pawn with Pawn Forever, else GearMatic with CheapUpgrades' size - GearMatic's skull on what's best in slot for you, and a cog on what your Mastercraft guides need. No more hovering every item." },
+    { "CheapUpgrades_GearMatic", "CheapUpgrades uses GearMatic's stat weights", { "CheapUpgrades", "GearMatic" }, since = 27,
+      tip = "CheapUpgrades values items with GearMatic's stat weights: a \"GearMatic\" weights profile for every spec, kept up to date (level, talents) and used unless you picked a profile of your own in CheapUpgrades. Off: CheapUpgrades' own weights again." },
+    { "GearMatic_SpecKeep", "Keep your best gear for every spec", { "GearMatic" }, since = 27,
+      tip = "Gear that is your best or 2nd best for any of your specs in GearMatic is kept from selling (Master Options' and GearMatic's own) and from DeleteCheapestItem - off-spec pieces too. GearMatic itself only looks at the spec you play now. Works with or without Pawn." },
+    { "GearMatic_Forever", "Separate GearMatic data per character", { "GearMatic" }, since = 7,
+      tip = "Keeps GearMatic's data apart for characters that share a first name (Forever reports no realm, so GearMatic saved them as one). Turning it off later makes GearMatic go back to the shared record." },
+    { "DialogKey_Pawn", "Best quest reward pre-selected", { "DialogKey_Numy" }, since = 7,
+      tip = "Pre-selects the best quest reward so DialogKey's key takes it (pick whose choice under Quests)." },
     { header = "Modules: selling (on / off after a reload)" },
-    { "NeverSell", "One never-sell list for every addon", {} },
-    { "GearMatic_SellGuard", "GearMatic's selling keeps what's protected", { "GearMatic" } },
-    { "DeleteCheapestItem_Protect", "Keep gear and materials from being deleted", { "DeleteCheapestItem" } },
-    { "Mastercraft_Keep", "Materials your guides need are never sold", { "Mastercraft" } },
-    { "Mastercraft_VendorSell", "Sell what Mastercraft says to vendor", { "Mastercraft" } },
-    { "Mastercraft_BankMats", "Guide materials go into the bank", { "Mastercraft" } },
-    { "CheapUpgrades_Baganator", "Upgrade badges on bag slots", { "CheapUpgrades", "Baganator" } },
-    { "GearMatic_Baganator", "GearMatic's junk coins and loadouts in bags", { "GearMatic", "Baganator" } },
+    { "NeverSell", "One never-sell list for every addon", {}, since = 24,
+      tip = "One never-sell list, kept the same in GearMatic (never auto-sold), Mastercraft (no VENDOR / AUCTION advice) and DeleteCheapestItem (never offered for deletion): add or remove an item in any of them, or with /mo never <item>, and it changes in all. /mo never lists it." },
+    { "GearMatic_SellGuard", "GearMatic's selling keeps what's protected", { "GearMatic" }, since = 25,
+      tip = "GearMatic's gear and low-value selling keeps what Master Options protects: the never-sell list, materials your Mastercraft guides need, and gear Pawn calls an upgrade or your best for a spec, or GearMatic rates your best or 2nd best for any spec (with GearMatic_SpecKeep) - through GearMatic's own sell guard." },
+    { "DeleteCheapestItem_Protect", "Keep gear and materials from being deleted", { "DeleteCheapestItem" }, since = 10,
+      tip = "DeleteCheapestItem never offers upgrades (Pawn, GearMatic), best-in-slot items, set or loadout pieces, profession tools or materials Mastercraft says you need. Kept as entries in its ignore list; only those it added are removed again." },
+    { "Mastercraft_Keep", "Materials your guides need are never sold", { "Mastercraft" }, since = 10,
+      tip = "Materials on your Mastercraft item tracker, or that Mastercraft's tooltip says a guide still needs, go on GearMatic's never-sell list (and are protected from DeleteCheapestItem with the Protect patch)." },
+    { "Mastercraft_VendorSell", "Sell what Mastercraft says to vendor", { "Mastercraft" }, since = 17,
+      tip = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank." },
+    { "Mastercraft_BankMats", "Guide materials go into the bank", { "Mastercraft" }, since = 18,
+      tip = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank." },
+    { "CheapUpgrades_Baganator", "Upgrade badges on bag slots", { "CheapUpgrades", "Baganator" }, since = 1,
+      tip = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots." },
+    { "GearMatic_Baganator", "GearMatic's junk coins and loadouts in bags", { "GearMatic", "Baganator" }, since = 6,
+      tip = "Baganator junk coins from GearMatic's vendor rules, and GearMatic loadouts shown as equipment sets on bag slots (GearMatic has loadouts on Vanilla / TBC clients only - not on Forever)." },
+    { "Mastercraft_Advice", "Mastercraft's advice remembered", { "Mastercraft" }, since = 37,
+      tip = "Remembers what Mastercraft advises for each item (KEEP, VENDOR, AUCTION, DISENCHANT), learned from its tooltips and read for new items in your bags in the background - so the junk coins for VENDOR items and the advice icons in the bags show without hovering each item." },
+    { "Baganator_Mastercraft", "Mastercraft's junk coin and advice icons in bags", { "Baganator", "Mastercraft" }, since = 37,
+      tip = "Mastercraft in Baganator's bags: its junk coin (greys, and what Master Options sells with them) and an icon with its advice on every bag slot (Bags > Mastercraft advice in bags). While the icons show, GearMatic's best-gold badges stay off - one verdict per slot." },
     { header = "Modules: more (on / off after a reload)" },
-    { "Mastercraft_FishingView", "Fishing view keeps bags and pop-ups", { "Mastercraft" } },
-    { "Mastercraft_Auctionator", "Scan prices button on Auctionator's page", { "Mastercraft", "Auctionator" } },
-    { "Mastercraft_Chattynator", "Mastercraft's /played kept out of chat", { "Mastercraft", "Chattynator" } },
-    { "Chat_AddonWhispers", "Hide not-online lines from addons' whispers", {} },
+    { "Mastercraft_FishingView", "Fishing view keeps bags and pop-ups", { "Mastercraft" }, since = 12,
+      tip = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator." },
+    { "Mastercraft_Auctionator", "Scan prices button on Auctionator's page", { "Mastercraft", "Auctionator" }, since = 9,
+      tip = "Mastercraft's Scan prices button on Auctionator's page (next to Full Scan) instead of the tab row or the bottom corner, where it covered Buyout." },
+    { "Mastercraft_Chattynator", "Mastercraft's /played kept out of chat", { "Mastercraft", "Chattynator" }, since = 14,
+      tip = "Mastercraft's own /played request (it records your play time) stays out of Chattynator's chat, as it already does in the game's chat. Your own /played still shows." },
+    { "Chat_AddonWhispers", "Hide not-online lines from addons' whispers", {}, since = 33,
+      tip = "Hides \"No player named ... is currently playing\" when an addon's hidden whisper (OpenMap's map sharing, Questie's sync, Mastercraft's crafter search ...) went to someone who just logged off - you sent nothing. Your own whispers' answers always show. /mo whispers lists which addon whispered whom." },
 }
 -- addon folder names as the AddOns list shows them
 local NICE = { ForeverDungeonJournal = "Dungeon Journal", DialogKey_Numy = "DialogKey", Spoken_Bosses = "Spoken Bosses",
@@ -950,7 +930,6 @@ local function FirstSentence(text)
     if #s > 170 then s = s:sub(1, 167):gsub("%s+%S*$", "") .. "..." end
     return s
 end
-MO.MODULES = MODULES
 for _, entry in ipairs(MODULES) do
     if entry.header then
         OPTIONS[#OPTIONS + 1] = { header = entry.header }
@@ -959,14 +938,14 @@ for _, entry in ipairs(MODULES) do
         local name = "MasterOptions_" .. short
         local function M() return _G.MasterOptions_Modules end
         OPTIONS[#OPTIONS + 1] = {
-            kind = "toggle", label = title, reload = true, rec = true, since = PATCH_SINCE[name] or 1,
+            kind = "toggle", label = title, reload = true, rec = true, since = entry.since or 1,
             module = short, needs = #needs > 0 and needs or nil,
-            desc = function() return FirstSentence(PATCH_TIP[name]) .. "\n" .. NeedsLine(needs) end,
+            desc = function() return FirstSentence(entry.tip) .. "\n" .. NeedsLine(needs) end,
             tip = function()
                 local m = M()
                 local state = m and m.State(short)
                 local now = state and (MODULE_STATE_TEXT[state] or ("|cff9d9d9dnot running: " .. state .. "|r")) or "?"
-                return (PATCH_TIP[name] or "") .. "\n\n" .. NeedsLine(needs) .. "\nModule: " .. short .. "\nNow: " .. now
+                return (entry.tip or "") .. "\n\n" .. NeedsLine(needs) .. "\nModule: " .. short .. "\nNow: " .. now
             end,
             get = function() local m = M(); return m == nil or m.IsEnabled(short) end,
             set = function(v) local m = M(); if m then m.SetEnabled(short, v) end end,

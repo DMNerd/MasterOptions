@@ -288,12 +288,39 @@ local function SpecKeep()
     return type(m) == "table" and type(m.KeepsMany) == "function" and m or nil
 end
 
-function MasterOptions_GearKeeps(link)
-    if MasterOptions_PawnKeeps(link) then return true end
+-- Asked for every bag slot on every Baganator redraw, every vendor pass and every bag update: the answer kept per
+-- link until anything it depends on can have changed - your bags and gear (best / 2nd best among what you own), your
+-- level, talents or spec - and for 5 s at most (Pawn's scales turned on or off fire nothing).
+local keepCache, keepCacheAt = {}, 0
+local keepCacheFrame = CreateFrame("Frame")
+for _, e in ipairs({ "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED", "PLAYER_LEVEL_UP", "PLAYER_TALENT_UPDATE",
+                     "ACTIVE_TALENT_GROUP_CHANGED", "CHARACTER_POINTS_CHANGED" }) do
+    pcall(keepCacheFrame.RegisterEvent, keepCacheFrame, e)
+end
+keepCacheFrame:SetScript("OnEvent", function() keepCache = {} end)
+
+local function GearKeepsNow(link)
+    if MasterOptions_PawnKeeps(link) then return true, "Pawn: an upgrade, or your best / 2nd best for a scale" end
     local m = SpecKeep()
     if not m then return false end
     local ok, out = pcall(m.KeepsMany, { link })
-    return ok and type(out) == "table" and out[link] == true
+    if ok and type(out) == "table" and out[link] == true then return true, "GearMatic: your best for one of your specs" end
+    return false
+end
+
+-- true, and why (for /mo vendor) - or false
+function MasterOptions_GearKeeps(link)
+    if type(link) ~= "string" then return false end
+    local now = GetTime and GetTime() or 0 -- (the tests' sandbox has no clock: no cache there beyond the events)
+    if now == 0 or now - keepCacheAt > 5 then keepCache, keepCacheAt = {}, now end
+    local hit = keepCache[link]
+    if hit == nil then
+        local keeps, why = GearKeepsNow(link)
+        hit = keeps and (why or true) or false
+        keepCache[link] = hit
+    end
+    if hit then return true, hit ~= true and hit or nil end
+    return false
 end
 
 function MasterOptions_GearKeepsMany(links)

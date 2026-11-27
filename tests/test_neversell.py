@@ -60,6 +60,7 @@ L('MasterOptions_NeverSell.Set(600, false)')
 res["/mo never remove -> gone everywhere"] = E("Nowhere(600)")
 res["Baganator lock: first in the top right, on listed items only"] = (E("CORNER.masteroptions_never_sell.pos.corner .. CORNER.masteroptions_never_sell.pos.priority") == "top_right1"
     and E("CORNER.masteroptions_never_sell.onUpdate(nil, { itemID = 500 })") is True and E("CORNER.masteroptions_never_sell.onUpdate(nil, { itemID = 600 })") is False)
+L("RunTimers()")  # (the shared refresh: a moment after the change)
 res["Baganator refreshed when the list changes"] = E("BAGREFRESH") > 0
 L('Tick(); Tick()')
 res["steady: nothing changes by itself"] = E("Everywhere(500) and Everywhere(102) and Everywhere(301) and Nowhere(201)")

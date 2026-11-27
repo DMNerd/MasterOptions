@@ -19,10 +19,21 @@ local function OnInit(itemButton)
     return fs
 end
 
+-- Asked for every bag slot on every Baganator redraw, and each answer runs CheapUpgrades' whole upgrade check: the
+-- badge kept per link until CheapUpgrades re-evaluates (below). "Not ready yet" (nil) isn't kept.
+local badges = {}
+
 local function OnUpdate(fs, details)
     if not (CU.db and CU.db.bagBadges) then return false end
-    local text = MasterOptions_Shared.CheapUpgradesBadge(details and details.itemLink)
-    if not text then return text end -- (nil: CheapUpgrades not ready yet; false: no badge)
+    local link = details and details.itemLink
+    if not link then return false end
+    local text = badges[link]
+    if text == nil then
+        text = MasterOptions_Shared.CheapUpgradesBadge(link)
+        if text == nil then return nil end -- (CheapUpgrades not ready yet: Baganator asks again)
+        badges[link] = text
+    end
+    if not text then return false end
     fs:SetText(text)
     return true
 end
@@ -30,10 +41,11 @@ end
 api.RegisterCornerWidget("CheapUpgrades badge", ID, OnUpdate, OnInit,
     { corner = "bottom_left", priority = 1 })
 
--- When CheapUpgrades re-evaluates (new gear, spec change, new prices), ask Baganator to redraw.
+-- When CheapUpgrades re-evaluates (new gear, spec change, new prices): its badges anew, and Baganator redraws
 if CU.Bags and type(CU.Bags.Refresh) == "function" then
     hooksecurefunc(CU.Bags, "Refresh", function()
-        if api.RequestItemButtonsRefresh then api.RequestItemButtonsRefresh() end
+        badges = {}
+        MasterOptions_Shared.RefreshBagButtons()
     end)
 end
 end)

@@ -73,10 +73,16 @@ end
 ---------------------------------------------------------------------------
 local OURS = "AddOns[/\\](MasterOptions[%w_]*)[/\\]"
 
+-- Every Lua error of every addon comes here. Its call stack (which tells an error raised elsewhere but called from
+-- our code) is read for the first 10 in a second: under another addon's error spam, no stack text for each one.
+local second, inSecond = -1, 0
 local function Capture(msg)
     local s = tostring(msg)
     local addon = s:match(OURS)
-    local stack = debugstack and debugstack(4, 12, 0) or nil
+    local now = GetTime and math.floor(GetTime()) or 0
+    if now ~= second then second, inSecond = now, 0 end
+    inSecond = inSecond + 1
+    local stack = (addon or inSecond <= 10) and debugstack and debugstack(4, 12, 0) or nil
     if not addon and stack then addon = stack:match(OURS) end -- (raised elsewhere, called from our code)
     if addon then Record(addon, nil, s, stack) end
 end
@@ -94,11 +100,7 @@ end
 ---------------------------------------------------------------------------
 function Log.List() return List() or pending end
 
-function Log.Count()
-    local n = 0
-    for _, e in ipairs(Log.List()) do n = n + 1 end
-    return n
-end
+function Log.Count() return #Log.List() end
 
 function Log.Clear()
     local list = List()

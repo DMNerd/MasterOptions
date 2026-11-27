@@ -72,7 +72,6 @@ local function MyFaction() return UnitFactionGroup("player") == "Alliance" and "
 -- QuestieDB fields (nil when unknown)
 local function ItemField(id, key) local l = Lib(); return l and l.Item and l.Item.Get and l.Item.Get(id, key) end
 local function NpcField(id, key) local l = Lib(); return l and l.Npc and l.Npc.Get and l.Npc.Get(id, key) end
-local function ItemIdsByName(name) local l = Lib(); return l and l.Item and l.Item.IdsByName and l.Item.IdsByName(name) end
 local function ObjectField(id, key) local l = Lib(); return l and l.Object and l.Object.Get and l.Object.Get(id, key) end
 local function IdsByName(entity, name)
     local l = Lib(); local e = l and l[entity]
@@ -96,7 +95,7 @@ local function PatternItems(recipeName)
     if items then return items end
     items = {}
     for _, prefix in ipairs(PATTERN_PREFIXES) do
-        for _, itemID in ipairs(ItemIdsByName(prefix .. recipeName) or {}) do items[#items + 1] = itemID end
+        for _, itemID in ipairs(IdsByName("Item", prefix .. recipeName) or {}) do items[#items + 1] = itemID end
     end
     patternCache[recipeName] = items
     return items
@@ -380,5 +379,4 @@ f:SetScript("OnEvent", function(_, event)
     end
 end)
 
-MasterOptions_RecipeMap = { Refresh = Refresh }
 end)
