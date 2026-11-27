@@ -7,6 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-11-27
+
 ### Added
 
 - **Spoken_Bosses' stories on Dungeon Journal's map.** When Dungeon Journal's map of a dungeon is on the world
@@ -225,7 +227,8 @@ Not released on its own: part of 2.6.0.
   them work together (until now separate `MasterOptions_<Addon>_<Addon>` addons). Each module runs only when the
   addons it works with are loaded.
 
-[Unreleased]: https://github.com/DMNerd/MasterOptions/compare/v2.8.1...HEAD
+[Unreleased]: https://github.com/DMNerd/MasterOptions/compare/v2.9.0...HEAD
+[2.9.0]: https://github.com/DMNerd/MasterOptions/compare/v2.8.1...v2.9.0
 [2.8.1]: https://github.com/DMNerd/MasterOptions/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/DMNerd/MasterOptions/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/DMNerd/MasterOptions/compare/v2.6.0...v2.7.0
