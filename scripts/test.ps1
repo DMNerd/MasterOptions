@@ -45,7 +45,8 @@ $tests = @(
     @("GearMatic_SpecKeep (off-spec gear kept)", "test_speckeep.py", @((F "MasterOptions_GearMatic_SpecKeep"))),
     @("CheapUpgrades_GearMatic (weights profile)", "test_cugm.py", @((F "MasterOptions_CheapUpgrades_GearMatic"))),
     @("Mastercraft_FishingView",     "test_fish.py",   @((F "MasterOptions_Mastercraft_FishingView"))),
-    @("Mastercraft_Chattynator",     "test_played.py", @((F "MasterOptions_Mastercraft_Chattynator")))
+    @("Mastercraft_Chattynator",     "test_played.py", @((F "MasterOptions_Mastercraft_Chattynator"))),
+    @("Chat_AddonWhispers (not-online lines)", "test_addonwhispers.py", @((F "MasterOptions_Chat_AddonWhispers")))
 )
 
 # macOS/Linux: run Lua in the C locale, as WoW does. Under a UTF-8 locale macOS treats bytes 0x80-0x9F as

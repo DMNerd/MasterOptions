@@ -34,7 +34,7 @@ local function RecOf(opt)
     return opt.rec
 end
 
-local DEFAULTS_VERSION = 32
+local DEFAULTS_VERSION = 33
 local Remember -- set below
 local function ApplyRecommended(after, manual) -- after: only options added after this defaults version
     local n = 0
@@ -215,6 +215,21 @@ side:SetWidth(SIDE_W)
 local sideBg = side:CreateTexture(nil, "BACKGROUND")
 sideBg:SetAllPoints()
 sideBg:SetColorTexture(0, 0, 0, 0.25)
+-- The section buttons sit on a list that scrolls with the mouse wheel when there are more than fit (2.9.0 had 22
+-- sections at 25 high: 550 in a 426 high side, and the last ones ran out of the window over the buttons below).
+-- Rows first get shorter to fit (SIDE_ROW_MIN at the least); only past that does the list scroll.
+local SIDE_ROW, SIDE_ROW_MIN = 25, 18
+local sideStep = SIDE_ROW
+local sideScroll = CreateFrame("ScrollFrame", nil, side)
+sideScroll:SetAllPoints()
+local sideList = CreateFrame("Frame", nil, sideScroll)
+sideList:SetSize(SIDE_W, 10)
+sideScroll:SetScrollChild(sideList)
+sideScroll:EnableMouseWheel(true)
+sideScroll:SetScript("OnMouseWheel", function(self, delta)
+    local max = math.max(0, sideList:GetHeight() - self:GetHeight())
+    self:SetVerticalScroll(math.min(max, math.max(0, self:GetVerticalScroll() - delta * sideStep * 3)))
+end)
 local divider = win:CreateTexture(nil, "ARTWORK")
 divider:SetColorTexture(1, 0.82, 0, 0.25)
 divider:SetPoint("TOPLEFT", side, "TOPRIGHT", 4, 0)
@@ -709,15 +724,27 @@ local function ShowSection(sec)
     if sec.neverSell then FillNeverSell() end
     body:SetHeight(math.max(10, (sec.problems and probHeight or sec.height) or 10))
     scroll:SetVerticalScroll(0)
+    -- the side list scrolled so the chosen section's button is in sight
+    if sec.sideIndex then
+        local top, bottom = 4 + (sec.sideIndex - 1) * sideStep, 4 + sec.sideIndex * sideStep
+        local view = sideScroll:GetHeight()
+        local at = sideScroll:GetVerticalScroll()
+        if type(at) ~= "number" then at = 0 end
+        if type(view) == "number" and view > 0 then
+            if top < at then sideScroll:SetVerticalScroll(top - 4)
+            elseif bottom > at + view then sideScroll:SetVerticalScroll(bottom - view + 4) end
+        end
+    end
     menu:Hide()
     if MasterOptionsDB then MasterOptionsDB.lastSection = sec.name end
 end
 
 local function SideButton(sec, i)
-    local b = CreateFrame("Button", nil, side)
-    b:SetHeight(24)
-    b:SetPoint("TOPLEFT", 2, -4 - (i - 1) * 25)
-    b:SetPoint("RIGHT", side, "RIGHT", -2, 0)
+    local b = CreateFrame("Button", nil, sideList)
+    b:SetHeight(sideStep - 1)
+    b:SetPoint("TOPLEFT", 2, -4 - (i - 1) * sideStep)
+    b:SetPoint("RIGHT", sideList, "RIGHT", -2, 0)
+    sec.sideIndex = i
     b.selected = b:CreateTexture(nil, "BACKGROUND")
     b.selected:SetAllPoints()
     b.selected:SetColorTexture(1, 0.82, 0, 0.18)
@@ -758,6 +785,10 @@ local function BuildWindow()
     -- Thanks: last
     thanksSec = { name = "Thanks", pane = thanksPane, thanks = true, height = thanksHeight, opts = {} }
     sections[#sections + 1] = thanksSec
+    -- the side list: rows as tall as fit (SIDE_ROW at most, SIDE_ROW_MIN at least), then scrolling
+    local avail = (WIN_H - 30 - 44) - 8 -- (the side's height: the window less its title bar and footer)
+    sideStep = math.max(SIDE_ROW_MIN, math.min(SIDE_ROW, math.floor(avail / math.max(1, #sections))))
+    sideList:SetHeight(8 + #sections * sideStep)
     for i, s in ipairs(sections) do
         if not s.problems and not s.neverSell and not s.thanks then
             s.pane = CreateFrame("Frame", nil, body)

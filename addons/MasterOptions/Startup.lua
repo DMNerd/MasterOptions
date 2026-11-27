@@ -335,6 +335,11 @@ SlashCmdList.MASTEROPTIONS = function(msg)
     msg = (msg or ""):match("^%s*(.-)%s*$")
     local never = msg:match("^[Nn][Ee][Vv][Ee][Rr]%s*(.*)$")
     if never then NeverSellCommand(never) return end
+    if msg:lower() == "whispers" then
+        local w = _G.MasterOptions_AddonWhispers
+        if w then w.List() else print("|cffffd200Master Options:|r the Chat / AddonWhispers module is off (/mo > Modules).") end
+        return
+    end
     local farm = msg:match("^[Ff][Aa][Rr][Mm]%s*(.*)$")
     if farm then
         local tour = _G.MasterOptions_FarmTour

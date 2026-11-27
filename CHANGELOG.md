@@ -7,6 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.9.2] - 2026-11-27
+
+### Fixed
+
+- **The section list ran out of the /mo window.** With 2.9.0's sections it was taller than the window, and the
+  last ones (Modules, Thanks) lay over the buttons below. The rows now fit the window, and if they ever don't, the
+  list scrolls with the mouse wheel, keeping the section you picked in sight.
+- **"No player named ... is currently playing" lines you didn't cause.** Addons talk to each other's copies with
+  hidden whispers (OpenMap's map sharing, Questie's sync, Mastercraft's crafter search, Details); one to someone who
+  just logged off makes the server print that line in your chat. New module **Chat / AddonWhispers** hides it -
+  never for a whisper you typed yourself. `/mo whispers` lists which addon whispered whom.
+
 ## [2.9.1] - 2026-11-27
 
 ### Fixed

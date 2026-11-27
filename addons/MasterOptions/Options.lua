@@ -781,8 +781,10 @@ local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions
                       MasterOptions_Mastercraft_FarmTour = 30,
                       MasterOptions_Mastercraft_RecipeMap = 31,
                       MasterOptions_DungeonJournal_SpokenBosses = 32,
-                      MasterOptions_ShortestPathForever_OpenMapPins = 32 }
+                      MasterOptions_ShortestPathForever_OpenMapPins = 32,
+                      MasterOptions_Chat_AddonWhispers = 33 }
 local PATCH_TIP = {
+    MasterOptions_Chat_AddonWhispers = "Hides \"No player named ... is currently playing\" when an addon's hidden whisper (OpenMap's map sharing, Questie's sync, Mastercraft's crafter search ...) went to someone who just logged off - you sent nothing. Your own whispers' answers always show. /mo whispers lists which addon whispered whom.",
     MasterOptions_ShortestPathForever_OpenMapPins = "Clearing ShortestPathForever's journey to a followed OpenMap pin also clears the pin: OpenMap stops following it, and the pin goes from the map (one you wrote a note on stays, just no longer followed).",
     MasterOptions_DungeonJournal_SpokenBosses = "Spoken_Bosses tells the dungeon's story beside the world map when Dungeon Journal's map of it is shown there (Map inside dungeons, Dungeon entrance click), and a boss's story when you click the boss on that map.",
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
@@ -845,6 +847,7 @@ local MODULES = {
     { "Mastercraft_FishingView", "Fishing view keeps bags and pop-ups", { "Mastercraft" } },
     { "Mastercraft_Auctionator", "Scan prices button on Auctionator's page", { "Mastercraft", "Auctionator" } },
     { "Mastercraft_Chattynator", "Mastercraft's /played kept out of chat", { "Mastercraft", "Chattynator" } },
+    { "Chat_AddonWhispers", "Hide not-online lines from addons' whispers", {} },
 }
 -- addon folder names as the AddOns list shows them
 local NICE = { ForeverDungeonJournal = "Dungeon Journal", DialogKey_Numy = "DialogKey", Spoken_Bosses = "Spoken Bosses",
