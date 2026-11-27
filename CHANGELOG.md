@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.15.1] - 2026-11-27
+
+### Fixed
+
+- **ShortestPathForever 1.49.1:** the journey's goal at the minimap's rim, which points the way, stays visible again
+  next to the trip's OpenMap pin. Shortest Path no longer says when its goal is at the rim, so Master Options tells
+  by how it draws it there: faded. Older versions still work as before.
+
 ## [2.15.0] - 2026-11-27
 
 ### Added

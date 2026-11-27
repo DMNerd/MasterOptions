@@ -85,6 +85,12 @@ res["a route's numbered stops stay"] = E("NUMBERED.shown") is True
 L('ShortestPathForeverMinimapRoute.goalEdge = true; GOAL:Show()')
 res["at the minimap's rim the goal stays (it points the way)"] = E("GOAL.shown") is True
 L('ShortestPathForeverMinimapRoute.goalEdge = nil')
+# ShortestPathForever 1.49.1: no goalEdge any more - the goal at the rim is shown faded (its EDGE_ALPHA 0.6)
+L('ALPHA = 0.6; function GOAL:GetAlpha() return ALPHA end; GOAL:Show()')
+res["1.49.1: at the rim (shown faded) the goal stays"] = E("GOAL.shown") is True
+L('ALPHA = 1; GOAL:Show()')
+res["1.49.1: on the minimap (full alpha) it's hidden"] = E("GOAL.shown") is False
+L('GOAL.GetAlpha = nil')
 
 # loading: nothing changes
 L('JOURNEY = "loading"; Notify()')

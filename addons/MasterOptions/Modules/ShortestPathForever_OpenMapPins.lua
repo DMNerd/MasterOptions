@@ -158,8 +158,13 @@ local function PinMarks()
 end
 
 -- the minimap: its goal texture (UI\Route.lua: ShortestPathForeverMinimapRoute.Goal), shown every frame it's on
--- the map; at the rim (goalEdge) it only points the way, and stays
+-- the map; at the rim it only points the way, and stays. Which is which: route.goalEdge until 1.49; since 1.49.1 that
+-- is a local of its drawing, which shows the goal at the rim faded (EDGE_ALPHA 0.6) and on the map at full alpha
 local goalHooked
+local function AtRim(goal, route)
+    if route.goalEdge ~= nil then return route.goalEdge == true end
+    return type(goal.GetAlpha) == "function" and goal:GetAlpha() < 0.99
+end
 local function MinimapGoal()
     local route = _G.ShortestPathForeverMinimapRoute
     local goal = type(route) == "table" and route.Goal
@@ -167,7 +172,7 @@ local function MinimapGoal()
     if not goalHooked and hooksecurefunc then
         goalHooked = true
         hooksecurefunc(goal, "Show", function(self)
-            if PinMarks() and not route.goalEdge then self:Hide() end
+            if PinMarks() and not AtRim(self, route) then self:Hide() end
         end)
     end
     return goal, route
@@ -201,7 +206,7 @@ end
 HideGoals = function()
     marksAt = -1 -- (the trip changed)
     local goal, route = MinimapGoal()
-    if goal and PinMarks() and not route.goalEdge then goal:Hide() end
+    if goal and PinMarks() and not AtRim(goal, route) then goal:Hide() end
     if _G.WorldMapFrame and WorldMapFrame:IsShown() then WorldGoals() end
 end
 

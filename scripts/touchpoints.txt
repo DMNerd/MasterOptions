@@ -400,7 +400,7 @@ ShortestPathForever|function|function API.Ended(|ShortestPathForever_OpenMapPins
 ShortestPathForever|function|API.Subscribe = hub.Subscribe|ShortestPathForever_OpenMapPins.lua
 ShortestPathForever|config-key|title = point.label or ns.JourneyTitle(point)|ShortestPathForever_OpenMapPins.lua (the goal's title)
 ShortestPathForever|function|return nil, answer --[[@as "loading"]]|ShortestPathForever_OpenMapPins.lua (Journey's "loading")
-ShortestPathForever|config-key|goalEdge|ShortestPathForever_OpenMapPins.lua (minimap goal at the rim stays)
+ShortestPathForever|config-key|EDGE_ALPHA|ShortestPathForever_OpenMapPins.lua (1.49.1+: the minimap goal at the rim is shown faded, and stays)
 ShortestPathForever|method|self.pressRegions =|ShortestPathForever_OpenMapPins.lua (world map goal pins recognised)
 ShortestPathForever|method|function GoalPin:SetStopAlpha|ShortestPathForever_OpenMapPins.lua
 ShortestPathForever|config-key|self.stopNumbers = numbers|ShortestPathForever_OpenMapPins.lua (a route's numbered stops stay)
