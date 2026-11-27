@@ -1,5 +1,6 @@
 # Tests every push to main and every pull request.
 # Pushing a tag vX.Y.Z (matching "## Version: X.Y.Z" in MasterOptions.toc) also builds the pack and publishes a GitHub Release.
+# Run by hand with "curseforge_tag" (an already released vX.Y.Z): only that tag's CurseForge upload, again.
 name: Test and release
 
 on:
@@ -8,6 +9,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      curseforge_tag:
+        description: "Upload this released tag (vX.Y.Z) to CurseForge only - no GitHub release. Empty: tests only."
+        required: false
+        default: ""
 
 jobs:
   test:
@@ -33,12 +39,16 @@ jobs:
 
   release:
     needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.curseforge_tag != '')
     runs-on: windows-latest
     permissions:
       contents: write
+    env:
+      TAG: ${{ inputs.curseforge_tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.curseforge_tag || github.ref }}
 
       - name: Check tag matches .toc version
         id: version
@@ -47,7 +57,7 @@ jobs:
           $toc = Get-Content addons\MasterOptions\MasterOptions.toc -Raw
           if ($toc -notmatch '(?m)^## Version:\s*(\S+)') { throw "No '## Version:' line in MasterOptions.toc" }
           $version = $Matches[1]
-          $tag = "${{ github.ref_name }}"
+          $tag = $env:TAG
           if ($tag -ne "v$version") { throw "Tag $tag does not match .toc version $version (expected v$version)" }
           "version=$version" >> $env:GITHUB_OUTPUT
 
@@ -73,11 +83,12 @@ jobs:
           Set-Content release-notes.md $notes -Encoding utf8
 
       - name: Publish release
+        if: github.event_name != 'workflow_dispatch'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" "dist\MasterOptions-${{ steps.version.outputs.version }}.zip" `
+          gh release create "$env:TAG" "dist\MasterOptions-${{ steps.version.outputs.version }}.zip" `
             --title "Master Options ${{ steps.version.outputs.version }}" `
             --notes-file release-notes.md
 
@@ -106,10 +117,17 @@ jobs:
           # (id, gameVersionTypeID, name, slug); /api/game/version-types isn't, so it only confirms the type when
           # it answers. Without it, the name has to be unique (1.60.1 is no Retail or Classic version's name).
           # Anything else fails: never a Retail or Classic version by guess.
-          $versions = @(Invoke-RestMethod "$api/game/versions" -Headers $headers)
+          # (Invoke-RestMethod hands a JSON array back as ONE object: unpacked here, else every filter below saw the
+          # whole list as one item - 2.9.0's upload failed on it)
+          function Items($answer) {
+            if ($answer -isnot [array] -and $null -ne $answer.PSObject.Properties['data']) { $answer = $answer.data }
+            @($answer | ForEach-Object { $_ })
+          }
+          $versions = Items (Invoke-RestMethod "$api/game/versions" -Headers $headers)
           $match = @($versions | Where-Object { $_.name -eq $gameVersionName })
           $types = $null
-          try { $types = @(Invoke-RestMethod "$api/game/version-types" -Headers $headers) } catch { $types = $null }
+          $forever = $null
+          try { $types = Items (Invoke-RestMethod "$api/game/version-types" -Headers $headers) } catch { $types = $null }
           if ($types) {
             $forever = @($types | Where-Object { $_.name -match 'Forever' })
             if ($forever.Count -ne 1) { throw "CurseForge has $($forever.Count) game version types named like 'Forever' (expected 1): $(@($types | ForEach-Object { $_.name }) -join ', ')" }
@@ -120,7 +138,8 @@ jobs:
           }
           if ($match.Count -ne 1) {
             $seen = @($versions | Where-Object { $_.name -eq $gameVersionName } | ForEach-Object { "id $($_.id) type $($_.gameVersionTypeID)" }) -join "; "
-            throw "Expected exactly one WoW Forever game version $gameVersionName on CurseForge, found $($match.Count). Versions with that name: $seen"
+            $ofForever = if ($forever) { @($versions | Where-Object { $_.gameVersionTypeID -eq $forever[0].id } | ForEach-Object { $_.name }) -join ", " } else { "?" }
+            throw "Expected exactly one WoW Forever game version $gameVersionName on CurseForge, found $($match.Count). Versions with that name: $seen. WoW Forever's versions on CurseForge: $ofForever"
           }
           "Game version: $gameVersionName = id $($match[0].id) ($kind)"
 
