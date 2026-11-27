@@ -25,13 +25,20 @@ for name in in_toc:
     declared[m.group(1)] = names(m.group(2))
 
 files = sorted(f[:-4] for f in os.listdir(os.path.join(root, "Modules")) if f.endswith(".lua"))
+# every addon a module needs loads before Master Options (an optional dependency): its modules start at Master
+# Options' own load, and an addon that loads after it is "not loaded" then - the module never runs (Spoken_Bosses,
+# 2.12-2.14: its story module never started)
+optional = set(a.strip() for a in re.search(r'^## OptionalDeps:(.*)$', toc, re.M).group(1).split(","))
+not_first = sorted(set(a for needs in declared.values() for a in needs) - optional)
 res = {
     "every module file is in the .toc": sorted(in_toc) == files,
     "every module has a row in the options": set(declared) <= set(listed),
     "no row for a module that doesn't exist": set(listed) <= set(declared),
     "each row's needs are the ones its module declares": all(listed.get(k) == v for k, v in declared.items()),
     "each module has its since and an explanation (tip)": set(declared) <= tips,
+    "every addon a module needs is an optional dependency (loads first)": not not_first,
 }
+if not_first: print("  not in OptionalDeps:", ", ".join(not_first))
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)
 missing = sorted(set(declared) - set(listed))

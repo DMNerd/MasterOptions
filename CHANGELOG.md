@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.14.1] - 2026-11-27
+
+### Fixed
+
+- **Spoken's dungeon and boss stories on Dungeon Journal's map never showed**, since that module came in 2.7. It
+  needs Spoken_Bosses, which loaded after Master Options (it wasn't one of Master Options' optional dependencies),
+  so the module never started. That is also why `/mo story` said "no command". A test now makes sure every addon a
+  module needs loads before Master Options.
+
 ## [2.14.0] - 2026-11-27
 
 ### Added
