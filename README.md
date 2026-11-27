@@ -12,6 +12,7 @@ public data and settings; the third-party addons themselves are never edited.
 | Path | What |
 |---|---|
 | `addons/MasterOptions/` | The addon as it goes into `Interface\AddOns` |
+| `addons/MasterOptions/*.lua` | In the `.toc`'s order: `ErrorLog.lua`, `Modules.lua` (the module loader), `Shared.lua` (checks the modules use too), then the window's files sharing one addon table (`local _, MO = ...`): `MasterOptions.lua` (access to each addon, Pawn and spec), `AddonSettings.lua` (Annoying mode, bag icons, profiles, UI style), `Options.lua` (the rows), `Problems.lua` (the health check), `Window.lua` (/mo, the recommended setup), `Startup.lua` (the game's Options page, login) |
 | `addons/MasterOptions/Modules/` | One file per module: `MasterOptions_Module(name, { needed addons }, function(ADDON) ... end)`, run by `Modules.lua` |
 | `tests/` | Sandbox tests: Lua run through lupa with stubbed WoW APIs |
 | `tests/fixtures/` | Copies of real SavedVariables and the installed-addon list, used by the tests |

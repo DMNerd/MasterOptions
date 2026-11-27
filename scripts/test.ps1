@@ -18,6 +18,7 @@ $mo = Join-Path $a "MasterOptions\MasterOptions.lua"
 $tests = @(
     @("syntax: MasterOptions",       "check.py",       @($mo)),
     @("syntax: modules",             "check_modules.py", @((Join-Path $a "MasterOptions\Modules"))),
+    @("syntax: core files",          "check_modules.py", @((Join-Path $a "MasterOptions"))),
     @("MasterOptions window + setup", "test_mo.py",     @($mo)),
     @("module loader",               "test_modules.py", @((Join-Path $a "MasterOptions\Modules.lua"))),
     @("error log",                   "test_errlog.py", @((Join-Path $a "MasterOptions\ErrorLog.lua"))),

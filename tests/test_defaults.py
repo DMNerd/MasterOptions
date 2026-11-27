@@ -133,8 +133,7 @@ lua.execute(r'''
 ''')
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
 from shared_lua import load_shared; load_shared(lua, mo_path)
-chunk = lua.eval("function(src) local f, e = load(src, '=MasterOptions.lua'); if not f then error(e) end; return f end")(open(mo_path, encoding="utf-8").read())
-chunk("MasterOptions")
+from shared_lua import load_master_options; load_master_options(lua, mo_path) # (MasterOptions.lua ... Startup.lua)
 L = lua.execute
 L('Fire("ADDON_LOADED", "MasterOptions")')
 L('Fire("PLAYER_LOGIN")')

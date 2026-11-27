@@ -15,6 +15,11 @@ Libs\LibDataBroker-1.1.lua
 Libs\LibDBIcon-1.0.lua
 Shared.lua
 MasterOptions.lua
+AddonSettings.lua
+Options.lua
+Problems.lua
+Window.lua
+Startup.lua
 Modules\GearMatic_Forever.lua
 Modules\GearMatic_Baganator.lua
 Modules\CheapUpgrades_Baganator.lua
