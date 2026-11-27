@@ -64,6 +64,7 @@ The workflow checks that the tag matches the `.toc` version, builds the pack, an
 | CheapUpgrades / Baganator | CheapUpgrades, Baganator | "+23%" badges on bag slots |
 | CheapUpgrades / GearMatic | CheapUpgrades, GearMatic | CheapUpgrades values items with GearMatic's stat weights: a "GearMatic" weights profile per spec (ratings converted to CheapUpgrades' per-1% units), kept up to date and used unless you picked a profile of your own |
 | OpenMapTweaks / Mastercraft | OpenMap_Tweaks, Mastercraft | Mastercraft's node rule filters OpenMap_Tweaks' pins |
+| DungeonJournal / Upgrades | ForeverDungeonJournal | Dungeon Journal's loot marked: an upgrade arrow and its size (Pawn with Pawn Forever, else GearMatic + CheapUpgrades' size), and GearMatic's best-in-slot skull |
 | DialogKey / Pawn | DialogKey | Pre-selects the best quest reward (Pawn / GearMatic) |
 | Mastercraft / Auctionator | Mastercraft, Auctionator | Scan prices button on Auctionator's page |
 | DeleteCheapestItem / Protect | DeleteCheapestItem | Never offers upgrades, sets, tools or needed materials |

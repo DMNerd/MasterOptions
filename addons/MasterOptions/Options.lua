@@ -317,6 +317,29 @@ local OPTIONS = {
           function(on) local c = CU(); if c then c.tooltipUpgrades = on; if on then c.tooltip = true end end end },
     }, "Off"),
     {
+        -- GearMatic (ItemTooltipHook.lua: profile.dropRateTooltip, WoW Forever) and Dungeon Journal (ItemSource.lua:
+        -- ForeverDungeonJournalDB.itemSourceStrip, on unless false) both say where an item drops. Not a conflict:
+        -- Dungeon Journal also names quests, GearMatic gives the chance - "Both" is a choice of its own.
+        kind = "choice", label = "Where an item drops (tooltip)", rec = "GearMatic", since = 29,
+        needs_any = { "GearMatic", "ForeverDungeonJournal" },
+        choices = { "GearMatic", "Dungeon Journal", "Both", "Off" }, off = "Off",
+        tip = "GearMatic and Dungeon Journal both add a line to item tooltips saying where the item drops. GearMatic: the creature or chest and how often it drops (from what GearMatic players looted; a Classic estimate until enough is known). Dungeon Journal: the boss, or the quest it's a reward of. Both: the two lines.",
+        get = function()
+            local g = gmOn("dropRateTooltip") and GM() ~= nil
+            local db = Loaded("ForeverDungeonJournal") and type(_G.ForeverDungeonJournalDB) == "table" and _G.ForeverDungeonJournalDB
+            local d = Loaded("ForeverDungeonJournal") and not (db and db.itemSourceStrip == false)
+            return (g and d and "Both") or (g and "GearMatic") or (d and "Dungeon Journal") or "Off"
+        end,
+        set = function(v)
+            local g = GM()
+            if g then g.dropRateTooltip = (v == "GearMatic" or v == "Both") end
+            local db = Loaded("ForeverDungeonJournal") and _G.ForeverDungeonJournalDB
+            if type(db) == "table" then
+                if v == "Dungeon Journal" or v == "Both" then db.itemSourceStrip = nil else db.itemSourceStrip = false end
+            end
+        end,
+    },
+    {
         kind = "choice", label = "Counts on your characters", since = 3, rec = "Syndicator",
         tip = "Syndicator (used by Baganator) and Mastercraft both list how many each of your characters has.",
         choices = { "Syndicator", "Mastercraft", "Off" },
@@ -659,7 +682,8 @@ local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions
                       MasterOptions_OpenMapMiniMap_Border = 19,
                       MasterOptions_ShortestPathForever_OpenMapMiniMap = 23,
                       MasterOptions_NeverSell = 24, MasterOptions_GearMatic_SellGuard = 25,
-                      MasterOptions_GearMatic_SpecKeep = 27, MasterOptions_CheapUpgrades_GearMatic = 27 }
+                      MasterOptions_GearMatic_SpecKeep = 27, MasterOptions_CheapUpgrades_GearMatic = 27,
+                      MasterOptions_DungeonJournal_Upgrades = 29 }
 local PATCH_TIP = {
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
     MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
@@ -674,6 +698,7 @@ local PATCH_TIP = {
     MasterOptions_Mastercraft_VendorSell = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank.",
     MasterOptions_Mastercraft_BankMats = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank.",
     MasterOptions_OpenMapMiniMap_Border = "OpenMap's square minimap framed with the action bar buttons' border (Look > Minimap border).",
+    MasterOptions_DungeonJournal_Upgrades = "Dungeon Journal's loot marked: an upgrade arrow and how big (+23%) by whoever judges upgrades - Pawn with Pawn Forever, else GearMatic with CheapUpgrades' size - and GearMatic's skull on what's best in slot for you. No more hovering every item.",
     MasterOptions_CheapUpgrades_GearMatic = "CheapUpgrades values items with GearMatic's stat weights: a \"GearMatic\" weights profile for every spec, kept up to date (level, talents) and used unless you picked a profile of your own in CheapUpgrades. Off: CheapUpgrades' own weights again.",
     MasterOptions_GearMatic_SpecKeep = "Gear that is your best or 2nd best for any of your specs in GearMatic is kept from selling (Master Options' and GearMatic's own) and from DeleteCheapestItem - off-spec pieces too. GearMatic itself only looks at the spec you play now. Works with or without Pawn.",
     MasterOptions_GearMatic_SellGuard = "GearMatic's gear and low-value selling keeps what Master Options protects: the never-sell list, materials your Mastercraft guides need, and gear Pawn calls an upgrade or your best for a spec, or GearMatic rates your best or 2nd best for any spec (with GearMatic_SpecKeep) - through GearMatic's own sell guard.",

@@ -32,6 +32,7 @@ $tests = @(
     @("OpenMapMiniMap_Border",       "test_border.py", @((F "MasterOptions_OpenMapMiniMap_Border"))),
     @("DungeonJournal_OpenMap pins", "test_djpin.py",  @((F "MasterOptions_DungeonJournal_OpenMap"))),
     @("DungeonJournal_OpenMap map",  "test_dmap.py",   @((F "MasterOptions_DungeonJournal_OpenMap"))),
+    @("DungeonJournal_Upgrades (loot marks)", "test_djupgrades.py", @((F "MasterOptions_DungeonJournal_Upgrades"))),
     @("OpenMapTweaks_Mastercraft stitched map", "test_omtstitch.py", @((F "MasterOptions_OpenMapTweaks_Mastercraft"))),
     @("ShortestPathForever_OpenMapMiniMap", "test_spfgoal.py", @((F "MasterOptions_ShortestPathForever_OpenMapMiniMap"))),
     @("NeverSell (shared never-sell list)", "test_neversell.py", @((F "MasterOptions_NeverSell"))),

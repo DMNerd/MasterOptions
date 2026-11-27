@@ -80,6 +80,66 @@ function S.GearMaticLoadoutIDs()
 end
 
 ---------------------------------------------------------------------------
+-- Upgrades
+---------------------------------------------------------------------------
+local function AddOnLoaded(name)
+    local f = (C_AddOns and C_AddOns.IsAddOnLoaded) or _G.IsAddOnLoaded
+    return f and f(name) and true or false
+end
+
+-- Who judges upgrades, for every choice that involves Pawn (one judge, so the stat weights, bag arrows,
+-- CheapUpgrades, quest rewards and Dungeon Journal's loot marks agree): "Pawn" with Pawn Forever installed
+-- (weights made for WoW Forever), otherwise "GearMatic", whose own weights are simulated for WoW Forever - Pawn
+-- without Pawn Forever only has its stock Classic scales. Pawn alone (no GearMatic) is still Pawn.
+function S.UpgradeJudge()
+    if AddOnLoaded("Pawn") and (AddOnLoaded("Pawn_Forever") or not AddOnLoaded("GearMatic")) then return "Pawn" end
+    return "GearMatic"
+end
+
+-- Pawn: the biggest upgrade % across the scales Pawn shows for this character (nil = not an upgrade, or no Pawn;
+-- false = Pawn hasn't got the item yet)
+function S.PawnUpgradePercent(link)
+    if type(_G.PawnGetItemData) ~= "function" or type(_G.PawnIsItemAnUpgrade) ~= "function" then return nil end
+    local ok, item = pcall(_G.PawnGetItemData, link)
+    if not ok or type(item) ~= "table" then return false end
+    local ok2, list = pcall(_G.PawnIsItemAnUpgrade, item)
+    if not ok2 or type(list) ~= "table" then return nil end
+    local best
+    for _, u in pairs(list) do
+        if type(u) == "table" and type(u.PercentUpgrade) == "number" and (not best or u.PercentUpgrade > best) then
+            best = u.PercentUpgrade
+        end
+    end
+    return best
+end
+
+-- Same rule as CheapUpgrades' own Bigger(): an empty slot (no %) beats any %.
+local function Bigger(a, b)
+    if not b then return true end
+    if not a.pct then return b.pct ~= nil end
+    return b.pct ~= nil and a.pct > b.pct
+end
+
+-- CheapUpgrades' badge for an item ("+23%" in its colour, or "NEW" for an empty slot): the text, false when it
+-- isn't an upgrade for a spec you watch, nil while CheapUpgrades isn't ready (ask again later)
+function S.CheapUpgradesBadge(link)
+    local cu = _G.CheapUpgrades
+    if type(cu) ~= "table" or type(cu.WatchedInfo) ~= "function" then return false end
+    if not cu.ctx then return nil end
+    if type(link) ~= "string" or link == "" then return false end
+    local ok, list = pcall(cu.WatchedInfo, cu, link)
+    if not ok or type(list) ~= "table" then return nil end
+    local best
+    for _, e in ipairs(list) do
+        if e.info and e.info.state == "upgrade" and Bigger(e.info, best) then best = e.info end
+    end
+    if not best then return false end
+    local textOk, text = pcall(cu.Bags and cu.Bags.BadgeText, best)
+    if not textOk or type(text) ~= "string" or text == "" then return false end
+    return text
+end
+
+---------------------------------------------------------------------------
 -- Mastercraft's Settings > Modules (2.1.2): MastercraftDB.settings.modules[key] = false turns a whole part off
 -- ("tip": every tooltip line, "loot": the KEEP / VENDOR advice, "ah": the Scan prices button). On otherwise,
 -- also before Mastercraft's saved settings are there.

@@ -61,14 +61,9 @@ end
 -- showed. GearMatic skips a scale flagged Hidden (a flag Pawn itself no longer reads on its scales),
 -- so while GearMatic uses Pawn, every scale this character doesn't show in Pawn gets that flag.
 -- The flags are cleared at logout: nothing of this is saved into Pawn's settings.
--- Who should judge upgrades, for every recommendation that involves Pawn (one judge, so the stat weights, bag
--- arrows, CheapUpgrades, the quest reward pick and its marker agree): Pawn with Pawn Forever installed (weights
--- made for WoW Forever); otherwise GearMatic, whose own weights are simulated for WoW Forever - Pawn without Pawn
--- Forever only has its stock Classic scales. Pawn alone (no GearMatic) is still Pawn.
-local function Judge()
-    if Loaded("Pawn") and (Loaded("Pawn_Forever") or not Loaded("GearMatic")) then return "Pawn" end
-    return "GearMatic"
-end
+-- Who judges upgrades, for every recommendation that involves Pawn: Pawn with Pawn Forever, else GearMatic
+-- (the rule and why: Shared.lua, UpgradeJudge)
+local Judge = MasterOptions_Shared.UpgradeJudge
 local function PawnElseGearMatic() return Judge() end
 
 local function GMUsesPawn()

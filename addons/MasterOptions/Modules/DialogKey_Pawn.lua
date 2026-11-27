@@ -32,20 +32,7 @@ end
 
 -- Pawn: the biggest upgrade % across the scales Pawn shows for this character (nil = not an upgrade,
 -- false = Pawn hasn't got the item yet)
-local function PawnUpgrade(link)
-    if type(_G.PawnGetItemData) ~= "function" or type(_G.PawnIsItemAnUpgrade) ~= "function" then return nil end
-    local ok, item = pcall(_G.PawnGetItemData, link)
-    if not ok or type(item) ~= "table" then return false end
-    local ok2, list = pcall(_G.PawnIsItemAnUpgrade, item)
-    if not ok2 or type(list) ~= "table" then return nil end
-    local best
-    for _, u in pairs(list) do
-        if type(u) == "table" and type(u.PercentUpgrade) == "number" and (not best or u.PercentUpgrade > best) then
-            best = u.PercentUpgrade
-        end
-    end
-    return best
-end
+local PawnUpgrade = MasterOptions_Shared.PawnUpgradePercent
 
 -- GearMatic: is it an upgrade for this character (not only for an alt)?
 local function GearMaticUpgrade(link)
