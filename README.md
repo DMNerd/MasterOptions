@@ -61,7 +61,8 @@ Master Options only makes these addons work together: everything it connects is 
 | OpenMap, OpenMap MiniMap | the OpenMap contributors |
 | OpenMap Tweaks | Austin |
 | Dungeon Journal (ForeverDungeonJournal) | Exehn |
-| Spoken, Spoken Bosses | Nucabe |
+| Spoken, Spoken Places | rustykey |
+| Spoken Bosses | Nucabe |
 | Shortest Path Forever | cjber |
 | DeleteCheapestItem Reloaded | Sander Vispoel (sandervspl) |
 | DialogKey - Numy Edition | Numy (earlier versions: Foxthorn, N01ch, FuriousProgrammer) |
@@ -164,7 +165,7 @@ was found.
 | OpenMap_Tweaks | [CurseForge](https://www.curseforge.com/wow/addons/openmap-tweaks) · — | Gathering pins (filtered by Mastercraft's node rule) |
 | OpenMap_MiniMap | [CurseForge](https://www.curseforge.com/wow/addons/openmap-minimap-the-openmap-companion) · — | Square minimap and its border; Minimap (it or BetterBlizzFrames' classic minimap, not both) |
 | ForeverDungeonJournal (Exehn's "DungeonJournal") | [CurseForge](https://www.curseforge.com/wow/addons/dungeonjournal) · — | Dungeon maps opened from OpenMap |
-| Spoken_Bosses (Nucabe's "Spoken") | — · — | Its dungeon and boss stories beside Dungeon Journal's map on the world map |
+| Spoken (rustykey) with Spoken_Places and Spoken_Bosses (Nucabe) | [CurseForge](https://www.curseforge.com/wow/addons/spoken) · [GitHub](https://github.com/rusty-key/spoken-wow) | Its dungeon and boss stories beside Dungeon Journal's map on the world map |
 | Baganator | [CurseForge](https://www.curseforge.com/wow/addons/baganator) · [GitHub](https://github.com/TheMouseNest/Baganator) | Junk coin and upgrade arrows in bags |
 | Syndicator (Baganator's backend) | [CurseForge](https://www.curseforge.com/wow/addons/syndicator) · [GitHub](https://github.com/TheMouseNest/Syndicator) | Counts on your characters |
 | Auctionator | [CurseForge](https://www.curseforge.com/wow/addons/auctionator) · [GitHub](https://github.com/TheMouseNest/Auctionator) | Price tooltips, Mastercraft's scan button |

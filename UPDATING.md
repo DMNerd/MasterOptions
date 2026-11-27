@@ -7,8 +7,11 @@ It takes about 10 minutes, or about 30 if a changelog touches something we use.
 ## 1. Run the name check (1 minute)
 
 ```sh
-pwsh scripts/check-addons.ps1        # Windows: .\scripts\check-addons.ps1
+pwsh scripts/check-addons.ps1 -Log   # Windows: .\scripts\check-addons.ps1 -Log
 ```
+
+`-Log` adds the check to [COMPATIBILITY.md](COMPATIBILITY.md): every addon's version, which ones were updated since
+the last logged check, and anything missing. You fill in its Notes in step 5.
 
 - `Everything Master Options relies on is still there.` Go to step 2.
 - A name is listed as missing: that addon renamed or removed something we use. Find the line in
@@ -18,9 +21,10 @@ pwsh scripts/check-addons.ps1        # Windows: .\scripts\check-addons.ps1
 
 ## 2. Read the changelogs (5 to 20 minutes)
 
-For each updated addon that Master Options uses (it has a `# --- <Addon> (<version>)` heading in
-`scripts/touchpoints.txt`), read its changelog from the version in that heading up to the new one. Most addons
-ship a `CHANGELOG.md` or `CHANGE_LOG.md` in their folder.
+For each addon the log marks **updated**, read its changelog from the old version up to the new one. Some ship a
+`CHANGELOG.md` or `CHANGE_LOG.md` in their folder. For the rest, look online: the CurseForge file page of the new
+version (its "What's new"), or the GitHub releases / CHANGELOG where the addon has a repository (links in the
+README's Supported addons).
 
 Look for:
 
@@ -54,6 +58,10 @@ Log in, `/reload` once, then:
 5. Visit a vendor: junk sells, and nothing on the never-sell list does.
 
 ## 5. Record it
+
+In [COMPATIBILITY.md](COMPATIBILITY.md), replace the new entry's Notes line: per updated addon, what changed that
+matters to Master Options (or "nothing we use"), and what was done about it (a fix and its version, a module that
+can retire, a setting to watch).
 
 In `scripts/touchpoints.txt`, update the version in each checked addon's `# --- <Addon> (<version>)` heading,
 and the date in line 3. Add any new names a fix now relies on. Commit.
