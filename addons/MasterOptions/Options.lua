@@ -588,6 +588,34 @@ local OPTIONS = {
         scope = "Baganator profile",
     },
     {
+        -- (Baganator corner widget "masteroptions_never_sell", Modules\NeverSell.lua; first in the top right)
+        kind = "toggle", label = "Never-sell lock in bags", rec = true, reload = true, needs = "Baganator",
+        tip = "A lock in the top-right corner of every bag slot whose item is on the never-sell list (/mo > Never sell): no addon sells or deletes it.",
+        get = function() local p = BAG(); return p ~= nil and CornerHas(p, "masteroptions_never_sell") end,
+        set = function(v)
+            local p = BAG(); if not p then return end
+            if v then CornerAdd(p, "masteroptions_never_sell", CORNERS[2]) else CornerRemove(p, "masteroptions_never_sell") end
+        end,
+        scope = "Baganator profile",
+    },
+    {
+        -- (Baganator corner widget "masteroptions_mc_advice", Modules\Mastercraft_VendorSell.lua; last in the top
+        -- right, so the lock and GearMatic's skull win the corner)
+        kind = "toggle", label = "Mastercraft advice in bags", rec = true, reload = true,
+        needs = { "Baganator", "MasterOptions_Mastercraft_VendorSell" },
+        tip = "Mastercraft's advice as an icon in the top-right corner of Baganator's bag slots: a green tick for KEEP (also \"keep some for a guide\"), the vendor's bag for VENDOR, the auctioneer for AUCTION and the disenchant icon for DISENCHANT. Learned from the item tooltips, and read for new items in the background.",
+        get = function() local p = BAG(); return p ~= nil and CornerHas(p, "masteroptions_mc_advice") end,
+        set = function(v)
+            local p = BAG(); if not p then return end
+            CornerRemove(p, "masteroptions_mc_advice")
+            if v then
+                p[CORNERS[2]] = type(p[CORNERS[2]]) == "table" and p[CORNERS[2]] or {}
+                table.insert(p[CORNERS[2]], "masteroptions_mc_advice")
+            end
+        end,
+        scope = "Baganator profile",
+    },
+    {
         kind = "choice", label = "GearMatic vendor badge", needs = "GearMatic",
         choices = { "Gold $", "Gold coin", "Off" }, off = "Off",
         tip = "GearMatic's badge in the bottom-left corner of gear you don't need, when a vendor pays the most for it. Gold coin looks like Baganator's junk coin, which means \"will be sold\" - Gold $ keeps the two apart.",

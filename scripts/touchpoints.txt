@@ -408,3 +408,5 @@ ShortestPathForever|config-value|"OpenMap:Pin"|ShortestPathForever_OpenMapPins.l
 
 ShortestPathForever|config-key|"ShortestPathForever_arrowMove"|Options.lua, Startup.lua (Move Shortest Path's arrow, /mo arrow)
 GearMatic|function|function BestItems.GetRank|GearMatic_SpecKeep.lua
+Baganator|function|function Baganator.API.RegisterCornerWidget|NeverSell.lua, Mastercraft_VendorSell.lua (lock, advice icons)
+Baganator|config-key|icon_grey_junk|Options.lua (Grey out junk in bags)

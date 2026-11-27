@@ -129,14 +129,16 @@ end
 ---------------------------------------------------------------------------
 local Changed -- (below: redraws Baganator's junk coins)
 
+-- DB.advice[itemID]: the verdict itself, for Baganator's advice icons ("KEEP" also when VENDOR keeps some for a guide)
 local function Remember(itemID, verdict, keepSome)
     if not (DB and itemID) then return end
     local sell
     if verdict then sell = verdict == "VENDOR" and not keepSome end
-    if DB.sell[itemID] ~= sell then
-        DB.sell[itemID] = sell
-        if Changed then Changed() end
-    end
+    local advice = verdict and ((verdict == "VENDOR" and keepSome) and "KEEP" or verdict) or nil
+    local changed = false
+    if DB.sell[itemID] ~= sell then DB.sell[itemID] = sell; changed = true end
+    if DB.advice[itemID] ~= advice then DB.advice[itemID] = advice; changed = true end
+    if changed and Changed then Changed() end
 end
 
 if TooltipDataProcessor and Enum and Enum.TooltipDataType then
@@ -272,6 +274,34 @@ if bagAPI and bagAPI.RegisterJunkPlugin then
     end)
 end
 
+-- Baganator corner icon: Mastercraft's advice on every bag slot it has advice for (Baganator > Icons, or /mo >
+-- Bags: "Mastercraft advice in bags"). Top right, after the never-sell lock and GearMatic's skull.
+local ADVICE_ICONS = {
+    KEEP = "Interface\\RaidFrame\\ReadyCheck-Ready",
+    VENDOR = "Interface\\GossipFrame\\VendorGossipIcon",
+    AUCTION = "Interface\\Minimap\\Tracking\\Auctioneer",
+    DISENCHANT = "Interface\\Icons\\INV_Enchant_Disenchant",
+}
+MasterOptions_MastercraftVendorSell.ADVICE_ICONS = ADVICE_ICONS
+MasterOptions_MastercraftVendorSell.Advice = function(itemID) return DB and DB.advice and DB.advice[itemID] end
+if bagAPI and bagAPI.RegisterCornerWidget then
+    local okR, err = pcall(bagAPI.RegisterCornerWidget, "Mastercraft advice (Master Options)", "masteroptions_mc_advice",
+        function(tex, details)
+            local id = type(details) == "table" and details.itemID
+            local advice = id and DB and DB.advice and DB.advice[id]
+            local path = advice and ADVICE_ICONS[advice]
+            if not path then return false end
+            tex:SetTexture(path)
+            return true
+        end,
+        function(button)
+            local t = button:CreateTexture(nil, "OVERLAY")
+            t:SetSize(14, 14)
+            return t
+        end, { corner = "top_right", priority = 3 })
+    if not okR then Check("adding the advice icons to Baganator", false, err) end
+end
+
 ---------------------------------------------------------------------------
 -- The bags: every slot Mastercraft says to VENDOR (read fresh)
 ---------------------------------------------------------------------------
@@ -299,7 +329,8 @@ end
 local fillPending, tried = false, {}
 local function Fill()
     fillPending = false
-    if not DB or Mode() == "off" or not Seller() then return end
+    -- (also with selling off: the advice icons in the bags need the verdicts too)
+    if not DB then return end
     if (InCombatLockdown and InCombatLockdown()) or GameTooltip:IsShown() then
         fillPending = true
         C_Timer.After(2, Fill)
@@ -463,6 +494,7 @@ f:SetScript("OnEvent", function(_, event, name)
         DB = MasterOptions_MastercraftVendorDB
         DB.mode = DB.mode or "goods"
         DB.sell = DB.sell or {}
+        DB.advice = DB.advice or {}
     elseif event == "PLAYER_LOGIN" then
         ClearGearMaticMarks() -- (a visit cut short by a disconnect)
         FillSoon(5) -- (after Mastercraft has its prices and guides in)

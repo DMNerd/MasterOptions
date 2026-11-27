@@ -67,6 +67,12 @@ GearMatic = { db = { profile = GMProf }, VendorAutomation = {
   SellJunk = function() SELLJUNK = SELLJUNK + 1; GMQ = {} ; for s, i in ipairs(BAG) do if GearMaticDB.sellMark[i.itemID] then GMQ[#GMQ+1] = { bag = 0, slot = s, itemID = i.itemID, marked = true } end end end,
   _Queue = function() return GMQ end,
 } }
+CORNER = {}
+Baganator = { API = {
+  RegisterJunkPlugin = function() end,
+  RegisterCornerWidget = function(label, id, onUpdate, onInit, pos) CORNER[id] = { onUpdate = onUpdate, onInit = onInit, pos = pos } end,
+  RequestItemButtonsRefresh = function() end,
+} }
 function Reset() for _, i in ipairs(BAG) do i.sold = nil end; SOLD = {}; GMQ = {} end
 function List(t) local o = {} for _, v in ipairs(t) do o[#o+1] = tostring(type(v) == "table" and v.itemID or v) end table.sort(o) return table.concat(o, ",") end
 ''')
@@ -136,4 +142,22 @@ check("goods and gear: sword sold, boots kept with the reason", "sold at the ven
 L('GMProf.autoSellJunk = false; OUT = {}; local p = print; print = function(s) OUT[#OUT+1] = s end; MasterOptions_MastercraftVendorSell.Explain(); print = p')
 out = list(lua.eval("OUT").values())
 check("no seller: says why", "GearMatic's Sell junk is off" in out[0] and "no junk seller" in line_for("item:2589"))
+print("== Baganator advice icons")
+L(r'''
+  local w = CORNER.masteroptions_mc_advice
+  TEX = {}
+  local function Icon(id)
+    local t = { SetTexture = function(self, p) self.p = p end }
+    local shown = w.onUpdate(t, { itemID = id })
+    return shown and t.p or "none"
+  end
+  POS = w.pos.corner .. ":" .. w.pos.priority
+  I_LINEN, I_THREAD, I_SILK, I_POLE, I_GREY = Icon(2589), Icon(2320), Icon(4306), Icon(6256), Icon(3300)
+''')
+check("advice icon registered top right, after lock and skull", E("POS") == "top_right:3")
+check("linen: vendor icon", "VendorGossipIcon" in E("I_LINEN"))
+check("thread (keep some for a guide): keep tick", "ReadyCheck-Ready" in E("I_THREAD"))
+check("silk: auction icon", "Auctioneer" in E("I_SILK"))
+check("pole: keep tick", "ReadyCheck-Ready" in E("I_POLE"))
+check("grey (no advice): no icon", E("I_GREY") == "none")
 print("ERRORS:", errors)

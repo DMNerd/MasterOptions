@@ -37,6 +37,7 @@ lua.execute(r'''
   end
   function Login(char) CHAR = char; DCI_CharDB = CHARDB[char]; Fire("PLAYER_LOGIN"); RunTimers() end
 ''')
+lua.execute('CORNER, BAGREFRESH = {}, 0; Baganator = { API = { RegisterCornerWidget = function(label, id, onUpdate, onInit, pos) CORNER[id] = { onUpdate = onUpdate, pos = pos } end, RequestItemButtonsRefresh = function() BAGREFRESH = BAGREFRESH + 1 end } }')
 lua.eval("function(s) return load(s, '=p') end")(src)("MasterOptions_NeverSell")
 L, E = lua.execute, lua.eval
 res = {}
@@ -57,6 +58,9 @@ L('MasterOptions_NeverSell.Set(102, true)')
 res["you add Keep's item yourself: yours now (Keep lets go of it)"] = E("Everywhere(102) and GearMaticDB.moKeep[102] == nil")
 L('MasterOptions_NeverSell.Set(600, false)')
 res["/mo never remove -> gone everywhere"] = E("Nowhere(600)")
+res["Baganator lock: first in the top right, on listed items only"] = (E("CORNER.masteroptions_never_sell.pos.corner .. CORNER.masteroptions_never_sell.pos.priority") == "top_right1"
+    and E("CORNER.masteroptions_never_sell.onUpdate(nil, { itemID = 500 })") is True and E("CORNER.masteroptions_never_sell.onUpdate(nil, { itemID = 600 })") is False)
+res["Baganator refreshed when the list changes"] = E("BAGREFRESH") > 0
 L('Tick(); Tick()')
 res["steady: nothing changes by itself"] = E("Everywhere(500) and Everywhere(102) and Everywhere(301) and Nowhere(201)")
 # another character: its own DeleteCheapestItem list catches up; its own entry joins in

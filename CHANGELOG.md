@@ -7,6 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.12.0] - 2026-11-27
+
+### Added
+
+- **Mastercraft advice in bags** (Bags, Baganator): Mastercraft's advice as an icon in the top-right corner of each
+  bag slot. A green tick means KEEP (also "keep some for a guide"), the vendor's bag means VENDOR, the auctioneer
+  means AUCTION, and the disenchant icon means DISENCHANT. The advice is learned from item tooltips, and new items
+  are read in the background, now even with VENDOR selling off.
+- **Never-sell lock in bags** (Bags, Baganator): a lock on every item on the never-sell list. It's first in the
+  top-right corner, so it wins over GearMatic's skull and the advice icon.
+- Both icons can also be moved or turned off in Baganator's own icon settings.
+
 ## [2.11.1] - 2026-11-27
 
 ### Fixed
