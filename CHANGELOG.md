@@ -7,6 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+### Added
+
+- **Problems: Sparkles' corpse plates and BetterBlizzPlates.** Sparkles' "Enemy plates at corpses" switches enemy
+  nameplates on for a moment, and BetterBlizzPlates saves every change to them as your choice. A logout or reload
+  during a fight at a corpse could leave enemy plates on for good. Problems now flags it, only when BetterBlizzPlates
+  keeps enemy plates off somewhere, and "Turn off" switches Sparkles' option off.
+
+### Changed
+
+- **Quest and recipe waypoints** (Shortest Path journey or the game's waypoint) takes effect at once, through
+  Shortest Path's own setting. Before, it took a reload.
+
 ## [2.16.0] - 2026-11-27
 
 ### Added

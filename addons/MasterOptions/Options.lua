@@ -318,9 +318,9 @@ local OPTIONS = {
         end,
     },
     {
-        kind = "choice", label = "Quest and recipe waypoints", rec = "Shortest Path journey", since = 32, reload = true,
+        kind = "choice", label = "Quest and recipe waypoints", rec = "Shortest Path journey", since = 32,
         needs = "ShortestPathForever", choices = { "Shortest Path journey", "Game's waypoint" },
-        tip = "Questie (its tracker's Set TomTom target), Mastercraft (Waypoint) and WhatsTraining send their waypoints to TomTom. Without TomTom installed, ShortestPathForever stands in for it. Shortest Path journey: each becomes a journey with a route (one at a time: a new one replaces the last). Game's waypoint: the game's own map pin and marker, no route. Takes a reload.",
+        tip = "Questie (its tracker's Set TomTom target), Mastercraft (Waypoint) and WhatsTraining send their waypoints to TomTom. Without TomTom installed, ShortestPathForever stands in for it. Shortest Path journey: each becomes a journey with a route (one at a time: a new one replaces the last). Game's waypoint: the game's own map pin and marker, no route. The same as Shortest Path's own \"Let guides set TomTom waypoints\"; takes effect at once.",
         get = MO.TargetsGet, set = MO.TargetsSet,
     },
 

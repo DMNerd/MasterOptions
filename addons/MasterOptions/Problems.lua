@@ -302,6 +302,23 @@ CHECKS[#CHECKS + 1] = { "Sparkles", function(add)
                 "Turn off", function() spk.minimapAutoAlternate = false end)
         end
     end
+    -- Sparkles' "Enemy plates at corpses" (corpseEnemyPlates) lends enemy nameplates for 2 s at a corpse while they're
+    -- off - and BetterBlizzPlates writes every change to them into its nameplate toggles as your choice
+    -- (BBP.SaveNameplateToggleCVar): a logout or reload in a fight in those 2 s, or BBP changing toggle sets meanwhile,
+    -- leaves enemy plates on for good. Only when BBP keeps enemy plates off somewhere and picks such changes up.
+    local bbp = _G.BetterBlizzPlatesDB
+    if spk and spk.corpseEnemyPlates == true and Loaded("BetterBlizzPlates") and type(bbp) == "table"
+        and bbp.avoidCVarPickup ~= true then
+        local off = false
+        for k, set in pairs(bbp) do
+            if type(k) == "string" and k:find("^nameplateToggles_") and type(set) == "table"
+                and set.nameplateShowEnemies == false then off = true break end
+        end
+        if off then
+            add("sparkles:corpseplates", "Sparkles lends enemy nameplates for a moment at corpses (\"Enemy plates at corpses\"), and BetterBlizzPlates saves every change to them as your choice - a logout or reload in a fight at a corpse leaves enemy plates on for good. Turn Sparkles' corpse plates off (BetterBlizzPlates keeps your enemy plate choice).",
+                "Turn off", function() spk.corpseEnemyPlates = false end)
+        end
+    end
 end }
 
 -- 4. Baganator settings pointing at addons that aren't loaded

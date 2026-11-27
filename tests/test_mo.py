@@ -200,6 +200,18 @@ sp_alt_always = lua.eval('ShowsProblem("Switch Herbs and Ore")')
 print("Sparkles problems: none when fine", sp_ok, "/ bobber", sp_bob, "/ switching", sp_alt, "/ switching with Always", sp_alt_always)
 if not (sp_ok and sp_bob and sp_alt and not sp_alt_always):
     lua.execute('ERRORS[#ERRORS+1] = "Sparkles problem rows wrong"')
+# Sparkles' corpse enemy plates while BetterBlizzPlates keeps enemy plates off in a toggle set (and picks changes up)
+lua.execute('LOADED.BetterBlizzPlates = true; BBP_WAS = BetterBlizzPlatesDB; SparklesDB.corpseEnemyPlates = true; '
+            'BetterBlizzPlatesDB = { nameplateToggles_pve = { nameplateShowEnemies = true }, nameplateToggles_pvp = { nameplateShowEnemies = true } }')
+cp_on_everywhere = lua.eval('ShowsProblem("lends enemy nameplates")')
+lua.execute('BetterBlizzPlatesDB.nameplateToggles_pve.nameplateShowEnemies = false')
+cp_off_somewhere = lua.eval('ShowsProblem("lends enemy nameplates")')
+lua.execute('BetterBlizzPlatesDB.avoidCVarPickup = true')
+cp_no_pickup = lua.eval('ShowsProblem("lends enemy nameplates")')
+lua.execute('BetterBlizzPlatesDB = BBP_WAS')
+print("Sparkles corpse plates vs BetterBlizzPlates: enemy plates on everywhere", cp_on_everywhere, "/ off in a set", cp_off_somewhere, "/ BBP not picking changes up", cp_no_pickup)
+if not (not cp_on_everywhere and cp_off_somewhere and not cp_no_pickup):
+    lua.execute('ERRORS[#ERRORS+1] = "Sparkles corpse plates problem wrong"')
 lua.execute('SparklesDB = nil; MastercraftDB.settings.nodesWhen = nil')
 # GearMatic's gold coin vendor badge next to Baganator's junk coin: a problem, fixed by "Use Gold $"
 lua.execute('GearMatic.db.profile.vendorMarkerStyle = "dollar"; GearMatic.db.profile.bestGoldShowVendor = nil')

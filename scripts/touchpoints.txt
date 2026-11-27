@@ -415,3 +415,7 @@ GearMatic|config-key|bestGoldShowDisenchant|Options.lua (Mastercraft advice in b
 Spoken_Places|function|function SpokenPlaces:SelectMap|DungeonJournal_SpokenBosses.lua (story back after a pick)
 Spoken_Places|function|function SpokenPlaces:SelectSubzone|DungeonJournal_SpokenBosses.lua (story back after a pick)
 ShortestPathForever|config-key|tourLine|Mastercraft_FarmTour.lua (1.49+: the calmer tour line)
+ShortestPathForever|config-key|"ShortestPathForever_" ..|AddonSettings.lua, Options.lua (its settings registered as ShortestPathForever_<key>: tomtom, arrowMove)
+Sparkles_Forever|config-key|corpseEnemyPlates|Problems.lua (corpse enemy plates vs BetterBlizzPlates' nameplate toggles)
+BetterBlizzPlates|config-key|avoidCVarPickup|Problems.lua (corpse enemy plates: BBP not picking up nameplate CVar changes)
+BetterBlizzPlates|config-key|nameplateToggles_|Problems.lua (its nameplate toggle sets: enemy plates off somewhere)

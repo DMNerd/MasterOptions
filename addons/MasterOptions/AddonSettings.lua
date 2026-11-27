@@ -423,7 +423,14 @@ local function ArrowTextSet(v) local d = SPF(); if d then d.arrowLabel = LABELS[
 -- Questie's, Mastercraft's and WhatsTraining's waypoints go to TomTom; without TomTom, ShortestPathForever stands
 -- in for it (its "Let guides set TomTom waypoints": tomtom) and they become journeys. Off: the game's waypoint.
 local function TargetsGet() return (SPF() or {}).tomtom == false and "Game's waypoint" or "Shortest Path journey" end
-local function TargetsSet(v) local d = SPF(); if d then d.tomtom = v ~= "Game's waypoint" end end
+-- (through its own setting, ShortestPathForever_tomtom, where it's registered: its stand-in starts or stands down at
+-- once - ns.RefreshTomTom - instead of after a reload)
+local function TargetsSet(v)
+    local on = v ~= "Game's waypoint"
+    local s = Settings and Settings.GetSetting and Settings.GetSetting("ShortestPathForever_tomtom")
+    if s and s.SetValue and pcall(s.SetValue, s, on) then return end
+    local d = SPF(); if d then d.tomtom = on end
+end
 
 -- OpenMap_MiniMap's other addons' minimap buttons: round the edge, only on mouse-over, or gathered in a tray
 local function ButtonsGet()
