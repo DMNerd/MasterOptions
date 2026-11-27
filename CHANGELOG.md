@@ -19,6 +19,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ### Fixed
 
+- The minimap border's corners away from the zone bar (the bottom two, with the bar on top) showed a notch: the
+  border's edges crossed there, and their lines don't meet. They're the border's own rounded corners now. By the
+  zone bar the corners stay square.
 - A bag slot with the junk coin no longer also shows Mastercraft's advice icon, whatever the advice: the coin already
   says it goes at the next vendor. Before, only VENDOR's icon stepped aside, so the DISENCHANT pieces sold under
   the rule above showed two icons.
