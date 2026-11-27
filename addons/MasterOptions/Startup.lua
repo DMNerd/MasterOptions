@@ -286,7 +286,7 @@ SlashCmdList.MASTEROPTIONS = function(msg)
             print(HEAD .. "Shortest Path Forever's arrow setting isn't there (is the addon loaded?).")
             return
         end
-        local on = not (s:GetValue() == true)
+        local on = s:GetValue() ~= true
         s:SetValue(on)
         print(HEAD .. "Shortest Path's arrow " .. (on
             and "unlocked - drag it (Shift-drag or arrow keys to nudge, right-click to reset). /mo arrow again to lock it."

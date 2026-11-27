@@ -940,7 +940,6 @@ for _, entry in ipairs(MODULES) do
         OPTIONS[#OPTIONS + 1] = { header = entry.header }
     else
         local short, title, needs = entry[1], entry[2], entry[3]
-        local name = "MasterOptions_" .. short
         local function M() return _G.MasterOptions_Modules end
         OPTIONS[#OPTIONS + 1] = {
             kind = "toggle", label = title, reload = true, rec = true, since = entry.since or 1,

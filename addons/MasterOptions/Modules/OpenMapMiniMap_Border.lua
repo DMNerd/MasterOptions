@@ -601,12 +601,12 @@ PlaceCoords = function()
         tab.text:SetPoint("CENTER", 0, tuck / 2)
     end
     tab:SetPoint(placed[1], placed[2], placed[3], placed[4], placed[5])
-    local inner = RIM * s * 0.5
+    local bgInset = RIM * s * 0.5
     tab.bg:ClearAllPoints()
     -- (to the rim's lines: theirs at the outer edge on the left and top, further in on the right and bottom -
     -- inset evenly, the top and left showed the world under the line's shading)
-    tab.bg:SetPoint("TOPLEFT", inner * 0.3, -inner * 0.3)
-    tab.bg:SetPoint("BOTTOMRIGHT", -inner, inner)
+    tab.bg:SetPoint("TOPLEFT", bgInset * 0.3, -bgInset * 0.3)
+    tab.bg:SetPoint("BOTTOMRIGHT", -bgInset, bgInset)
     -- (rounded on its outer side; square where it's tucked under the frame's rim)
     if tab.pieces then SliceLayout(tab.pieces, k, side ~= "bottom", side == "bottom") end
     tab:SetFrameStrata(ring and frame:GetFrameStrata() or edge:GetFrameStrata())

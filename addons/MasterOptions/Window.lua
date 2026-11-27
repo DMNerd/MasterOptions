@@ -3,7 +3,7 @@
 
 local _, MO = ...
 -- from the files before this one
-local Loaded, OPTIONS, Problems, SyncIcons = MO.Loaded, MO.OPTIONS, MO.Problems, MO.SyncIcons
+local OPTIONS, Problems, SyncIcons = MO.OPTIONS, MO.Problems, MO.SyncIcons
 local Available, ApplyRecommended, ChoiceShown, RecOf, Remember = MO.Available, MO.ApplyRecommended, MO.ChoiceShown, MO.RecOf, MO.Remember
 
 ---------------------------------------------------------------------------
