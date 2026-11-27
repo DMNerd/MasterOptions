@@ -21,8 +21,8 @@ local _, Check = Shared.ErrorReporters(ADDON)
 local OPENMAP_OWNER = "OpenMap:Pin" -- (ShortestPathForever's owner for OpenMap's handoff: UI\OpenMap.lua's PinOwner)
 local GOLD = 1                       -- (OpenMap's pin colours: 1 gold, 2 red, 3 green, 4 blue, 5 purple)
 local FROM = "Master Options"        -- (a trip pin's `from`: OpenMap shows where a pin came from)
-local NOTE_MAX = 160
-local NEAR = 5e-4
+local Pins = Shared.OpenMapPins      -- (OpenMap's pin list, as every module of ours uses it)
+local WorldMap, Near = Pins.Module, Pins.Near
 
 local function API()
     local spf = _G.ShortestPathForever
@@ -31,28 +31,13 @@ local function API()
         and type(api.Ended) == "function" then return api end
 end
 
-local function WorldMap()
-    local mod = Shared.OpenMapWorldMap()
-    if mod and type(mod.db) == "table" and type(mod.db.pins) == "table" and type(mod.db.pins.list) == "table" then return mod end
-end
-
 -- the pins placed for trips (saved: after a reload a trip still has its pin, and a leftover one is cleaned up)
 local function Ours()
     MasterOptionsDB = MasterOptionsDB or {}
     MasterOptionsDB.tripPins = type(MasterOptionsDB.tripPins) == "table" and MasterOptionsDB.tripPins or {}
     return MasterOptionsDB.tripPins
 end
-
-local function Near(a, b) return type(a) == "number" and type(b) == "number" and math.abs(a - b) < NEAR end
-local function PinFor(mod, map, x, y)
-    if mod.PinAt then
-        local p = mod.PinAt(map, x, y)
-        if p then return p end
-    end
-    for _, p in ipairs(mod.db.pins.list) do
-        if p.map == map and Near(p.x, x) and Near(p.y, y) then return p end
-    end
-end
+Pins.OnRemove(function(id) Ours()[id] = nil end) -- (removed by any module of ours: no longer a trip pin)
 
 -- a note you wrote: not empty, and not the one an addon (or we) gave the pin
 local function YourNote(p)
@@ -63,28 +48,12 @@ local function YourNote(p)
     return p.from == nil
 end
 
-local function Note(title)
-    local text = tostring(title or "Journey"):gsub("%c", " "):gsub("|", "/")
-    if #text > NOTE_MAX then text = text:sub(1, NOTE_MAX):gsub("[\192-\255][\128-\191]*$", "") end
-    return text
-end
-
-local function Round(v) return math.floor(v * 1e4 + 0.5) / 1e4 end
-
 ---------------------------------------------------------------------------
 -- The trip under way: { key, owner, map, x, y, pin, multi }
 ---------------------------------------------------------------------------
 local trip
 
-local function RemovePin(mod, p)
-    local list = mod.db.pins.list
-    for i = #list, 1, -1 do if list[i] == p then table.remove(list, i) end end
-    if mod.DropSketches and p.id then pcall(mod.DropSketches, p.id) end
-    Ours()[p.id] = nil
-    -- (Dungeon Journal's pins: Master Options' own record of it goes too)
-    local dj = _G.MasterOptions_DJOpenMapDB
-    if type(dj) == "table" and type(dj.ours) == "table" and p.id then dj.ours[p.id] = nil end
-end
+local RemovePin = Pins.Remove -- (out of OpenMap's list and every module's record - Dungeon Journal's too)
 
 local function Followed(p)
     local m, x, y = Shared.OpenMapFollowed()
@@ -104,17 +73,12 @@ end
 local function StartTrip(t, title)
     local mod = WorldMap()
     if not mod then return end
-    local p = PinFor(mod, t.map, t.x, t.y)
+    local p = Pins.Find(mod, t.map, t.x, t.y)
     if not p then
-        local pins = mod.db.pins
-        pins.nextId = pins.nextId or 1
-        p = { id = pins.nextId, map = t.map, x = Round(t.x), y = Round(t.y), note = Note(title), color = GOLD,
-              from = FROM, at = time and time() or nil }
-        pins.nextId = pins.nextId + 1
-        table.insert(pins.list, p)
+        local note = Pins.Note(title or "Journey")
+        if note == "" then note = "Journey" end
+        p = Pins.Add(mod, t.map, t.x, t.y, note, GOLD, FROM)
         Ours()[p.id] = p.note
-        if mod.db.pinsHidden and mod.SetPinsHidden then pcall(mod.SetPinsHidden, false) end -- (else out of sight)
-        if mod.RefreshPins then pcall(mod.RefreshPins) end
     end
     t.pin = p
 end

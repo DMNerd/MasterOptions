@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.15.0] - 2026-11-27
+
+### Added
+
+- **Problems: a module that didn't start.** If every addon a module needs is installed, enabled and loaded, but
+  the module still didn't start, `/mo > Problems` says so. That means the addon loaded after Master Options:
+  Master Options' own mistake, to report. This is how the Spoken story module sat unnoticed until 2.14.1.
+
+### Changed
+
+- **One way to place and clear OpenMap pins.** Dungeon Journal's Show on Map pins and Shortest Path's trip pins are
+  now placed, found and removed by the same code, with the same note format.
+- **Fixed with it:** a Show on Map pin cleared by Dungeon Journal now also drops OpenMap's sketches on it and the
+  trip module's record of it. The trip module no longer edits the Show on Map module's saved data.
+
 ## [2.14.1] - 2026-11-27
 
 ### Fixed

@@ -45,3 +45,19 @@ print("after the Journal clears it:", lua.eval("Pins()"), "| followed:", lua.eva
 # a pin you wrote your own note on stays
 L('ForeverDungeonJournal_NS.SetWaypointArrow(SPOT); OM.PinAt(1436, 0.5612, 0.4721).note = "Defias quest - go at night"; ForeverDungeonJournal_NS.ClearWaypointArrow(SPOT)')
 print("renamed by you, then cleared:", lua.eval("Pins()"))
+# one owner for our pins: a Show on Map pin a trip also used is forgotten by the trip module too, and OpenMap's
+# sketches on it go with it, when Dungeon Journal clears its mark
+L(r'''
+  MasterOptionsDB = { tripPins = {} }
+  MasterOptions_Shared.OpenMapPins.OnRemove(function(id) MasterOptionsDB.tripPins[id] = nil end) -- (as the trip module)
+  DROPPED = nil; OM.DropSketches = function(id) DROPPED = id end
+  SPOT2 = { mapID = 1436, x = 0.30, y = 0.60, label = "Elsewhere" }
+  ForeverDungeonJournal_NS.SetWaypointArrow(SPOT2)
+  PID = OM.PinAt(1436, 0.30, 0.60).id
+  MasterOptionsDB.tripPins[PID] = "Journey"
+  ForeverDungeonJournal_NS.ClearWaypointArrow(SPOT2)
+''')
+ok = (lua.eval("MasterOptionsDB.tripPins[PID]") is None and lua.eval("DROPPED == PID")
+      and lua.eval("MasterOptions_DJOpenMapDB.ours[PID]") is None)
+print(("ok   " if ok else "FAIL ") + "cleared by Dungeon Journal: the trip's record and OpenMap's sketches go too")
+print("ERRORS:", 0 if ok else 1)

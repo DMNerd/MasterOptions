@@ -59,6 +59,8 @@ lua.execute(r'''
   function WM.TrackPoint(m, x, y) FOLLOWED = { map = m, x = x, y = y } end
   OpenMap = { GetModule = function(_, n) if n == "worldmap" then return WM end end }
   MasterOptions_DJOpenMapDB = { ours = {} }
+  -- (DungeonJournal_ShowOnMap, in game: forgets its own record of a pin any module of ours removes)
+  MasterOptions_Shared.OpenMapPins.OnRemove(function(id) MasterOptions_DJOpenMapDB.ours[id] = nil end)
   function Pin(id, note, from, x) local p = { id = id, map = 1434, x = x or (0.1 * id), y = 0.5, note = note, from = from }
     table.insert(WM.db.pins.list, p); return p end
   function Has(id) for _, p in ipairs(WM.db.pins.list) do if p.id == id then return true end end return false end

@@ -19,23 +19,15 @@ local S = MasterOptions_Shared
 local _, Check = S.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
 local BLUE = 4                -- OpenMap's pin colours: 1 gold, 2 red, 3 green, 4 blue, 5 purple
-local NOTE_MAX = 160
-local DB                       -- MasterOptions_DJOpenMapDB: { ours = { [pin id] = true } } (ShortestPathForever_OpenMapPins reads it)
-
-local function WorldMap()
-    local mod = S.OpenMapWorldMap()
-    if mod and mod.db and type(mod.db.pins) == "table" and type(mod.db.pins.list) == "table" then return mod end
-end
-
-local function Round(v) return math.floor(v * 1e4 + 0.5) / 1e4 end
+local DB                       -- MasterOptions_DJOpenMapDB: { ours = { [pin id] = true } }
+local Pins = S.OpenMapPins     -- (OpenMap's pin list, as every module of ours uses it)
+local WorldMap = Pins.Module
+Pins.OnRemove(function(id) if DB then DB.ours[id] = nil end end) -- (removed by any module of ours: not ours any more)
 
 local function Note(spot)
     local text = spot.label or spot.questTitle or ""
     if spot.questTitle and spot.label and spot.questTitle ~= spot.label then text = spot.label .. " (" .. spot.questTitle .. ")" end
-    text = ("Dungeon Journal: " .. tostring(text)):gsub("%c", " "):gsub("|", "/")
-    text = text:gsub("%s*\226\128\148%s*", " - "):gsub("%s*\226\128\147%s*", " - ") -- (long dashes: " - ")
-    if #text > NOTE_MAX then text = text:sub(1, NOTE_MAX):gsub("[\192-\255][\128-\191]*$", "") end
-    return (text:gsub("^%s+", ""):gsub("%s+$", ""))
+    return Pins.Note("Dungeon Journal: " .. tostring(text))
 end
 
 local function Spot(spot)
@@ -49,15 +41,9 @@ local function Shown(spot)
     local mod = WorldMap()
     local mapID, x, y = Spot(spot)
     if not (mod and mapID) then return end
-    local pins = mod.db.pins
-    local p = mod.PinAt and mod.PinAt(mapID, x, y)
+    local p = Pins.Find(mod, mapID, x, y)
     if not p then
-        if mod.db.pinsHidden and mod.SetPinsHidden then pcall(mod.SetPinsHidden, false) end -- (else it would be out of sight)
-        pins.nextId = pins.nextId or 1
-        p = { id = pins.nextId, map = mapID, x = Round(x), y = Round(y), note = Note(spot), color = BLUE,
-              from = "Dungeon Journal", at = time() }
-        pins.nextId = pins.nextId + 1
-        table.insert(pins.list, p)
+        p = Pins.Add(mod, mapID, x, y, Note(spot), BLUE, "Dungeon Journal")
         DB.ours[p.id] = true
     end
     if mod.db.pinsFollowNew ~= false and mod.TrackPoint then pcall(mod.TrackPoint, p.map, p.x, p.y, p.note) end
@@ -68,16 +54,14 @@ local function Cleared(spot)
     local mod = WorldMap()
     local mapID, x, y = Spot(spot)
     if not (mod and mapID) then return end
-    local p = mod.PinAt and mod.PinAt(mapID, x, y)
+    local p = Pins.Find(mod, mapID, x, y)
     if not (p and DB.ours[p.id]) then return end
     -- kept: you wrote your own note on it
     if p.note ~= Note(spot) then DB.ours[p.id] = nil return end
     -- still followed: no longer (by the spot OpenMap was told to follow - ShortestPathForever's journey moves the
     -- game's waypoint along the way, so that alone missed it)
     if mod.ClearPin and S.OpenMapFollows(p.map, p.x, p.y) then pcall(mod.ClearPin) end
-    local list = mod.db.pins.list
-    for i = #list, 1, -1 do if list[i] == p then table.remove(list, i) end end
-    DB.ours[p.id] = nil
+    Pins.Remove(mod, p) -- (its sketches, our record and a trip's record of it go with it)
     if mod.RefreshPins then pcall(mod.RefreshPins) end
 end
 

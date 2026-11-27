@@ -113,7 +113,10 @@ from shared_lua import load_shared; load_shared(lua, mo_path)
 lua.eval("function(s) return load(s, '=Modules.lua') end")(open(_os.path.join(_os.path.dirname(_os.path.abspath(mo_path)), "Modules.lua"), encoding="utf-8").read())()
 from shared_lua import load_master_options; load_master_options(lua, mo_path) # (MasterOptions.lua ... Startup.lua)
 L = lua.execute
+# a module whose addon loads after Master Options (not loaded when the modules start): it doesn't start
+L('ENABLED.LateAddon = true; MasterOptions_Module("Test_Late", { "LateAddon" }, function() STARTED = true end)')
 L('Fire("ADDON_LOADED", "MasterOptions")')
+L('LOADED.LateAddon = true') # (it loads after)
 # an error from a patch, so Problems has its error row (Copy / Clear get clicked below)
 L('if MasterOptions_ReportError then MasterOptions_ReportError("MasterOptions_Mastercraft_Keep", "test", "Keep.lua:1: test error") end')
 L('Fire("PLAYER_LOGIN")')
@@ -235,6 +238,9 @@ lua.execute(r"""
   LOADED.BetterBetterBlizzPlates, LOADED.BetterBlizzPlates, LOADED.Questie = nil, nil, nil
   C_AddOns.GetAddOnMetadata, LibQuestieDB = nil, nil
 """)
+lua.execute('MasterOptionsDB.ignoredProblems["latemodule:Test_Late"] = nil') # (every button was clicked above, Ignore too)
+comp["a module whose addon loaded after Master Options: said so"] = (lua.eval('STARTED') is None
+    and lua.eval('ShowsProblem("Test_Late didn.t start: LateAddon loaded after")') is True)
 print("companion versions:", comp)
 if not all(comp.values()):
     lua.execute('ERRORS[#ERRORS+1] = "Companion version problems wrong"')

@@ -452,6 +452,71 @@ function S.OpenMapFollowed()
 end
 
 ---------------------------------------------------------------------------
+-- OpenMap's pins, as our modules place and clear them (DungeonJournal_ShowOnMap, ShortestPathForever_OpenMapPins):
+-- straight into OpenMap's pin list (OpenMapDB: worldmap -> pins), in its own format - one way for all of them.
+-- Each module keeps its own record of the pins it placed; a pin removed by any of them is forgotten by all
+-- (OpenMapPins.OnRemove).
+---------------------------------------------------------------------------
+local Pins = {}
+S.OpenMapPins = Pins
+local NOTE_MAX = 160
+
+-- OpenMap's world map module with its pin list, or nil
+function Pins.Module()
+    local mod = OpenMapWorldMap()
+    if mod and type(mod.db) == "table" and type(mod.db.pins) == "table" and type(mod.db.pins.list) == "table" then return mod end
+end
+
+function Pins.Near(a, b) return type(a) == "number" and type(b) == "number" and math.abs(a - b) < NEAR end
+local function Round(v) return math.floor(v * 1e4 + 0.5) / 1e4 end
+
+-- a pin's note: one line, no "|" (OpenMap's escapes), long dashes as " - ", at most 160 bytes (cut whole characters)
+function Pins.Note(text)
+    text = tostring(text or ""):gsub("%c", " "):gsub("|", "/")
+    text = text:gsub("%s*\226\128\148%s*", " - "):gsub("%s*\226\128\147%s*", " - ")
+    if #text > NOTE_MAX then text = text:sub(1, NOTE_MAX):gsub("[\192-\255][\128-\191]*$", "") end
+    return (text:gsub("^%s+", ""):gsub("%s+$", ""))
+end
+
+-- the pin at a spot: OpenMap's own lookup, else one within a hair of it
+function Pins.Find(mod, map, x, y)
+    if mod.PinAt then
+        local p = mod.PinAt(map, x, y)
+        if p then return p end
+    end
+    for _, p in ipairs(mod.db.pins.list) do
+        if p.map == map and Pins.Near(p.x, x) and Pins.Near(p.y, y) then return p end
+    end
+end
+
+-- a new pin (colour: OpenMap's 1 gold, 2 red, 3 green, 4 blue, 5 purple; from: where it came from, OpenMap shows it)
+function Pins.Add(mod, map, x, y, note, color, from)
+    local pins = mod.db.pins
+    pins.nextId = pins.nextId or 1
+    local p = { id = pins.nextId, map = map, x = Round(x), y = Round(y), note = note, color = color, from = from,
+                at = time and time() or nil }
+    pins.nextId = pins.nextId + 1
+    table.insert(pins.list, p)
+    if mod.db.pinsHidden and mod.SetPinsHidden then pcall(mod.SetPinsHidden, false) end -- (else it would be out of sight)
+    if mod.RefreshPins then pcall(mod.RefreshPins) end
+    return p
+end
+
+-- fn(pinID): a pin was removed - forget it
+local removedCallbacks = {}
+function Pins.OnRemove(fn) removedCallbacks[#removedCallbacks + 1] = fn end
+
+-- the pin out of OpenMap's list, its sketches with it, and out of every module's record (the caller refreshes)
+function Pins.Remove(mod, p)
+    local list = mod.db.pins.list
+    for i = #list, 1, -1 do if list[i] == p then table.remove(list, i) end end
+    if mod.DropSketches and p.id then pcall(mod.DropSketches, p.id) end
+    if p.id then
+        for _, fn in ipairs(removedCallbacks) do pcall(fn, p.id) end
+    end
+end
+
+---------------------------------------------------------------------------
 -- Master Options' look for its own frames on others' maps (the minimap's zone bar and coordinates tab; the dungeon
 -- chooser is the game's BasicFrameTemplate itself): the /mo window's header (the game's BasicFrameTemplate title bar - Details' title bar matches it),
 -- else a grey gradient like it, darker at the top

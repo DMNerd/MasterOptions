@@ -106,6 +106,26 @@ CHECKS[#CHECKS + 1] = { "addons that didn't load", function(add)
     end
 end }
 
+-- 1b. a module that didn't start although every addon it needs is installed, enabled and loaded now: that addon
+-- loaded after Master Options (not one of its optional dependencies), so it wasn't there when the modules started -
+-- Master Options' own mistake (Spoken_Bosses until 2.14.1: Spoken's stories on Dungeon Journal's map never showed)
+CHECKS[#CHECKS + 1] = { "modules that didn't start", function(add)
+    local mods = _G.MasterOptions_Modules
+    for _, m in ipairs(mods and mods.list or {}) do
+        local state = mods.State(m.name)
+        if type(state) == "string" and state:find("^needs ") and #m.needs > 0 then
+            local late = true
+            for _, n in ipairs(m.needs) do
+                if not (Exists(n) and AddonEnabled(n) and Loaded(n)) then late = false break end
+            end
+            if late then
+                add("latemodule:" .. m.name, ("The module %s didn't start: %s loaded after Master Options. That's Master Options' to fix - please report it (Problems > Copy has the details)."):format(
+                    m.name, table.concat(m.needs, ", ")))
+            end
+        end
+    end
+end }
+
 -- 2. old copies of our patches
 CHECKS[#CHECKS + 1] = { "old copies", function(add)
     for _, old in ipairs(RENAMED) do
