@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.12.3] - 2026-11-27
+
+### Fixed
+
+- GearMatic's badges still came back next to Mastercraft's advice icons. 2.12.1 and 2.12.2 turned them off only when
+  the advice row was switched on, but Baganator had already switched the icons on by itself, so that never ran. Now,
+  at every login while the advice icons show, GearMatic's vendor $, auction price tag and disenchant marker are
+  turned off.
+
 ## [2.12.2] - 2026-11-27
 
 ### Fixed

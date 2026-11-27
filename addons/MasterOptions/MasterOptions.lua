@@ -346,6 +346,7 @@ local function GMRefreshBagIcons()
     try(gm.DisenchantWindow, "RequestRefresh")
     try(gm.Baganator, "RequestRefresh")
 end
+MasterOptions_GMRefreshBagIcons = GMRefreshBagIcons -- (for modules)
 
 -- for the files after this one
 MO.AUC = AUC

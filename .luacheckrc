@@ -19,7 +19,7 @@ globals = {
     "MasterOptions_MinimapBorderDB",
     "MasterOptions_Module", "MasterOptions_Modules", "MasterOptions_ErrorLog", "MasterOptions_ReportError",
     "MasterOptions_MastercraftKeep", "MasterOptions_MastercraftVendorSell", "MasterOptions_MinimapBorder",
-    "MasterOptions_NeverSell", "MasterOptions_AddonWhispers", "MasterOptions_PawnKeeps", "MasterOptions_PawnKeepsMany",
+    "MasterOptions_NeverSell", "MasterOptions_AddonWhispers", "MasterOptions_GMRefreshBagIcons","MasterOptions_PawnKeeps", "MasterOptions_PawnKeepsMany",
     "MasterOptions_GearKeeps", "MasterOptions_GearKeepsMany", "MasterOptions_GearMaticSpecKeeps", "MasterOptions_CheapUpgradesGearMatic", "MasterOptions_Shared", "MasterOptions_FarmTour", "MasterOptions_RecipeMap", "MasterOptions_DJSpoken", "MasterOptions_SPFOpenMapPins",
     "SLASH_MASTEROPTIONS1", "SLASH_MASTEROPTIONS2",
     -- Blizzard tables we add entries to

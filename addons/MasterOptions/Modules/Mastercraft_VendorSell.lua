@@ -304,6 +304,22 @@ if bagAPI and bagAPI.RegisterCornerWidget then
     if not okR then Check("adding the advice icons to Baganator", false, err) end
 end
 
+-- One verdict per bag slot: while the advice icons show, GearMatic's three "best gold" badges (vendor $, auction
+-- price tag, disenchant marker) stay off - they say the same, and often disagree. Checked at every login.
+local BEST_GOLD = { "bestGoldShowVendor", "bestGoldShowAuction", "bestGoldShowDisenchant" }
+local function OneVerdictPerSlot()
+    local api = _G.Baganator and _G.Baganator.API
+    if not (api and api.IsCornerWidgetActive and api.IsCornerWidgetActive("masteroptions_mc_advice")) then return end
+    local p = GMProfile()
+    if type(p) ~= "table" then return end
+    local changed = false
+    for _, k in ipairs(BEST_GOLD) do
+        if p[k] ~= false then p[k] = false; changed = true end
+    end
+    if changed and type(_G.MasterOptions_GMRefreshBagIcons) == "function" then pcall(_G.MasterOptions_GMRefreshBagIcons) end
+end
+MasterOptions_MastercraftVendorSell.OneVerdictPerSlot = OneVerdictPerSlot
+
 ---------------------------------------------------------------------------
 -- The bags: every slot Mastercraft says to VENDOR (read fresh)
 ---------------------------------------------------------------------------
@@ -499,6 +515,8 @@ f:SetScript("OnEvent", function(_, event, name)
         DB.advice = DB.advice or {}
     elseif event == "PLAYER_LOGIN" then
         ClearGearMaticMarks() -- (a visit cut short by a disconnect)
+        -- (after Baganator has put its corner settings in: it does at its own login)
+        C_Timer.After(1, function() Check("turning GearMatic's badges off", pcall(OneVerdictPerSlot)) end)
         FillSoon(5) -- (after Mastercraft has its prices and guides in)
     elseif event == "BAG_UPDATE_DELAYED" then
         if not merchantOpen then FillSoon(0.5) end

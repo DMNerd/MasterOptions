@@ -164,4 +164,12 @@ check("pole: keep tick", "ReadyCheck-Ready" in E("I_POLE"))
 check("grey (no advice): no icon", E("I_GREY") == "none")
 check("VENDOR with the junk coin already: no second icon", E("I_LINEN_COIN") is False)
 check("other advice still shows next to a junk coin", E("I_POLE_COIN") is True)
+L('ACTIVE = false; Baganator.API.IsCornerWidgetActive = function(id) return ACTIVE and id == "masteroptions_mc_advice" end; '
+  'GMRefreshed = 0; MasterOptions_GMRefreshBagIcons = function() GMRefreshed = GMRefreshed + 1 end; '
+  'MasterOptions_MastercraftVendorSell.OneVerdictPerSlot()')
+check("advice icons off: GearMatic's badges left alone", E("GMProf.bestGoldShowAuction") is None and E("GMRefreshed") == 0)
+L('ACTIVE = true; GMProf.bestGoldShowAuction = true; Fire("PLAYER_LOGIN"); Run()')
+check("advice icons on: at login all three GearMatic badges off, its bags redrawn",
+      E("GMProf.bestGoldShowVendor") is False and E("GMProf.bestGoldShowAuction") is False
+      and E("GMProf.bestGoldShowDisenchant") is False and E("GMRefreshed") == 1)
 print("ERRORS:", errors)
