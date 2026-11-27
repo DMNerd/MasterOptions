@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.12.2] - 2026-11-27
+
+### Fixed
+
+- Double icons in the bags came back a while after a reload. Besides its vendor $, GearMatic has an auction-house
+  price tag and a disenchant marker, which appear once it has worked out prices. **Mastercraft advice in bags** now
+  turns all three off, also with this update.
+
 ## [2.12.1] - 2026-11-27
 
 ### Changed
