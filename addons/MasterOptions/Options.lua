@@ -601,9 +601,10 @@ local OPTIONS = {
     {
         -- (Baganator corner widget "masteroptions_mc_advice", Modules\Mastercraft_VendorSell.lua; last in the top
         -- right, so the lock and GearMatic's skull win the corner)
-        kind = "toggle", label = "Mastercraft advice in bags", rec = true, reload = true,
+        -- (since 35: turns GearMatic's vendor badge off - two verdicts on one slot)
+        kind = "toggle", label = "Mastercraft advice in bags", rec = true, since = 35, reload = true,
         needs = { "Baganator", "MasterOptions_Mastercraft_VendorSell" },
-        tip = "Mastercraft's advice as an icon in the top-right corner of Baganator's bag slots: a green tick for KEEP (also \"keep some for a guide\"), the vendor's bag for VENDOR, the auctioneer for AUCTION and the disenchant icon for DISENCHANT. Learned from the item tooltips, and read for new items in the background.",
+        tip = "Mastercraft's advice as an icon in the top-right corner of Baganator's bag slots: a green tick for KEEP (also \"keep some for a guide\"), the vendor's bag for VENDOR, the auctioneer for AUCTION and the disenchant icon for DISENCHANT. Learned from the item tooltips, and read for new items in the background. No vendor's bag where the junk coin already shows it goes at the next vendor. Turns GearMatic's vendor badge off (one verdict per slot).",
         get = function() local p = BAG(); return p ~= nil and CornerHas(p, "masteroptions_mc_advice") end,
         set = function(v)
             local p = BAG(); if not p then return end
@@ -611,6 +612,11 @@ local OPTIONS = {
             if v then
                 p[CORNERS[2]] = type(p[CORNERS[2]]) == "table" and p[CORNERS[2]] or {}
                 table.insert(p[CORNERS[2]], "masteroptions_mc_advice")
+                local s = GM()
+                if s and s.bestGoldShowVendor ~= false then
+                    s.bestGoldShowVendor = false
+                    GMRefreshBagIcons()
+                end
             end
         end,
         scope = "Baganator profile",
@@ -629,6 +635,9 @@ local OPTIONS = {
             s.bestGoldShowVendor = v ~= "Off"
             if v ~= "Off" then s.vendorMarkerStyle = (v == "Gold coin") and "coin" or "dollar" end
             GMRefreshBagIcons()
+            -- (one verdict per slot: GearMatic's badge back on takes Mastercraft's advice icons off)
+            local p = v ~= "Off" and BAG()
+            if p then CornerRemove(p, "masteroptions_mc_advice") end
         end,
     },
     {

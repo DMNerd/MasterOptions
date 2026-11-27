@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.12.1] - 2026-11-27
+
+### Changed
+
+- One verdict per bag slot: **Mastercraft advice in bags** turns GearMatic's vendor badge off. That happens with this
+  update too, and turning the badge back on takes the advice icons away. The VENDOR bag isn't shown where the junk
+  coin already says the item goes at the next vendor.
+
 ## [2.12.0] - 2026-11-27
 
 ### Added

@@ -153,6 +153,8 @@ L(r'''
   end
   POS = w.pos.corner .. ":" .. w.pos.priority
   I_LINEN, I_THREAD, I_SILK, I_POLE, I_GREY = Icon(2589), Icon(2320), Icon(4306), Icon(6256), Icon(3300)
+  I_LINEN_COIN = w.onUpdate({ SetTexture = function() end }, { itemID = 2589, isJunk = true })
+  I_POLE_COIN = w.onUpdate({ SetTexture = function() end }, { itemID = 6256, isJunk = true })
 ''')
 check("advice icon registered top right, after lock and skull", E("POS") == "top_right:3")
 check("linen: vendor icon", "VendorGossipIcon" in E("I_LINEN"))
@@ -160,4 +162,6 @@ check("thread (keep some for a guide): keep tick", "ReadyCheck-Ready" in E("I_TH
 check("silk: auction icon", "Auctioneer" in E("I_SILK"))
 check("pole: keep tick", "ReadyCheck-Ready" in E("I_POLE"))
 check("grey (no advice): no icon", E("I_GREY") == "none")
+check("VENDOR with the junk coin already: no second icon", E("I_LINEN_COIN") is False)
+check("other advice still shows next to a junk coin", E("I_POLE_COIN") is True)
 print("ERRORS:", errors)

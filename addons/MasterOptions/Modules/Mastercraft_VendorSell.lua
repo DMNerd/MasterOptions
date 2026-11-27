@@ -291,6 +291,8 @@ if bagAPI and bagAPI.RegisterCornerWidget then
             local advice = id and DB and DB.advice and DB.advice[id]
             local path = advice and ADVICE_ICONS[advice]
             if not path then return false end
+            -- the junk coin (and grey) already says it goes at the next vendor: no second icon for it
+            if advice == "VENDOR" and details.isJunk == true then return false end
             tex:SetTexture(path)
             return true
         end,
