@@ -341,7 +341,8 @@ MasterOptions_MinimapBorder = {
 -- (half size), its edge tucked under the frame's rim so it grows out of it. The game's own coordinates line
 -- (Edit Mode's "show coordinates": MinimapContainer.PlayerCoords - it hung on the map's bottom edge, under
 -- OpenMap's bottom row of addon buttons) is made see-through meanwhile; the tab shows while the game's would
--- (that setting on). DB.coords: "top-left" | "top-center" | "top-right" | "bottom-..." | "game" (the game's own).
+-- (that setting on). DB.coords: "inside" (the numbers alone, in the map's top-right corner) | "top-left" |
+-- "top-center" | "top-right" | "bottom-..." (a tab) | "game" (the game's own).
 ---------------------------------------------------------------------------
 local tab
 
@@ -460,12 +461,36 @@ local function OnScreenSide(side, top, bottom, h)
     return side
 end
 
+-- "inside": just the numbers, in the map's top-right corner - no tab, no background (outlined, so they read over the
+-- map; a player's ask: "just simplify it"). Above the map's pins.
+local inner
+local function InnerBuild()
+    if inner then return inner end
+    inner = CreateFrame("Frame", "MasterOptionsMinimapCoordsInside", body)
+    inner:SetSize(80, 14)
+    inner.text = inner:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local font, size = inner.text:GetFont()
+    if font then inner.text:SetFont(font, size or 10, "OUTLINE") end
+    inner.text:SetPoint("TOPRIGHT")
+    inner.text:SetJustifyH("RIGHT")
+    local wait, shown = 0, nil
+    inner:SetScript("OnUpdate", function(self, elapsed)
+        wait = wait - elapsed
+        if wait > 0 then return end
+        wait = 0.2
+        local xy = PlayerXY()
+        if xy ~= shown then shown = xy; self.text:SetText(xy) end
+    end)
+    return inner
+end
+
 PlaceCoords = function()
     local c = Coords()
     local mode = CoordsMode()
     -- (OpenMap_MiniMap's look off: the game's line - until 2.9.0 it stayed see-through with no tab: no coordinates)
     if mode == "game" or not OpenMapLook() then
         if tab then tab:Hide() end
+        if inner then inner:Hide() end
         if c then c:SetAlpha(1) end
         return
     end
@@ -474,8 +499,22 @@ PlaceCoords = function()
     local want = (c and c:IsShown()) or (GetCVar and GetCVar("minimapShowPlayerCoords") == "1")
     if not want then
         if tab then tab:Hide() end
+        if inner then inner:Hide() end
         return
     end
+    if mode == "inside" then
+        if tab then tab:Hide() end
+        coordsSide = nil
+        InnerBuild()
+        inner:ClearAllPoints()
+        inner:SetPoint("TOPRIGHT", body, "TOPRIGHT", -4, -4)
+        inner:SetFrameStrata(edge and edge:GetFrameStrata() or body:GetFrameStrata())
+        inner:SetFrameLevel(((edge and edge:GetFrameLevel()) or body:GetFrameLevel() or 1) + 10)
+        inner.text:SetText(PlayerXY())
+        inner:Show()
+        return
+    end
+    if inner then inner:Hide() end
     TabBuild()
     local s = Scale()
     local k = BUTTON * CUT * s * 0.5          -- (the tab's corners: half the frame's)

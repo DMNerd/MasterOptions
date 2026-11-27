@@ -17,6 +17,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
   during a fight at a corpse could leave enemy plates on for good. Problems now flags it, only when BetterBlizzPlates
   keeps enemy plates off somewhere, and "Turn off" switches Sparkles' option off.
 
+- **Minimap coordinates "Inside, top right"** (now recommended, applied with this update): just the numbers in the
+  minimap's top-right corner, outlined, with no tab or background, and never in the way of the addon buttons round
+  the edge. The tab on the frame's edge is still a choice.
+
 ### Fixed
 
 - The never-sell lock and Mastercraft's advice icons in Baganator's bags didn't show on items with a cooldown running

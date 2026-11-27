@@ -809,10 +809,11 @@ local OPTIONS = {
         end,
     },
     {
-        kind = "choice", label = "Minimap coordinates", rec = "Top center", since = 22,
+        -- (since 39: "Inside, top right" recommended - simpler, and clear of the addon buttons round the edge)
+        kind = "choice", label = "Minimap coordinates", rec = "Inside, top right", since = 39,
         needs = "MasterOptions_OpenMapMiniMap_Border",
-        choices = { "Top left", "Top center", "Top right", "Bottom left", "Bottom center", "Bottom right", "Game's place" },
-        tip = "The coordinates in a small tab sticking out of the minimap's frame, like the zone bar (same background and border): on its top or bottom edge, at the left, centre or right. When the minimap is so close to the top (or bottom) of the screen that the tab would stick off it, the tab goes on the other edge, and this row says so - move the minimap away from the screen's edge to have it where you picked. Shown while the game's coordinates setting is on (Edit Mode's minimap \"show coordinates\", or OpenMap's \"Coordinates under the map\"). Game's place: the game's own line on the map's bottom edge, where OpenMap's bottom row of addon buttons covers it. Changes at once.",
+        choices = { "Inside, top right", "Top left", "Top center", "Top right", "Bottom left", "Bottom center", "Bottom right", "Game's place" },
+        tip = "Inside, top right: just the numbers, in the minimap's top-right corner - no tab, no background. Or the coordinates in a small tab sticking out of the minimap's frame, like the zone bar (same background and border): on its top or bottom edge, at the left, centre or right. When the minimap is so close to the top (or bottom) of the screen that the tab would stick off it, the tab goes on the other edge, and this row says so - move the minimap away from the screen's edge to have it where you picked. Shown while the game's coordinates setting is on (Edit Mode's minimap \"show coordinates\", or OpenMap's \"Coordinates under the map\"). Game's place: the game's own line on the map's bottom edge, where OpenMap's bottom row of addon buttons covers it. Changes at once.",
         -- (the row's short text: says so when the tab had to go on the other edge)
         desc = function()
             local b = _G.MasterOptions_MinimapBorder
@@ -822,12 +823,13 @@ local OPTIONS = {
                 return ("|cffffd200On the %s edge now:|r no room %s your minimap - it's at the %s of the screen. Move it away from the edge to have it %s."):format(
                     used, wanted == "top" and "above" or "below", wanted, wanted == "top" and "on top" or "at the bottom")
             end
-            return "The coordinates in a small tab sticking out of the minimap's frame, like the zone bar: on its top or bottom edge."
+            return "Inside the minimap's top-right corner, or in a small tab on its top or bottom edge."
         end,
         get = function()
             local d = _G.MasterOptions_MinimapBorderDB
             local m = type(d) == "table" and d.coords or nil
             if m == "game" then return "Game's place" end
+            if m == "inside" then return "Inside, top right" end
             if m == nil or m == "top" then return "Top center" end
             local side, align = m:match("^(%a+)%-(%a+)$")
             if not side then return "Top center" end
@@ -835,7 +837,8 @@ local OPTIONS = {
         end,
         set = function(v)
             MasterOptions_MinimapBorderDB = MasterOptions_MinimapBorderDB or {}
-            MasterOptions_MinimapBorderDB.coords = (v == "Game's place") and "game" or v:lower():gsub(" ", "-")
+            MasterOptions_MinimapBorderDB.coords = (v == "Game's place") and "game" or (v == "Inside, top right") and "inside"
+                or v:lower():gsub(" ", "-")
             local b = _G.MasterOptions_MinimapBorder
             if b and b.PlaceCoords then pcall(b.PlaceCoords) end
         end,

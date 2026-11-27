@@ -46,6 +46,9 @@ local function Region(kind)
   function r:GetAtlas() return self.atlas end
   function r:SetText(t) self.txt = t end
   function r:GetStringWidth() return 50 end
+  function r:GetFont() return "Fonts\\FRIZQT__.TTF", 10 end
+  function r:SetFont(f, s, flags) self.fontFlags = flags end
+  function r:SetJustifyH(j) self.justify = j end
   function r:GetStringHeight() return 10 end
   function r:CreateFontString() local t = Region('fs'); self.fonts = self.fonts or {}; self.fonts[#self.fonts+1] = t; return t end
   function r:CreateTexture() local t = Region("tex"); self.textures = self.textures or {}; self.textures[#self.textures+1] = t; return t end
@@ -167,6 +170,12 @@ L(r'''
 ''')
 check("coordinates tab: a minimap button where it sits - moved along the edge clear of it", E("X1 ~= X0 and (X1 > X0 + 30 or X1 < X0 - 30)"), True)
 check("...the button gone: back where asked", E("X2 == X0"), True)
+
+# "inside": the numbers alone in the map's top-right corner - no tab
+L('MasterOptions_MinimapBorderDB.coords = "inside"; MasterOptions_MinimapBorder.Apply(); Run()')
+check("inside: the numbers in the map's top-right corner, outlined, no tab", E("(function() local f = MasterOptionsMinimapCoordsInside; return f ~= nil and f.shown and f.points[1][1] == 'TOPRIGHT' and f.points[1][2] == Body and f.text.fontFlags == 'OUTLINE' and not MasterOptionsMinimapCoords.shown end)()"), True)
+L('MasterOptions_MinimapBorderDB.coords = "top-center"; MasterOptions_MinimapBorder.Apply(); Run()')
+check("...a tab chosen again: the inside numbers gone, the tab back", E("MasterOptionsMinimapCoordsInside.shown == false and MasterOptionsMinimapCoords.shown"), True)
 
 L('MasterOptions_MinimapBorderDB.on = true; OpenMapMiniMapDB.profile.shape = "round"; MasterOptions_MinimapBorder.Apply(); Run()')
 check("round minimap: left alone", E("MasterOptionsMinimapBorder.shown == false and Edge.texture.alpha == 1"), True)
