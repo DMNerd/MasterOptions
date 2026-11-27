@@ -189,6 +189,17 @@ print("Sparkles problems: none when fine", sp_ok, "/ bobber", sp_bob, "/ switchi
 if not (sp_ok and sp_bob and sp_alt and not sp_alt_always):
     lua.execute('ERRORS[#ERRORS+1] = "Sparkles problem rows wrong"')
 lua.execute('SparklesDB = nil; MastercraftDB.settings.nodesWhen = nil')
+# GearMatic's gold coin vendor badge next to Baganator's junk coin: a problem, fixed by "Use Gold $"
+lua.execute('GearMatic.db.profile.vendorMarkerStyle = "dollar"; GearMatic.db.profile.bestGoldShowVendor = nil')
+coin_ok = not lua.eval('ShowsProblem("same icon as Baganator")')
+lua.execute('GearMatic.db.profile.vendorMarkerStyle = "coin"')
+coin_on = lua.eval('ShowsProblem("same icon as Baganator")')
+lua.execute('GearMatic.db.profile.bestGoldShowVendor = false')
+coin_hidden = lua.eval('ShowsProblem("same icon as Baganator")')
+print("vendor coin problem: none with $", coin_ok, "/ coin", coin_on, "/ badge off", coin_hidden)
+if not (coin_ok and coin_on and not coin_hidden):
+    lua.execute('ERRORS[#ERRORS+1] = "Vendor coin problem row wrong"')
+lua.execute('GearMatic.db.profile.vendorMarkerStyle = nil; GearMatic.db.profile.bestGoldShowVendor = nil')
 print("synced:", lua.eval("MasterOptionsDB.syncChars"), "shared:", lua.eval("(function() local o = {} for k, v in pairs(MasterOptionsDB.shared or {}) do o[#o+1] = k .. '=' .. tostring(v) end table.sort(o) return table.concat(o, '; ') end)()"))
 print("errlog rows:", lua.eval("MasterOptions_ErrorLog and MasterOptions_ErrorLog.Count()"), "copy window:", lua.eval("MasterOptionsErrorFrame ~= nil"))
 errs = lua.eval("ERRORS")

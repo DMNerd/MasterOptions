@@ -85,7 +85,11 @@ GearMatic = {
   },
   Pawn = { ImportAllScales = function() end },
 }
-Baganator = { API = { RequestItemButtonsRefresh = function() end } }
+-- (Skins: the skin listener API, which Bag icon size hooks; CORNER_FRAMES = what Baganator has made so far)
+SKIN_LISTENERS, CORNER_FRAMES = {}, {}
+Baganator = { API = { RequestItemButtonsRefresh = function() end,
+  Skins = { RegisterListener = function(fn) SKIN_LISTENERS[#SKIN_LISTENERS + 1] = fn end,
+            GetAllFrames = function() return CORNER_FRAMES end } } }
 CheapUpgrades = {}
 SlashCmdList.PAWN_FOREVER = function(m) print("/pff " .. m) end
 -- Pawn: real saved scales + Pawn Forever's rogue scales as its first run leaves them (stock hidden, ours shown)
@@ -246,6 +250,63 @@ else:
     print("bobber row:", got)
     if got != ["Both", ("Sparkles", "Sparkles", True, False), ("Off", "Off", False, False), ("Both", "Both", True, True)]:
         lua.execute('ERRORS[#ERRORS+1] = "Fishing bobber mark row wrong"')
+# bag icon rows (2.6.0): GearMatic's skull in Baganator, its vendor badge, its bag icon size
+lua.execute(r'''
+  for _, s in ipairs(SETTINGS) do
+    if s.name:find("Best-in-slot skull in bags", 1, true) == 1 then SKULL = s end
+    if s.name == "GearMatic vendor badge" then BADGE = s end
+    if s.name:find("Bag icon size", 1, true) == 1 then ISIZE = s end
+  end
+  function BagProfile() return BAGANATOR_CONFIG.Profiles[BAGANATOR_CURRENT_PROFILE or "DEFAULT"] or BAGANATOR_CONFIG.Profiles.DEFAULT end
+  function SkullCount() local n = 0 for _, k in ipairs({ "icon_top_left_corner_array", "icon_top_right_corner_array", "icon_bottom_left_corner_array", "icon_bottom_right_corner_array" }) do for _, v in ipairs(BagProfile()[k] or {}) do if v == "gearmatic_bis" then n = n + 1 end end end return n end
+''')
+bag = {}
+if lua.eval("SKULL and BADGE and ISIZE") is None or not lua.eval("SKULL and BADGE and ISIZE"):
+    bag["rows on the Options page"] = False
+else:
+    lua.execute('SKULL.set(false)')
+    bag["skull off: out of every corner"] = lua.eval("SkullCount()") == 0 and lua.eval("SKULL.get()") is False
+    lua.execute('SKULL.set(true); SKULL.set(true)')
+    bag["skull on: once, top right"] = (lua.eval("SkullCount()") == 1 and lua.eval('BagProfile().icon_top_right_corner_array[1]') == "gearmatic_bis"
+        and lua.eval("SKULL.get()") is True)
+    gp = "GearMatic.db.profile"
+    lua.execute('BADGE.set("Gold coin")')
+    bag["badge coin"] = lua.eval(gp + ".vendorMarkerStyle") == "coin" and lua.eval(gp + ".bestGoldShowVendor") is True and lua.eval("BADGE.get()") == "Gold coin"
+    lua.execute('BADGE.set("Off")')
+    bag["badge off: style kept"] = lua.eval(gp + ".bestGoldShowVendor") is False and lua.eval(gp + ".vendorMarkerStyle") == "coin" and lua.eval("BADGE.get()") == "Off"
+    lua.execute('BADGE.set("Gold $")')
+    bag["badge $"] = lua.eval(gp + ".vendorMarkerStyle") == "dollar" and lua.eval(gp + ".bestGoldShowVendor") is True and lua.eval("BADGE.get()") == "Gold $"
+    # one size for every corner icon: a texture and a frame icon scaled, text and GearMatic's own left alone
+    lua.execute(r'''
+      function Region(kind, extra) local r = { scale = 1, kind = kind }
+        function r:SetScale(v) self.scale = v end
+        function r:GetObjectType() return self.kind end
+        for k, v in pairs(extra or {}) do r[k] = v end
+        return r end
+      function NewCorner(id, r) local d = { regionType = "CornerWidget", region = r, tags = { id } }
+        CORNER_FRAMES[#CORNER_FRAMES + 1] = d
+        for _, fn in ipairs(SKIN_LISTENERS) do fn(d) end
+        return r end
+      PAWN_ARROW = NewCorner("pawn", Region("Texture"))
+      CIMI = NewCorner("can_i_mog_it", Region("Frame"))
+      ILVL = NewCorner("item_level", Region("FontString", { sizeFont = true }))
+      CU_TEXT = NewCorner("cheapupgrades_badge", Region("FontString"))
+      GM_SKULL = NewCorner("gearmatic_bis", Region("Texture"))
+      GearMatic.db.profile.bagIconSize = "large"
+      ISIZE.set("Small")
+      JUNK = NewCorner("junk", Region("Texture")) -- (made after the pick: the listener sizes it as it's made)
+    ''')
+    small = 18 / 28
+    sc = lambda n: lua.eval(n + ".scale")
+    bag["size small: icons scaled, made before and after"] = all(abs(sc(n) - small) < 1e-9 for n in ("PAWN_ARROW", "CIMI", "JUNK"))
+    bag["size small: text left alone"] = sc("ILVL") == 1 and sc("CU_TEXT") == 1
+    bag["size small: GearMatic's own icons not scaled twice, its setting set"] = sc("GM_SKULL") == 1 and lua.eval(gp + ".bagIconSize") == "small"
+    bag["size small: the row reads it back"] = lua.eval("ISIZE.get()") == "Small"
+    lua.execute('ISIZE.set("Large")')
+    bag["size large: every icon back to its own size"] = all(sc(n) == 1 for n in ("PAWN_ARROW", "CIMI", "JUNK")) and lua.eval(gp + ".bagIconSize") == "large"
+print("bag icon rows:", bag)
+if not all(bag.values()):
+    lua.execute('ERRORS[#ERRORS+1] = "Bag icon rows wrong"')
 print("synced:", lua.eval("MasterOptionsDB.syncChars"), "shared:", lua.eval("(function() local o = {} for k, v in pairs(MasterOptionsDB.shared or {}) do o[#o+1] = k .. '=' .. tostring(v) end table.sort(o) return table.concat(o, '; ') end)()"))
 errs = lua.eval("ERRORS")
 print("ERRORS:", len(errs))

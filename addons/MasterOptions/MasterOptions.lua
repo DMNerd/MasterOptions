@@ -301,6 +301,63 @@ local function RefreshGearMatic()
     try(gm.Baganator, "RequestRefresh")
 end
 
+-- GearMatic's bag icons after a look or size change: what its own settings page calls (Settings.lua, 6.10.1)
+local function GMRefreshBagIcons()
+    local gm = _G.GearMatic
+    if not (Loaded("GearMatic") and type(gm) == "table") then return end
+    local function try(t, k) if type(t) == "table" and type(t[k]) == "function" then pcall(t[k]) end end
+    try(gm, "RefreshBoEBadgeTextures")
+    try(gm, "RefreshBagIconSizes")
+    try(gm.BagOverlay, "RepaintDecor")
+    try(gm.BagOverlay, "RefreshAll")
+    try(gm.QuestRewardHook, "RefreshVendorMarkers")
+    try(gm.DisenchantWindow, "RequestRefresh")
+    try(gm.Baganator, "RequestRefresh")
+end
+
+---------------------------------------------------------------------------
+-- Bag icon size: every icon any addon puts in a corner of Baganator's bag slots, one size
+-- Baganator hands each corner widget, as it creates it, to its skin listeners (API.Skins.RegisterListener,
+-- regionType "CornerWidget", tags = { widget id }): an icon (texture or frame) is scaled there. Text (item
+-- level, counts, "+23%") is left alone - Baganator sizes it by its own font size (the sizeFont ones). GearMatic's
+-- widgets are sized by GearMatic itself (its bagIconSize, also for its bottom-left badge, which isn't a widget):
+-- the row sets that instead, so nothing is scaled twice.
+---------------------------------------------------------------------------
+local ICON_SCALE = { Large = 1, Medium = 23 / 28, Small = 18 / 28 } -- (GearMatic's steps: its badge 28 / 23 / 18)
+local GM_ICON_SIZE = { Large = "large", Medium = "medium", Small = "small" }
+
+local function BagIconSize() return MasterOptionsDB and MasterOptionsDB.bagIconSize or "Large" end
+
+local function ScaleCornerIcon(details)
+    if type(details) ~= "table" or details.regionType ~= "CornerWidget" then return end
+    local r, id = details.region, type(details.tags) == "table" and details.tags[1]
+    if type(r) ~= "table" or type(r.SetScale) ~= "function" or r.sizeFont then return end
+    if r.GetObjectType and r:GetObjectType() == "FontString" then return end
+    if type(id) == "string" and id:find("^gearmatic") then return end
+    r:SetScale(ICON_SCALE[BagIconSize()] or 1)
+end
+
+local function ApplyBagIconSize()
+    local api = _G.Baganator and _G.Baganator.API and _G.Baganator.API.Skins
+    if api and api.GetAllFrames then
+        for _, details in ipairs(api.GetAllFrames() or {}) do pcall(ScaleCornerIcon, details) end
+    end
+    local s = Loaded("GearMatic") and GM()
+    local gmSize = GM_ICON_SIZE[BagIconSize()]
+    -- (only once you've picked a size here: until then GearMatic keeps its own)
+    if s and MasterOptionsDB and MasterOptionsDB.bagIconSize and s.bagIconSize ~= gmSize then
+        s.bagIconSize = gmSize
+        GMRefreshBagIcons()
+    end
+end
+
+do
+    local api = Loaded("Baganator") and _G.Baganator and _G.Baganator.API and _G.Baganator.API.Skins
+    if api and api.RegisterListener then
+        api.RegisterListener(function(details) pcall(ScaleCornerIcon, details) end)
+    end
+end
+
 ---------------------------------------------------------------------------
 -- Baganator and Chattynator settings: the active profile table (written directly; they read it on reload)
 ---------------------------------------------------------------------------
@@ -1086,6 +1143,45 @@ local OPTIONS = {
         end,
         scope = "Baganator profile",
     },
+    {
+        -- (GearMatic's skull is Baganator's corner widget "gearmatic_bis", top right; Baganator auto-inserts a
+        -- widget once only, so taking it out sticks)
+        kind = "toggle", label = "Best-in-slot skull in bags", reload = true,
+        needs = { "Baganator", "GearMatic" },
+        tip = "GearMatic's skull in the top-right corner of Baganator's bag slots, on items that are best in slot for you. GearMatic has no switch for it in the bags (only for the character sheet).",
+        get = function() local p = BAG(); return p ~= nil and CornerHas(p, "gearmatic_bis") end,
+        set = function(v)
+            local p = BAG(); if not p then return end
+            if v then CornerAdd(p, "gearmatic_bis", CORNERS[2]) else CornerRemove(p, "gearmatic_bis") end
+        end,
+        scope = "Baganator profile",
+    },
+    {
+        kind = "choice", label = "GearMatic vendor badge", needs = "GearMatic",
+        choices = { "Gold $", "Gold coin", "Off" }, off = "Off",
+        tip = "GearMatic's badge in the bottom-left corner of gear you don't need, when a vendor pays the most for it. Gold coin looks like Baganator's junk coin, which means \"will be sold\" - Gold $ keeps the two apart.",
+        get = function()
+            local s = GM(); if not s then return "Off" end
+            if s.bestGoldShowVendor == false then return "Off" end
+            return s.vendorMarkerStyle == "coin" and "Gold coin" or "Gold $"
+        end,
+        set = function(v)
+            local s = GM(); if not s then return end
+            s.bestGoldShowVendor = v ~= "Off"
+            if v ~= "Off" then s.vendorMarkerStyle = (v == "Gold coin") and "coin" or "dollar" end
+            GMRefreshBagIcons()
+        end,
+    },
+    {
+        kind = "choice", label = "Bag icon size", needs = "Baganator",
+        choices = { "Large", "Medium", "Small" },
+        tip = "One size for every icon on Baganator's bag slots, whichever addon adds it: Pawn's arrow, the junk coin, GearMatic's arrow, skull and badge, and any other addon's corner icons. Text (item level, counts, CheapUpgrades' \"+23%\") keeps Baganator's font size. Large: each addon's own size. Also sets GearMatic's Bag icon size.",
+        get = function() return BagIconSize() end,
+        set = function(v)
+            MasterOptionsDB.bagIconSize = ICON_SCALE[v] and v or "Large"
+            ApplyBagIconSize()
+        end,
+    },
 
     { header = "Quests" },
     {
@@ -1530,6 +1626,12 @@ local function Problems()
         if BAG_UPGRADE_OWNER[u] and not OwnerLoaded(BAG_UPGRADE_OWNER[u]) then
             add("bagupgrade:" .. u, ("Baganator's upgrade plugin is set to \"%s\", whose addon isn't loaded."):format(u), "Reset",
                 function() SetBagPlugin(p, "upgrade", Loaded("Pawn") and "pawn" or "none") end)
+        end
+        -- GearMatic 6.10's "Gold coin" vendor badge is the same icon as Baganator's junk coin ("will be sold")
+        local gs = GM()
+        if gs and gs.vendorMarkerStyle == "coin" and gs.bestGoldShowVendor ~= false and p.junk_plugin ~= "none" then
+            add("bagcoin:gearmatic", "GearMatic's vendor badge is the gold coin, the same icon as Baganator's junk coin - so a coin in your bags may mean \"sold\" or only \"worth most at a vendor\". Switch GearMatic's badge to the gold $.",
+                "Use Gold $", function() gs.vendorMarkerStyle = "dollar"; GMRefreshBagIcons() end)
         end
     end
     return out
