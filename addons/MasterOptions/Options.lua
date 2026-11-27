@@ -15,6 +15,26 @@ local mcNotOff, mcOn, mcSetTip, mcTip = MO.mcNotOff, MO.mcOn, MO.mcSetTip, MO.mc
 ---------------------------------------------------------------------------
 -- A "who shows this" row over any number of addons. sources: { name, get(), set(on) }.
 -- Choosing one turns the others off; two or more on shows as a conflict.
+-- Where an item comes from, in tooltips (the row "Where an item drops"): each addon's own line
+local function DJDB()
+    local db = Loaded("ForeverDungeonJournal") and _G.ForeverDungeonJournalDB
+    return type(db) == "table" and db or nil
+end
+local DROP_SOURCES = {
+    { name = "GearMatic", loaded = function() return GM() ~= nil end,
+      get = function() return gmOn("dropRateTooltip") end,
+      set = function(on) local g = GM(); if g then g.dropRateTooltip = on end end },
+    { name = "Dungeon Journal", loaded = function() return Loaded("ForeverDungeonJournal") end,
+      get = function() local db = DJDB(); return not (db and db.itemSourceStrip == false) end,
+      set = function(on)
+          local db = DJDB()
+          if db then if on then db.itemSourceStrip = nil else db.itemSourceStrip = false end end
+      end },
+    { name = "Mastercraft", loaded = function() return MC() ~= nil end,
+      get = function() return mcTip("tipSources") and true or false end,
+      set = function(on) mcSetTip("tipSources", on) end },
+}
+
 local function Multi(label, rec, since, tip, sources, offLabel)
     local choices = {}
     for _, src in ipairs(sources) do choices[#choices + 1] = src[1] end
@@ -317,25 +337,27 @@ local OPTIONS = {
           function(on) local c = CU(); if c then c.tooltipUpgrades = on; if on then c.tooltip = true end end end },
     }, "Off"),
     {
-        -- GearMatic (ItemTooltipHook.lua: profile.dropRateTooltip, WoW Forever) and Dungeon Journal (ItemSource.lua:
-        -- ForeverDungeonJournalDB.itemSourceStrip, on unless false) both say where an item drops. Not a conflict:
-        -- Dungeon Journal also names quests, GearMatic gives the chance - "Both" is a choice of its own.
+        -- Three addons can say where an item comes from, each with its own reach: GearMatic (ItemTooltipHook.lua:
+        -- profile.dropRateTooltip, WoW Forever: the creature or chest and the chance), Dungeon Journal
+        -- (ItemSource.lua: ForeverDungeonJournalDB.itemSourceStrip, on unless false: the boss, or the quest), and
+        -- Mastercraft (Tooltip.lua: settings.tipSources, materials: vendors, drops, gathering). Not a conflict -
+        -- "All" is a choice of its own, and two on shows as "A + B".
         kind = "choice", label = "Where an item drops (tooltip)", rec = "GearMatic", since = 29,
-        needs_any = { "GearMatic", "ForeverDungeonJournal" },
-        choices = { "GearMatic", "Dungeon Journal", "Both", "Off" }, off = "Off",
-        tip = "GearMatic and Dungeon Journal both add a line to item tooltips saying where the item drops. GearMatic: the creature or chest and how often it drops (from what GearMatic players looted; a Classic estimate until enough is known). Dungeon Journal: the boss, or the quest it's a reward of. Both: the two lines.",
+        needs_any = { "GearMatic", "ForeverDungeonJournal", "Mastercraft" },
+        choices = { "GearMatic", "Dungeon Journal", "Mastercraft", "All", "Off" }, off = "Off",
+        tip = "GearMatic, Dungeon Journal and Mastercraft can each add lines to item tooltips saying where an item comes from. GearMatic: the creature or chest and how often it drops (from what GearMatic players looted; a Classic estimate until enough is known). Dungeon Journal: the boss, or the quest it's a reward of. Mastercraft: for materials, the vendors, drops and gathering that give them. All: every line.",
         get = function()
-            local g = gmOn("dropRateTooltip") and GM() ~= nil
-            local db = Loaded("ForeverDungeonJournal") and type(_G.ForeverDungeonJournalDB) == "table" and _G.ForeverDungeonJournalDB
-            local d = Loaded("ForeverDungeonJournal") and not (db and db.itemSourceStrip == false)
-            return (g and d and "Both") or (g and "GearMatic") or (d and "Dungeon Journal") or "Off"
+            local on, n = {}, 0
+            for _, src in ipairs(DROP_SOURCES) do
+                if src.loaded() then n = n + 1; if src.get() then on[#on + 1] = src.name end end
+            end
+            if #on == 0 then return "Off" end
+            if #on == n and n > 1 then return "All" end
+            return table.concat(on, " + ")
         end,
         set = function(v)
-            local g = GM()
-            if g then g.dropRateTooltip = (v == "GearMatic" or v == "Both") end
-            local db = Loaded("ForeverDungeonJournal") and _G.ForeverDungeonJournalDB
-            if type(db) == "table" then
-                if v == "Dungeon Journal" or v == "Both" then db.itemSourceStrip = nil else db.itemSourceStrip = false end
+            for _, src in ipairs(DROP_SOURCES) do
+                if src.loaded() then src.set(v == src.name or v == "All") end
             end
         end,
     },
@@ -690,7 +712,8 @@ local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions
                       MasterOptions_ShortestPathForever_OpenMapMiniMap = 23,
                       MasterOptions_NeverSell = 24, MasterOptions_GearMatic_SellGuard = 25,
                       MasterOptions_GearMatic_SpecKeep = 27, MasterOptions_CheapUpgrades_GearMatic = 27,
-                      MasterOptions_DungeonJournal_Upgrades = 29 }
+                      MasterOptions_DungeonJournal_Upgrades = 29,
+                      MasterOptions_Mastercraft_FarmTour = 30 }
 local PATCH_TIP = {
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
     MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
@@ -705,6 +728,7 @@ local PATCH_TIP = {
     MasterOptions_Mastercraft_VendorSell = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank.",
     MasterOptions_Mastercraft_BankMats = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank.",
     MasterOptions_OpenMapMiniMap_Border = "OpenMap's square minimap framed with the action bar buttons' border (Look > Minimap border).",
+    MasterOptions_Mastercraft_FarmTour = "Start farming in Mastercraft and ShortestPathForever walks you through this zone's herbs and veins worth it to you, nearest first (Mastercraft's own nodes and its Which nodes rule), and stops when you do. ShortestPathForever's own farming tour needs GatherMate2. /mo farm starts one without Mastercraft's session (/mo farm herbs, ores, stop).",
     MasterOptions_DungeonJournal_Upgrades = "Dungeon Journal's loot marked: an upgrade arrow and how big (+23%) by whoever judges upgrades - Pawn with Pawn Forever, else GearMatic with CheapUpgrades' size - GearMatic's skull on what's best in slot for you, and a cog on what your Mastercraft guides need. No more hovering every item.",
     MasterOptions_CheapUpgrades_GearMatic = "CheapUpgrades values items with GearMatic's stat weights: a \"GearMatic\" weights profile for every spec, kept up to date (level, talents) and used unless you picked a profile of your own in CheapUpgrades. Off: CheapUpgrades' own weights again.",
     MasterOptions_GearMatic_SpecKeep = "Gear that is your best or 2nd best for any of your specs in GearMatic is kept from selling (Master Options' and GearMatic's own) and from DeleteCheapestItem - off-spec pieces too. GearMatic itself only looks at the spec you play now. Works with or without Pawn.",

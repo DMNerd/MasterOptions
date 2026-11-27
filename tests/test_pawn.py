@@ -423,22 +423,27 @@ print("chat lines:", lines)
 if not all(lines.values()):
     print("  off:", lua.eval("OFF_STATE")); print("  back:", lua.eval("BACK_STATE"))
     lua.execute('ERRORS[#ERRORS+1] = "Chat lines only you see wrong"')
-# Where an item drops (tooltip): GearMatic's drop chance line and Dungeon Journal's source line
+# Where an item drops (tooltip): GearMatic's drop chance, Dungeon Journal's source, Mastercraft's material sources
 lua.execute(r"""
   for _, s in ipairs(SETTINGS) do if s.name:find("Where an item drops", 1, true) == 1 then DROPS = s end end
   LOADED.ForeverDungeonJournal = true
   ForeverDungeonJournalDB = {}
-  local gp = GearMatic.db.profile
-  gp.dropRateTooltip = nil
+  local gp, mc = GearMatic.db.profile, MastercraftDB.settings
+  gp.dropRateTooltip, mc.tipSources = nil, nil
   DR = { DROPS and DROPS.get() }
-  for _, v in ipairs({ "GearMatic", "Dungeon Journal", "Off", "Both" }) do
+  for _, v in ipairs({ "GearMatic", "Dungeon Journal", "Mastercraft", "Off", "All" }) do
     DROPS.set(v)
-    DR[#DR + 1] = v .. ":" .. tostring(gp.dropRateTooltip) .. "/" .. tostring(ForeverDungeonJournalDB.itemSourceStrip) .. "=" .. DROPS.get()
+    DR[#DR + 1] = v .. ":" .. tostring(gp.dropRateTooltip) .. "/" .. tostring(ForeverDungeonJournalDB.itemSourceStrip)
+      .. "/" .. tostring(mc.tipSources) .. "=" .. DROPS.get()
   end
+  mc.tipSources = false
+  DR[#DR + 1] = "two on=" .. DROPS.get()
 """)
 drops = list(lua.eval("DR").values())
 print("drops row:", drops)
-if drops != ["Both", "GearMatic:true/false=GearMatic", "Dungeon Journal:false/nil=Dungeon Journal", "Off:false/false=Off", "Both:true/nil=Both"]:
+if drops != ["All", "GearMatic:true/false/false=GearMatic", "Dungeon Journal:false/nil/false=Dungeon Journal",
+             "Mastercraft:false/false/true=Mastercraft", "Off:false/false/false=Off", "All:true/nil/true=All",
+             "two on=GearMatic + Dungeon Journal"]:
     lua.execute('ERRORS[#ERRORS+1] = "Where an item drops row wrong"')
 print("synced:", lua.eval("MasterOptionsDB.syncChars"), "shared:", lua.eval("(function() local o = {} for k, v in pairs(MasterOptionsDB.shared or {}) do o[#o+1] = k .. '=' .. tostring(v) end table.sort(o) return table.concat(o, '; ') end)()"))
 errs = lua.eval("ERRORS")

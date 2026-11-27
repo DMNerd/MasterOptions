@@ -12,47 +12,17 @@ MasterOptions_Module("OpenMapTweaks_Mastercraft", { "OpenMap_Tweaks", "Mastercra
 -- Change those in Mastercraft (or Master Options) and the OpenMap_Tweaks pins follow.
 -- Turn Mastercraft's own map/minimap pins off to avoid two pins per node (Master Options does this).
 
-local HERB, MINE = 182, 186
-local MAX_SKILL = 300
+local Shared = MasterOptions_Shared
+local HERB, MINE = Shared.HERB, Shared.MINE
 local TRACK_SPELL = { [MINE] = 2580, [HERB] = 2383 }             -- Find Minerals, Find Herbs
 local TRACK_ICON  = { [MINE] = 136025, [HERB] = 133939 }
-local PROF_NAMES = {
-    [HERB] = { Herbalism = true, Herboristerie = true, ["Kräuterkunde"] = true, ["Herboristería"] = true, Erbalismo = true, Herborismo = true },
-    [MINE] = { Mining = true, Minage = true, Bergbau = true, ["Minería"] = true, Estrazione = true, ["Mineração"] = true },
-}
-
 local function MC() local db = _G.MastercraftDB; return type(db) == "table" and db.settings or {} end
 
 ---------------------------------------------------------------------------
 -- Player state
 ---------------------------------------------------------------------------
 local ranks = {}
-local function ScanRanks()
-    local found = {}
-    if GetProfessions and GetProfessionInfo then
-        local res = { pcall(GetProfessions) }
-        if res[1] then
-            for i = 2, 6 do
-                local idx = res[i]
-                if idx then
-                    local ok, _, _, rank, _, _, _, sl = pcall(GetProfessionInfo, idx)
-                    if ok and (sl == HERB or sl == MINE) then found[sl] = rank or 0 end
-                end
-            end
-        end
-    end
-    if next(found) == nil and GetNumSkillLines and GetSkillLineInfo then
-        for i = 1, GetNumSkillLines() do
-            local name, header, _, rank = GetSkillLineInfo(i)
-            if name and not header then
-                for sl, names in pairs(PROF_NAMES) do
-                    if names[name] then found[sl] = rank or 0 end
-                end
-            end
-        end
-    end
-    ranks = found
-end
+local function ScanRanks() ranks = Shared.GatheringRanks() end
 
 local trackName = {}
 local function SpellName(id)
@@ -106,15 +76,7 @@ end
 local function Wanted(e)
     if type(e) ~= "table" or (e.sl ~= HERB and e.sl ~= MINE) then return true end
     if not Active(e.sl) then return false end
-    local filter = MC().nodesFilter or "skillups"
-    if filter == "all" then return true end
-    local skill = ranks[e.sl]
-    if not skill then return false end
-    local req = tonumber(e.l)
-    if not req then return true end
-    if skill < req then return false end
-    if filter == "gatherable" or skill >= MAX_SKILL then return true end
-    return skill - req < 100
+    return Shared.GatherWanted(MC().nodesFilter or "skillups", ranks[e.sl], tonumber(e.l))
 end
 
 local function SpotWanted(spot)

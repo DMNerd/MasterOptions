@@ -70,6 +70,7 @@ The workflow checks that the tag matches the `.toc` version, builds the pack, an
 | DeleteCheapestItem / Protect | DeleteCheapestItem | Never offers upgrades, sets, tools or needed materials |
 | Mastercraft / Keep | Mastercraft | Needed / KEEP items go on GearMatic's never-sell list |
 | Mastercraft / VendorSell | Mastercraft | Items Mastercraft marks VENDOR are sold by your junk seller, and get the junk coin |
+| Mastercraft / FarmTour | Mastercraft, ShortestPathForever | Start farming in Mastercraft and ShortestPathForever walks you through the zone's herbs and veins worth it to you (Mastercraft's nodes and rule), nearest first; `/mo farm` (`herbs`, `ores`, `stop`) without Mastercraft's session |
 | Mastercraft / BankMats | Mastercraft | At the bank, guide materials go in; VENDOR / AUCTION items stay in bags |
 | OpenMapMiniMap / Border | OpenMap_MiniMap | Square minimap framed with the action bar buttons' border |
 | DungeonJournal / OpenMap | ForeverDungeonJournal, OpenMap | Show on Map puts an OpenMap pin; map inside dungeons (OpenMap's own switch); Dungeon entrance click: Dungeon Journal's map, its page, or OpenMap's map (written to OpenMap's option too) |

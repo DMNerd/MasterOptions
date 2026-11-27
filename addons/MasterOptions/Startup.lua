@@ -331,6 +331,13 @@ SlashCmdList.MASTEROPTIONS = function(msg)
     msg = (msg or ""):match("^%s*(.-)%s*$")
     local never = msg:match("^[Nn][Ee][Vv][Ee][Rr]%s*(.*)$")
     if never then NeverSellCommand(never) return end
+    local farm = msg:match("^[Ff][Aa][Rr][Mm]%s*(.*)$")
+    if farm then
+        local tour = _G.MasterOptions_FarmTour
+        if tour then tour.Command(farm)
+        else print("|cffffd200Master Options:|r farming tours need Mastercraft and ShortestPathForever (and the Mastercraft / FarmTour module on).") end
+        return
+    end
     msg = msg:lower()
     if msg == "minimap" then
         local DBI = LibStub and LibStub("LibDBIcon-1.0", true)

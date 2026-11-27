@@ -140,6 +140,57 @@ function S.CheapUpgradesBadge(link)
 end
 
 ---------------------------------------------------------------------------
+-- Gathering (Herbalism, Mining): your skill, and which nodes are worth it by Mastercraft's rule
+---------------------------------------------------------------------------
+S.HERB, S.MINE = 182, 186 -- (skill line IDs)
+local HERB, MINE = S.HERB, S.MINE
+local MAX_GATHER_SKILL = 300
+local PROF_NAMES = {
+    [HERB] = { Herbalism = true, Herboristerie = true, ["Kr\195\164uterkunde"] = true, ["Herborister\195\173a"] = true, Erbalismo = true, Herborismo = true },
+    [MINE] = { Mining = true, Minage = true, Bergbau = true, ["Miner\195\173a"] = true, Estrazione = true, ["Minera\195\167\195\163o"] = true },
+}
+
+-- { [S.HERB] = rank, [S.MINE] = rank } for the gathering professions you have
+function S.GatheringRanks()
+    local found = {}
+    if GetProfessions and GetProfessionInfo then
+        local res = { pcall(GetProfessions) }
+        if res[1] then
+            for i = 2, 6 do
+                local idx = res[i]
+                if idx then
+                    local ok, _, _, rank, _, _, _, sl = pcall(GetProfessionInfo, idx)
+                    if ok and (sl == HERB or sl == MINE) then found[sl] = rank or 0 end
+                end
+            end
+        end
+    end
+    if next(found) == nil and GetNumSkillLines and GetSkillLineInfo then
+        for i = 1, GetNumSkillLines() do
+            local name, header, _, rank = GetSkillLineInfo(i)
+            if name and not header then
+                for sl, names in pairs(PROF_NAMES) do
+                    if names[name] then found[sl] = rank or 0 end
+                end
+            end
+        end
+    end
+    return found
+end
+
+-- Mastercraft's Settings > Nodes > Which nodes (settings.nodesFilter: "skillups" (its default), "gatherable", "all"):
+-- is a node needing req skill worth it at skill? No req known: yes. At the top (300) there are no skill-ups left:
+-- then all you can gather.
+function S.GatherWanted(filter, skill, req)
+    if filter == "all" then return true end
+    if not skill then return false end
+    if not req then return true end
+    if skill < req then return false end
+    if filter == "gatherable" or skill >= MAX_GATHER_SKILL then return true end
+    return skill - req < 100
+end
+
+---------------------------------------------------------------------------
 -- Mastercraft's Settings > Modules (2.1.2): MastercraftDB.settings.modules[key] = false turns a whole part off
 -- ("tip": every tooltip line, "loot": the KEEP / VENDOR advice, "ah": the Scan prices button). On otherwise,
 -- also before Mastercraft's saved settings are there.

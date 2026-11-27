@@ -317,3 +317,15 @@ Questie|config-key|questAnnounceItems|AddonSettings.lua (Chat lines only you see
 Questie|config-key|questAnnounceLocally|AddonSettings.lua (Chat lines only you see)
 ForeverDungeonJournal|config-key|hideChatLines|AddonSettings.lua (Chat lines only you see)
 Auctionator|config-key|auction_chat_log|AddonSettings.lua (Chat lines only you see)
+# --- added in 2.8.0 (Mastercraft_FarmTour; Mastercraft in "Where an item drops")
+Mastercraft|literal|table.insert(list, { x = node.x, y = node.y, n = node.name, p = node.prof, i = node.item|Mastercraft_FarmTour.lua (MastercraftDB.nodes[zone map])
+Mastercraft|literal|session = { start = time(), gained = {} }|Mastercraft_FarmTour.lua (its farm session)
+Mastercraft|literal|ns.charKey = UnitGUID("player")|Mastercraft_FarmTour.lua (MastercraftDB.farm[GUID])
+Mastercraft|config-key|nodesFilter|Mastercraft_FarmTour.lua, Shared.lua (GatherWanted)
+Mastercraft|config-key|nodesGM|Mastercraft_FarmTour.lua (imported GatherMate2 nodes)
+Mastercraft|config-key|tipSources|Options.lua (Where an item drops)
+ShortestPathForever|function|function API.NavigateRoute(owner, stops, options)|Mastercraft_FarmTour.lua
+ShortestPathForever|function|function API.Cancel(owner)|Mastercraft_FarmTour.lua
+ShortestPathForever|global|ShortestPathForever.API = API|Mastercraft_FarmTour.lua
+ShortestPathForever|literal|local MAX_STOPS = 64|Mastercraft_FarmTour.lua (its MAX_STOPS)
+ShortestPathForever|literal|policy == "walking"|Mastercraft_FarmTour.lua
