@@ -4,7 +4,7 @@ MasterOptions_Module("Mastercraft_RecipeMap", { "Mastercraft", "Questie" }, func
 -- Mastercraft + Questie -> map markers on the vendors and trainers worth a visit for your professions.
 --
 --   pattern vendors  an NPC of your faction (or both) selling the pattern, recipe, plans, formula, schematic,
---                    manual or design of a recipe you haven't learned. Mastercraft's save lists every recipe of
+--                    manual, design or camp blueprint of a recipe you haven't learned. Mastercraft's save lists every recipe of
 --                    your professions with "learned" (MastercraftDB.recipes[GUID][profession].list); QuestieDB
 --                    knows which items vendors sell (LibQuestieDB.Item "vendors") and finds the pattern by its
 --                    name ("Pattern: " .. the recipe's name: both in the game's language).
@@ -30,7 +30,8 @@ local PROF_ID = { -- (profession name in Mastercraft's save -> skill line, Quest
     ["First Aid"] = 129, Blacksmithing = 164, Leatherworking = 165, Alchemy = 171, Herbalism = 182, Cooking = 185,
     Mining = 186, Tailoring = 197, Engineering = 202, Enchanting = 333, Fishing = 356, Skinning = 393, Jewelcrafting = 755,
 }
-local PATTERN_PREFIXES = { "Pattern: ", "Recipe: ", "Plans: ", "Formula: ", "Schematic: ", "Manual: ", "Design: " }
+local PATTERN_PREFIXES = { "Pattern: ", "Recipe: ", "Plans: ", "Formula: ", "Schematic: ", "Manual: ", "Design: ",
+    "Blueprint: " } -- (Blueprint: WoW Forever's camp objects, tiers 2 and 3 - Mastercraft's Camping tab)
 local NEXT_RANK = { -- cap now -> next rank's name and the level it needs
     [75] = { "Journeyman", 10 }, [150] = { "Expert", 20 }, [225] = { "Artisan", 35 },
 }

@@ -123,6 +123,17 @@ L('COMBAT = true; LEVEL = 26; Fire("PLAYER_LEVEL_UP"); RunTimers()')
 res["in a fight: waits"] = E("REDRAWS") == 1
 L('COMBAT = false; Fire("PLAYER_REGEN_ENABLED"); RunTimers()')
 res["...drawn after it"] = E("REDRAWS") == 2
+# a camp blueprint ("Blueprint: Anvil", WoW Forever's camping): its vendor marked like a pattern's
+L(r"""
+  local list = MastercraftDB.recipes["Player-1"].Leatherworking.list
+  list[#list + 1] = { name = "Anvil", learned = false }
+  local find = LibQuestieDB.Item.IdsByName
+  LibQuestieDB.Item.IdsByName = function(n) if n == "Blueprint: Anvil" then return { 9100 } end return find(n) end
+  local get = LibQuestieDB.Item.Get
+  LibQuestieDB.Item.Get = function(id, k) if id == 9100 and k == "vendors" then return { 501 } end return get(id, k) end
+  Fire("NEW_RECIPE_LEARNED"); RunTimers()
+""")
+res["a camp blueprint's vendor marked"] = E('Lines("Alliance Vendor")') == "Anvil (Leatherworking)"
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)
