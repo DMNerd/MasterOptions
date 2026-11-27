@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.10.1] - 2026-11-27
+
+### Added
+
+- **Move Shortest Path's arrow** (Routes and waypoints), and `/mo arrow`: unlocks ShortestPathForever's direction
+  arrow to drag anywhere (Shift-drag or the arrow keys nudge it, right-click puts it back), and locks it again,
+  click-through, where you left it. The same switch as ShortestPathForever's own "Move the arrow".
+
 ## [2.10.0] - 2026-11-27
 
 ### Changed

@@ -335,6 +335,20 @@ SlashCmdList.MASTEROPTIONS = function(msg)
     msg = (msg or ""):match("^%s*(.-)%s*$")
     local never = msg:match("^[Nn][Ee][Vv][Ee][Rr]%s*(.*)$")
     if never then NeverSellCommand(never) return end
+    if msg:lower() == "arrow" then
+        -- /mo arrow: Shortest Path's "Move the arrow" on / off (its own setting, through the game's Settings)
+        local s = Settings and Settings.GetSetting and Settings.GetSetting("ShortestPathForever_arrowMove")
+        if not (s and s.GetValue and s.SetValue) then
+            print("|cffffd200Master Options:|r Shortest Path Forever's arrow setting isn't there (is the addon loaded?).")
+            return
+        end
+        local on = not (s:GetValue() == true)
+        s:SetValue(on)
+        print("|cffffd200Master Options:|r Shortest Path's arrow " .. (on
+            and "unlocked - drag it (Shift-drag or arrow keys to nudge, right-click to reset). /mo arrow again to lock it."
+            or "locked where it is."))
+        return
+    end
     if msg:lower() == "whispers" then
         local w = _G.MasterOptions_AddonWhispers
         if w then w.List() else print("|cffffd200Master Options:|r the Chat / AddonWhispers module is off (/mo > Modules).") end

@@ -302,6 +302,22 @@ local OPTIONS = {
         get = MO.ArrowTextGet, set = MO.ArrowTextSet,
     },
     {
+        -- ShortestPathForever's own "Move the arrow" (its Settings > Interface > Direction arrow): registered with the
+        -- game's Settings as ShortestPathForever_arrowMove - read and switched through it, nothing of ours saved. No
+        -- recommendation: a switch you flip while placing it, not a setting.
+        kind = "toggle", label = "Move Shortest Path's arrow",
+        needs = "ShortestPathForever",
+        tip = "On: Shortest Path's direction arrow shows over a dark box (with or without a journey) to drag anywhere; Shift-drag or the arrow keys nudge it, right-click puts it back in its own place. Off: locked again and click-through, where you left it. The same switch as Shortest Path's own \"Move the arrow\".",
+        get = function()
+            local s = Settings and Settings.GetSetting and Settings.GetSetting("ShortestPathForever_arrowMove")
+            return s and s.GetValue and s:GetValue() == true or false
+        end,
+        set = function(v)
+            local s = Settings and Settings.GetSetting and Settings.GetSetting("ShortestPathForever_arrowMove")
+            if s and s.SetValue then s:SetValue(v and true or false) end
+        end,
+    },
+    {
         kind = "choice", label = "Quest and recipe waypoints", rec = "Shortest Path journey", since = 32, reload = true,
         needs = "ShortestPathForever", choices = { "Shortest Path journey", "Game's waypoint" },
         tip = "Questie (its tracker's Set TomTom target), Mastercraft (Waypoint) and WhatsTraining send their waypoints to TomTom. Without TomTom installed, ShortestPathForever stands in for it. Shortest Path journey: each becomes a journey with a route (one at a time: a new one replaces the last). Game's waypoint: the game's own map pin and marker, no route. Takes a reload.",
