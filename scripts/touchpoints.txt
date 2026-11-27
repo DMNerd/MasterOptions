@@ -329,3 +329,22 @@ ShortestPathForever|function|function API.Cancel(owner)|Mastercraft_FarmTour.lua
 ShortestPathForever|global|ShortestPathForever.API = API|Mastercraft_FarmTour.lua
 ShortestPathForever|literal|local MAX_STOPS = 64|Mastercraft_FarmTour.lua (its MAX_STOPS)
 ShortestPathForever|literal|policy == "walking"|Mastercraft_FarmTour.lua
+# --- added in 2.8.0 (Problems: companion addons made for one version)
+BetterBetterBlizzPlates|literal|X-BetterBlizzPlates-Version|Problems.lua (its BetterBlizzPlates version)
+Questie|literal|X-QuestieDB-Contract|Problems.lua (the QuestieDB contract it needs)
+QuestieDB|function|RequireContract|Problems.lua (LibQuestieDB.RequireContract, as Questie checks)
+# --- added in 2.8.0 (Mastercraft_RecipeMap: pattern vendors and trainers on the map)
+Mastercraft|literal|learned = info.learned|Mastercraft_RecipeMap.lua (MastercraftDB.recipes[GUID][profession].list)
+Mastercraft|literal|{ name = p.name, skill = p.skill|Mastercraft_RecipeMap.lua (chars[GUID].professions: name, skill, max)
+QuestieDB|function|function entity.IdsByName(name)|Mastercraft_RecipeMap.lua (patterns by name)
+QuestieDB|function|function entity.BuildNameIndexAsync(iterationsPerCycle)|Mastercraft_RecipeMap.lua
+QuestieDB|literal|['vendors'] = 14|Mastercraft_RecipeMap.lua (the item field it reads)
+QuestieDB|literal|['friendlyToFaction'] = 13|Mastercraft_RecipeMap.lua (the NPC field it reads)
+Questie|literal|Townsfolk.professionTrainers = {}|Mastercraft_RecipeMap.lua
+Questie|function|function ZoneDB:GetUiMapIdByAreaId(areaId)|Mastercraft_RecipeMap.lua
+Questie|function|function pins:AddWorldMapIconMap(ref, icon, uiMapID, x, y, showFlag, frameLevel)|Mastercraft_RecipeMap.lua (HereBeDragons-Pins, Questie's copy)
+Questie|function|function pins:AddMinimapIconMap(ref, icon, uiMapID, x, y, showInParentZone, floatOnEdge)|Mastercraft_RecipeMap.lua
+GearMatic|function|function DR.ForItem(itemID)|Mastercraft_RecipeMap.lua (GearMatic.DropRates: where a pattern drops, how often)
+GearMatic|literal|ns.DropRates = DR|Mastercraft_RecipeMap.lua
+QuestieDB|literal|['npcDrops'] =|Mastercraft_RecipeMap.lua (drops without a GearMatic rate)
+QuestieDB|literal|['objectDrops'] =|Mastercraft_RecipeMap.lua

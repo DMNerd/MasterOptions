@@ -27,6 +27,7 @@ Modules\CheapUpgrades_GearMatic.lua
 Modules\DialogKey_Pawn.lua
 Modules\Mastercraft_Keep.lua
 Modules\Mastercraft_FarmTour.lua
+Modules\Mastercraft_RecipeMap.lua
 Modules\Mastercraft_VendorSell.lua
 Modules\Mastercraft_BankMats.lua
 Modules\Mastercraft_Auctionator.lua

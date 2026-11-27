@@ -209,6 +209,43 @@ local function Problems()
             "Enable", function() SetAddonEnabled("Pawn_Forever", true) end)
     end
 
+    -- Companion addons made for one version of the addon they extend
+    local Meta = AO.GetAddOnMetadata or _G.GetAddOnMetadata
+    local function Field(name, key)
+        local ok, v = pcall(Meta, name, key)
+        return ok and type(v) == "string" and v:match("^%s*(.-)%s*$") or nil
+    end
+    -- BetterBetterBlizzPlates opens its window only for the BetterBlizzPlates version it names
+    -- (X-BetterBlizzPlates-Version; BetterBlizzPlates' own Version carries a leading "v")
+    if Meta and Loaded("BetterBetterBlizzPlates") and Loaded("BetterBlizzPlates") then
+        local want, have = Field("BetterBetterBlizzPlates", "X-BetterBlizzPlates-Version"), Field("BetterBlizzPlates", "Version")
+        have = have and have:gsub("^[vV]", "")
+        if want and have and want ~= have then
+            add("bbbp:version", ("BetterBetterBlizzPlates is made for BetterBlizzPlates %s, and you have %s - its options window stays closed until BetterBetterBlizzPlates is updated for it (BetterBlizzPlates' own options still work)."):format(want, have))
+        end
+    end
+    -- Questie needs QuestieDB, at the contract its .toc names (X-QuestieDB-Contract): the same check Questie
+    -- makes at login (Modules/VersionCheckDB.lua), here with the rest
+    if Loaded("Questie") then
+        local need = tonumber(Field("Questie", "X-QuestieDB-Contract") or "")
+        if not Loaded("QuestieDB") then
+            if Exists("QuestieDB") and not AddonEnabled("QuestieDB") then
+                add("questiedb:off", "QuestieDB is turned off, so Questie has no quest data. Turn it on and reload.",
+                    "Enable", function() SetAddonEnabled("QuestieDB", true) end)
+            elseif not Exists("QuestieDB") then
+                add("questiedb:missing", "QuestieDB isn't installed, so Questie has no quest data. Reinstall Questie (QuestieDB comes with it).")
+            end
+        elseif need then
+            local lib = _G.LibQuestieDB
+            local ok, supported = false, nil
+            if type(lib) == "table" and type(lib.RequireContract) == "function" then ok, supported = pcall(lib.RequireContract, need) end
+            local have = Field("QuestieDB", "Version") or "?"
+            if not (ok and supported == true) then
+                add("questiedb:contract", ("This Questie needs QuestieDB's data contract %d, which QuestieDB %s doesn't give - Questie may show no quests. Update Questie and QuestieDB together."):format(need, have))
+            end
+        end
+    end
+
     -- Sparkles_Forever with Mastercraft
     local spk, mcs = SPK(), MC()
     if spk and mcs then

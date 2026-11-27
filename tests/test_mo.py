@@ -201,6 +201,35 @@ print("vendor coin problem: none with $", coin_ok, "/ coin", coin_on, "/ badge o
 if not (coin_ok and coin_on and not coin_hidden):
     lua.execute('ERRORS[#ERRORS+1] = "Vendor coin problem row wrong"')
 lua.execute('GearMatic.db.profile.vendorMarkerStyle = nil; GearMatic.db.profile.bestGoldShowVendor = nil')
+# companion addons made for one version of the addon they extend: BetterBetterBlizzPlates, QuestieDB
+lua.execute(r"""
+  META = { BetterBetterBlizzPlates = { ["X-BetterBlizzPlates-Version"] = "2.2.5c" }, BetterBlizzPlates = { Version = "v2.2.5c" },
+           Questie = { ["X-QuestieDB-Contract"] = "4" }, QuestieDB = { Version = "1.1.6" } }
+  C_AddOns.GetAddOnMetadata = function(n, k) return META[n] and META[n][k] end
+  LOADED.BetterBetterBlizzPlates, LOADED.BetterBlizzPlates = true, true
+  ENABLED.BetterBetterBlizzPlates, ENABLED.BetterBlizzPlates = true, true
+  LOADED.Questie, LOADED.QuestieDB, ENABLED.Questie, ENABLED.QuestieDB = true, true, true, true
+  CONTRACT_OK = true
+  LibQuestieDB = { RequireContract = function(n) if CONTRACT_OK and n == 4 then return true end return false, "nope" end }
+""")
+comp = {}
+comp["matching versions: nothing to say"] = not lua.eval('ShowsProblem("made for BetterBlizzPlates") or ShowsProblem("QuestieDB")')
+lua.execute('META.BetterBlizzPlates.Version = "v2.2.6"')
+comp["BetterBlizzPlates updated first: its companion's window stays closed, said so"] = lua.eval('ShowsProblem("made for BetterBlizzPlates 2.2.5c, and you have 2.2.6")') is True
+lua.execute('META.BetterBlizzPlates.Version = "v2.2.5c"; CONTRACT_OK = false')
+comp["QuestieDB without Questie's contract: said so"] = lua.eval('ShowsProblem("data contract 4, which QuestieDB 1.1.6")') is True
+lua.execute('CONTRACT_OK = true; LOADED.QuestieDB = false; ENABLED.QuestieDB = false')
+comp["QuestieDB turned off: said so"] = lua.eval('ShowsProblem("QuestieDB is turned off")') is True
+lua.execute('ENABLED.QuestieDB = nil')
+comp["QuestieDB not installed: said so"] = lua.eval('ShowsProblem("QuestieDB isn.t installed")') is True
+lua.execute(r"""
+  LOADED.QuestieDB, ENABLED.QuestieDB = true, true
+  LOADED.BetterBetterBlizzPlates, LOADED.BetterBlizzPlates, LOADED.Questie = nil, nil, nil
+  C_AddOns.GetAddOnMetadata, LibQuestieDB = nil, nil
+""")
+print("companion versions:", comp)
+if not all(comp.values()):
+    lua.execute('ERRORS[#ERRORS+1] = "Companion version problems wrong"')
 # one judge for every Pawn-or-GearMatic recommendation: Pawn with Pawn Forever, GearMatic without it
 lua.execute(r"""
   function CountText(t) Reopen(); local n = 0 for _, f in ipairs(FRAMES) do if f._text == t then n = n + 1 end end return n end

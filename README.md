@@ -1,8 +1,13 @@
 # Master Options
 
-Master Options (`/mo`) and its compatibility patches for the WoW Forever client (Interface 16001).
-It is one window for the settings that overlap between installed addons: vendor automation, gathering pins,
-stat weights, bag icons, UI style and so on. What makes them work together are modules in
+**A meta settings manager and compatibility layer for WoW Forever addons** (Interface 16001).
+
+The goal: make interesting and useful addons cooperate, for a vanilla-plus experience. The game keeps its classic
+feel, and the addons on top of it work as one.
+
+As a settings manager, `/mo` is one window for the settings that overlap between installed addons: vendor
+automation, gathering pins, stat weights, bag icons, UI style and so on. As a compatibility layer, its modules make
+those addons work together. They live in
 `addons/MasterOptions/Modules/` (until 2.0 they were separate `MasterOptions_<Addon>_<Addon>` addons): each runs only
 when the addons it works with are loaded, and can be turned off under /mo > Modules. They only read other addons'
 public data and settings; the third-party addons themselves are never edited.
@@ -70,6 +75,7 @@ The workflow checks that the tag matches the `.toc` version, builds the pack, an
 | DeleteCheapestItem / Protect | DeleteCheapestItem | Never offers upgrades, sets, tools or needed materials |
 | Mastercraft / Keep | Mastercraft | Needed / KEEP items go on GearMatic's never-sell list |
 | Mastercraft / VendorSell | Mastercraft | Items Mastercraft marks VENDOR are sold by your junk seller, and get the junk coin |
+| Mastercraft / RecipeMap | Mastercraft, Questie | Map markers on vendors selling patterns for recipes you haven't learned, the creatures and chests they drop from (specific drops, with GearMatic's chance), and on your profession's trainers when you're near your cap and can train the next rank (Mastercraft's recipe list + QuestieDB, drawn with HereBeDragons) |
 | Mastercraft / FarmTour | Mastercraft, ShortestPathForever | Start farming in Mastercraft and ShortestPathForever walks you through the zone's herbs and veins worth it to you (Mastercraft's nodes and rule), nearest first; `/mo farm` (`herbs`, `ores`, `stop`) without Mastercraft's session |
 | Mastercraft / BankMats | Mastercraft | At the bank, guide materials go in; VENDOR / AUCTION items stay in bags |
 | OpenMapMiniMap / Border | OpenMap_MiniMap | Square minimap framed with the action bar buttons' border |

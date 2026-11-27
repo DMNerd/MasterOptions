@@ -20,7 +20,7 @@ globals = {
     "MasterOptions_Module", "MasterOptions_Modules", "MasterOptions_ErrorLog", "MasterOptions_ReportError",
     "MasterOptions_MastercraftKeep", "MasterOptions_MastercraftVendorSell", "MasterOptions_MinimapBorder",
     "MasterOptions_NeverSell", "MasterOptions_PawnKeeps", "MasterOptions_PawnKeepsMany",
-    "MasterOptions_GearKeeps", "MasterOptions_GearKeepsMany", "MasterOptions_GearMaticSpecKeeps", "MasterOptions_CheapUpgradesGearMatic", "MasterOptions_Shared", "MasterOptions_FarmTour",
+    "MasterOptions_GearKeeps", "MasterOptions_GearKeepsMany", "MasterOptions_GearMaticSpecKeeps", "MasterOptions_CheapUpgradesGearMatic", "MasterOptions_Shared", "MasterOptions_FarmTour", "MasterOptions_RecipeMap",
     "SLASH_MASTEROPTIONS1", "SLASH_MASTEROPTIONS2",
     -- Blizzard tables we add entries to
     "SlashCmdList", "UISpecialFrames",
@@ -38,7 +38,7 @@ read_globals = {
     "GetNumQuestChoices", "GetNumSkillLines", "GetProfessionInfo", "GetProfessions", "GetQuestItemInfo",
     "GetQuestItemLink", "GetRealmName", "GetSkillLineInfo", "GetSpellInfo", "GetTime", "GetTrackingTexture",
     "HideUIPanel", "InCombatLockdown", "IsAddOnLoadOnDemand", "IsAddOnLoaded", "IsEquippableItem", "IsInInstance",
-    "IsModifierKeyDown", "IsResting", "ReloadUI", "UnitClass", "UnitGUID", "UnitName", "UseContainerItem",
+    "IsModifierKeyDown", "IsResting", "ReloadUI", "UnitClass", "UnitFactionGroup", "UnitLevel", "UnitGUID", "UnitName", "UseContainerItem",
     "GameTooltip_Hide", "QuestInfoItem_OnClick", "QuestInfo_GetRewardButton",
     "GetCursorInfo", "ClearCursor", "GetItemIcon", "ChatEdit_InsertLink", "ChatFrameUtil",
     "CreateSettingsButtonInitializer", "CreateSettingsListSectionHeaderInitializer",
