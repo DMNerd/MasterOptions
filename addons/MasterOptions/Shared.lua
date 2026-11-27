@@ -58,6 +58,18 @@ function S.CharacterKey()
     return (first or "?") .. ((last and last ~= "") and (" " .. last) or "") .. "-" .. (GetRealmName() or "")
 end
 
+-- Master Options' own version and author, from its .toc (one place: the window title, /mo > Thanks, the game's
+-- Options page and the minimap button all show them)
+function S.About()
+    local meta = (C_AddOns and C_AddOns.GetAddOnMetadata) or _G.GetAddOnMetadata
+    local function Get(key)
+        local ok, v = pcall(meta, "MasterOptions", key)
+        return ok and type(v) == "string" and v ~= "" and v or nil
+    end
+    local version, author = meta and Get("Version") or "?", meta and Get("Author") or "DMNerd"
+    return version, author, ("Master Options %s  |cff9d9d9dby %s|r"):format(version, author)
+end
+
 -- Mastercraft's saved data (MastercraftDB), or nil
 function S.MastercraftDB()
     local db = _G.MastercraftDB

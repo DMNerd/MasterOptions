@@ -48,8 +48,12 @@ local function RegisterSettingsPanel()
             pcall(layout.AddInitializer, layout, CreateSettingsButtonInitializer(label, text, fn, tip, true))
         end
     end
+    local version, author = MasterOptions_Shared.About()
+    Header(("Master Options %s - by %s"):format(version, author))
     Button("Master Options window", "Open", OpenWindow,
         "The same settings in Master Options' own window (/mo), with the Problems list.")
+    Button("Thanks", "Show", function() if MO.OpenThanks then MO.OpenThanks() end end,
+        "The authors of every addon Master Options works with - everything it connects is their work.")
     Button("Some changes need a reload", "Reload", ReloadUI,
         "Skins, bag icons and compatibility patches take effect after a reload.")
 
@@ -197,7 +201,8 @@ ev:SetScript("OnEvent", function()
                 end
             end,
             OnTooltipShow = function(tt)
-                tt:AddLine("Master Options")
+                local version, author = MasterOptions_Shared.About()
+                tt:AddDoubleLine("Master Options", ("%s - by %s"):format(version, author), 1, 0.82, 0, 0.6, 0.6, 0.6)
                 local n = 0
                 for _, opt in ipairs(OPTIONS) do
                     if opt.kind == "choice" and Available(opt) and opt.get() == "Both (conflict)" then n = n + 1 end

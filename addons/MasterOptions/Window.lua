@@ -191,7 +191,7 @@ win:Hide()
 tinsert(UISpecialFrames, "MasterOptionsFrame")
 win.title = win:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 win.title:SetPoint("TOP", 0, -5)
-win.title:SetText("Master Options")
+win.title:SetText((select(3, MasterOptions_Shared.About()))) -- ("Master Options 2.8.1  by DMNerd", from the .toc)
 
 -- left: the sections
 local side = CreateFrame("Frame", nil, win)
@@ -670,13 +670,16 @@ thanksText:SetWidth(PANE_W - 24)
 thanksText:SetJustifyH("LEFT")
 thanksText:SetSpacing(3)
 do
-    local lines = { "|cffffd200Thank you|r - Master Options only makes these addons work together: everything it connects is their authors' work.", " " }
+    local version, author = MasterOptions_Shared.About()
+    local lines = { ("|cffffd200Master Options %s|r by |cffffd200%s|r - free, MIT license."):format(version, author), " ",
+        "|cffffd200Thank you|r - Master Options only makes these addons work together: everything it connects is their authors' work.", " " }
     for _, c in ipairs(CREDITS) do lines[#lines + 1] = ("|cffffd200%s|r  %s"):format(c[1], c[2]) end
     lines[#lines + 1] = " "
     lines[#lines + 1] = "And to the libraries Master Options uses - LibStub, CallbackHandler (the Ace3 team), LibDataBroker (tekkub), LibDBIcon (funkehdude), HereBeDragons (Nevcairiel) - and to the WoWSims Forever and Wowhead Forever data GearMatic, CheapUpgrades and Mastercraft are built on."
     thanksText:SetText(table.concat(lines, "\n"))
 end
 local thanksHeight = math.ceil((thanksText:GetStringHeight() or 300) + 16)
+local thanksSec -- (the section, once the window is built)
 thanksPane:SetHeight(thanksHeight)
 
 ---------------------------------------------------------------------------
@@ -738,7 +741,8 @@ local function BuildWindow()
     for i, s in ipairs(sections) do if s.name == "Vendor and bank" then at = i + 1 end end
     table.insert(sections, at, nsSec)
     -- Thanks: last
-    sections[#sections + 1] = { name = "Thanks", pane = thanksPane, thanks = true, height = thanksHeight, opts = {} }
+    thanksSec = { name = "Thanks", pane = thanksPane, thanks = true, height = thanksHeight, opts = {} }
+    sections[#sections + 1] = thanksSec
     for i, s in ipairs(sections) do
         if not s.problems and not s.neverSell and not s.thanks then
             s.pane = CreateFrame("Frame", nil, body)
@@ -819,6 +823,12 @@ local function OpenWindow()
     if SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end
     win:Show()
 end
+-- the window, on its Thanks section (the game's Options page has a button for it)
+local function OpenThanks()
+    OpenWindow()
+    if thanksSec then ShowSection(thanksSec) end
+end
+MO.OpenThanks = OpenThanks
 
 -- for the files after this one
 MO.ApplyRecommended = ApplyRecommended

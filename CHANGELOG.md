@@ -12,7 +12,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 ### Added
 
 - **/mo > Thanks:** the authors of every addon Master Options works with, the libraries it uses and the data
-  behind GearMatic, CheapUpgrades and Mastercraft.
+  behind GearMatic, CheapUpgrades and Mastercraft. The game's Options page (Options > AddOns > Master Options)
+  has a Thanks button that opens it.
+- Master Options' version and author in the /mo window's title, at the top of the Options page and in the
+  minimap button's tooltip.
 
 ### Changed
 
