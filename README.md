@@ -89,6 +89,12 @@ The workflow checks that the tag matches the `.toc` version, builds the pack, an
 `MasterOptions-<version>.zip` to a new GitHub Release. Its notes are that version's section of CHANGELOG.md; a tag
 without one fails the release, so nothing goes out without notes. The zip carries CHANGELOG.md too.
 
+The same tag also publishes to **CurseForge** (project 1834365): the workflow builds a CurseForge zip with only the
+`MasterOptions` folder (`scripts/pack.ps1 -CurseForge`) and uploads it through CurseForge's upload API, with the same
+changelog section as its notes, for the WoW Forever game version that matches `## Interface:` (16001 -> 1.60.1).
+This needs the repository secret `CF_API_TOKEN` (a CurseForge API token); CurseForge's own packager is left off on
+purpose (no `.pkgmeta`).
+
 **Test data:** `tests/fixtures/` holds anonymised settings tables (characters renamed Testchar Alpha / Testchar Beta, realm
 "Test Realm", logs and other players' names removed).
 
