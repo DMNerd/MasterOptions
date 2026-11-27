@@ -14,7 +14,9 @@ lua.execute(r'''
     function f:RegisterEvent(e) self.ev[e] = true end
     function f:SetScript(k, fn) self[k] = fn end
     FRAMES[#FRAMES + 1] = f; return f end
-  C_Timer = { After = function(d, fn) fn() end }
+  QUEUE, TM = false, {}
+  C_Timer = { After = function(d, fn) if QUEUE then TM[#TM + 1] = fn else fn() end end }
+  function RunTimers() local t = TM; TM = {}; for _, fn in ipairs(t) do fn() end end
   function Fire(e) for _, f in ipairs(FRAMES) do if f.ev[e] and f.OnEvent then f.OnEvent(f, e) end end end
   function MasterOptions_ReportError(_, _, e) ERRS = ERRS + 1; print("ERR", e) end
   function hooksecurefunc(t, k, fn) local orig = t[k]; t[k] = function(...) local r = orig(...); fn(...); return r end end
@@ -88,6 +90,22 @@ L('Draw("Shadowfang Keep"); Log(); WorldMapFrame.scripts.OnHide()')
 res["world map closed: our story cleared"] = E("Log()") == "clear"
 L('ATTACHED = false; ForeverDungeonJournal_NS.OpenBossFromWorldMap("Shadowfang Keep", 1)')
 res["a boss opened from the journal (not the world map): nothing"] = E("Log()") == ""
+# the entrance click on OpenMap's map also picks the zone under it in Spoken Places, after our story went up
+L(r'''
+  WorldMapFrame.scripts.OnHide(); Draw(nil); Log()
+  SpokenPlaces = { selected = nil }
+  local show = SpokenBossesAddon.MapLore.ShowDungeon
+  SpokenBossesAddon.MapLore.ShowDungeon = function(map, id) SpokenPlaces.selected = nil; return show(map, id) end
+  QUEUE = true
+  Draw("Shadowfang Keep")
+  SpokenPlaces.selected = "Tirisfal Glades"   -- (Spoken's click handler, same click)
+  RunTimers(); RunTimers()
+  QUEUE = false
+''')
+res["entrance click picked the zone in Spoken after ours: the dungeon's story put back, once"] = (
+    E("Log()") == "dungeon 33@1421,dungeon 33@1421" and E("SpokenPlaces.selected") is None)
+L('SpokenPlaces.selected = "Tirisfal Glades"; QUEUE = true; ForeverDungeonJournal_NS.RefreshWorldMapOverlay(); RunTimers(); QUEUE = false')
+res["...a zone picked later (not right after ours went up): left alone"] = E("Log()") == ""
 L('SpokenBossesAddon.MapLore = nil; Draw("Shadowfang Keep")')
 res["Spoken's helper gone: nothing, no error"] = E("Log()") == "" and E("ERRS") == 0
 for k, v in res.items():

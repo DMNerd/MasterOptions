@@ -75,7 +75,20 @@ local function Refreshed()
     Clear()
     local m, mapID = Lore(), nil
     if m then mapID = MapID(m) end
-    if id and mapID and m.ShowDungeon(mapID, id) then shownID = id end
+    if id and mapID and m.ShowDungeon(mapID, id) then
+        shownID = id
+        -- On OpenMap's map a click anywhere in a zone picks that zone's story (Spoken Places, SubzoneClick) - and
+        -- the entrance click that opened this map is such a click: its pick, made after ours, drops our story.
+        -- A moment later, still up and the zone picked: ours again.
+        C_Timer.After(0.15, function()
+            local sp = _G.SpokenPlaces
+            if shownID == id and type(sp) == "table" and sp.selected ~= nil
+                and FDJ.IsWorldMapOverlayAttached and FDJ.IsWorldMapOverlayAttached() then
+                shownID = nil
+                Check("showing the dungeon's story", pcall(Refreshed))
+            end
+        end)
+    end
 end
 
 local function BossOpened(dungeon, index)

@@ -164,6 +164,21 @@ local function DungeonMapPart()
 
     local function HasMap(key) return FDJ and FDJ.DUNGEON_MAPS and FDJ.DUNGEON_MAPS[key] ~= nil end
 
+    -- the world map navigated away (its navigation bar, a zone clicked open, the mouse wheel out) while a dungeon
+    -- is previewed: the preview ends - Dungeon Journal's map only goes with a map change it doesn't watch
+    local previewMap
+    if FDJ and WorldMapFrame and type(WorldMapFrame.OnMapChanged) == "function" then
+        hooksecurefunc(WorldMapFrame, "OnMapChanged", function()
+            if not preview then return end
+            local now = WorldMapFrame.GetMapID and WorldMapFrame:GetMapID() or WorldMapFrame.mapID
+            if now == previewMap then return end
+            preview, previewMap = nil, nil
+            C_Timer.After(0, function()
+                if WorldMapFrame:IsShown() then pcall(FDJ.RefreshWorldMapOverlay) end
+            end)
+        end)
+    end
+
     -- the overlay went away (right-click, its World Map button, the map closed): preview over
     local hookedBackdrop
     local function WatchBackdrop()
@@ -194,6 +209,7 @@ local function DungeonMapPart()
         local journal = _G.ForeverDungeonJournalFrame
         if journal and journal:IsShown() then return false end -- (it's using its map panel itself)
         preview = key
+        previewMap = WorldMapFrame.GetMapID and WorldMapFrame:GetMapID() or WorldMapFrame.mapID
         pcall(FDJ.RefreshWorldMapOverlay)
         if not FDJ.IsWorldMapOverlayAttached() then
             local button = _G.ForeverDungeonJournalWorldMapToggle -- (switched to the world map earlier)

@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.12.5] - 2026-11-27
+
+### Fixed
+
+- Clicking a dungeon entrance on OpenMap's map showed the story of the zone you clicked in, not the dungeon's. The
+  same click also picks that zone's story in Spoken Places, after the dungeon's went up. The dungeon's story is now
+  put back.
+- The dungeon map opened by an entrance click stayed on top when you navigated the world map with its navigation
+  bar (or opened another zone). It now closes when the world map moves to another map.
+
 ## [2.12.4] - 2026-11-27
 
 ### Fixed
