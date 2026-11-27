@@ -50,6 +50,21 @@ res["many: the kept ones only"] = (E("MANY[Link(300)]") is True and E("MANY[Link
     and E("MANY[Link(600)]") is None and E("MANY[Link(666)]") is None)
 res["asked with the item's slot and owned pools"] = E("ASKED[1]") == "INVTYPE_WEAPON:true"
 res["GearMatic erroring: not kept, no error out"] = E("ERRS") == 0
+# GearMatic's own ranks (GetRank + RankAppliesToSlot): 2nd best only counts where a second one is worn
+L(r'''
+  local function ID(link) return tonumber(link:match("item:(%d+)")) end
+  SLOT = { [700] = "INVTYPE_HAND", [701] = "INVTYPE_FINGER", [702] = "INVTYPE_HAND" }
+  C_Item.GetItemInfoInstant = function(link) local id = ID(link) return id, "Armor", "Cloth", SLOT[id] or "INVTYPE_WEAPON" end
+  local bi = GearMatic.Scoring2.BestItems
+  bi.GetRank = function(scale, loc, link) local id = ID(link)
+    if id == 700 or id == 701 then return "second" end
+    if id == 702 then return scale == OFF and "best" or "second" end
+  end
+  bi.RankAppliesToSlot = function(loc) return loc == "INVTYPE_FINGER" end
+''')
+res["spare gloves, 2nd best: not kept"] = E("MasterOptions_GearMaticSpecKeeps.Keeps(Link(700))") is False
+res["2nd best ring: not kept either"] = E("MasterOptions_GearMaticSpecKeeps.Keeps(Link(701))") is False
+res["gloves best for the off-spec: kept"] = E("MasterOptions_GearMaticSpecKeeps.Keeps(Link(702))") is True
 L("GearMatic.Scoring2 = nil")
 res["GearMatic without BestItems: nothing kept, no error"] = (E("next(MasterOptions_GearMaticSpecKeeps.KeepsMany({ Link(300) })) == nil")
     and E("ERRS") == 0)

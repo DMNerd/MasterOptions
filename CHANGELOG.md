@@ -7,6 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.10.4] - 2026-11-27
+
+### Fixed
+
+- **Spare gear Mastercraft says to VENDOR is sold again** (sell mode "Goods and gear"). The off-spec check kept
+  anything GearMatic ranked "2nd best" for a spec. But GearMatic ranks only what you own, so a spare pair of
+  gloves far worse than the ones you wear counted as "2nd best" just for being the only other pair. Now only
+  "best for one of your specs" keeps a piece (a bag piece that beats what you wear is an upgrade, still kept).
+  The same check also protects gear from DeleteCheapestItem and GearMatic's own sell pass.
+- A GearMatic upgrade only for an alt no longer keeps a **soulbound** piece: it can't be sent to them.
+  Account-bound pieces still stay.
+
 ## [2.10.3] - 2026-11-27
 
 ### Changed

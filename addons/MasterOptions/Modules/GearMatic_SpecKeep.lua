@@ -47,9 +47,17 @@ local function KeepsOne(bi, scales, link)
         local okB, passes = pcall(bi.BadgeLevelBandPasses, link)
         if okB and passes == false then return false end
     end
+    -- best for a spec: kept. Second best isn't: GearMatic ranks only what you own, so a spare pair of gloves 45%
+    -- worse than the ones you wear is "second best" just for being the only other pair. (A bag piece that beats
+    -- something you wear is an upgrade - kept by that rule.)
     for _, scale in ipairs(scales) do
-        local ok, best = pcall(bi.IsItemBestOrSecondBest, scale, equipLoc, link, true)
-        if ok and best then return true end
+        if type(bi.GetRank) == "function" then
+            local ok, rank = pcall(bi.GetRank, scale, equipLoc, link, true)
+            if ok and rank == "best" then return true end
+        else
+            local ok, best = pcall(bi.IsItemBestOrSecondBest, scale, equipLoc, link, true)
+            if ok and best then return true end
+        end
     end
     return false
 end

@@ -109,14 +109,30 @@ end
 
 local function GM() local g = _G.GearMatic; return type(g) == "table" and g or nil end
 
--- GearMatic's own verdict on a bag slot: an upgrade (for you or an alt), best in slot, or in an equipment set
+-- Bound to you alone (soulbound, not account-bound): it can never go to an alt. nil = can't tell.
+function S.Soulbound(bag, slot, link)
+    local get = C_Container and C_Container.GetContainerItemInfo
+    local ok, info = pcall(get or error, bag, slot)
+    if not ok or type(info) ~= "table" or info.isBound == nil then return nil end
+    if not info.isBound then return false end
+    -- account-bound items (bind types 7-9) travel to alts
+    local okI, bindType = pcall(function() return select(14, ((C_Item and C_Item.GetItemInfo) or GetItemInfo)(link or info.hyperlink)) end)
+    if okI and type(bindType) == "number" and bindType >= 7 then return false end
+    return true
+end
+
+-- GearMatic's own verdict on a bag slot: an upgrade (for you or an alt), best in slot, or in an equipment set.
+-- An upgrade only for an alt doesn't keep a soulbound piece: it can't be sent to them.
 function S.GearMaticKeeps(link, bag, slot, itemID)
     local gm = GM()
     if not gm then return false end
     local bo = gm.BagOverlay
     if bo and bo.MarkerVerdict then
         local ok, v = pcall(bo.MarkerVerdict, link, bag, slot)
-        if ok and type(v) == "table" and (v.upgrade or v.alt or v.skull) then return true end
+        if ok and type(v) == "table" then
+            if v.upgrade or v.skull then return true end
+            if v.alt and S.Soulbound(bag, slot, link) ~= true then return true end
+        end
     end
     local va = gm.VendorAutomation
     if va and va.InEquipmentSet then

@@ -20,7 +20,8 @@ foreach ($group in ($entries | Group-Object Addon)) {
     $dir = Join-Path $AddOns $group.Name
     if (-not (Test-Path $dir)) { $skipped += $group.Name; continue }
     $toc = Get-ChildItem $dir -Filter *.toc | Select-Object -First 1
-    $ver = if ($toc) { (Select-String -Path $toc.FullName -Pattern '^## Version:\s*(.+)$' | Select-Object -First 1).Matches.Groups[1].Value } else { "?" }
+    $m = if ($toc) { Select-String -Path $toc.FullName -Pattern '^## Version:\s*(.+)$' | Select-Object -First 1 }
+    $ver = if ($m) { $m.Matches[0].Groups[1].Value } else { "?" } # (some addons' .toc has no Version line)
     $files = Get-ChildItem $dir -Recurse -Include *.lua, *.xml, *.toc -File
     $bad = @()
     foreach ($e in $group.Group) {

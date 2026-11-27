@@ -109,7 +109,7 @@ local function GearStaysWhy(link, bag, slot, itemID, loadouts)
         local ok, v = pcall(bo.MarkerVerdict, link, bag, slot)
         if ok and type(v) == "table" then
             if v.upgrade then return "GearMatic: an upgrade for you" end
-            if v.alt then return "GearMatic: an upgrade for one of your alts" end
+            if v.alt and Shared.Soulbound(bag, slot, link) ~= true then return "GearMatic: an upgrade for one of your alts (not soulbound)" end
             if v.skull then return "GearMatic: best in slot" end
         end
     end
