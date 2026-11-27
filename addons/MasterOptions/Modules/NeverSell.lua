@@ -221,6 +221,35 @@ function API.Sources()
 end
 MasterOptions_NeverSell = API
 
+-- /mo never [remove] <item link or ID>, /mo never: the list
+MasterOptions_Shared.Command("never", function(rest)
+    local head = "|cffffd200Master Options:|r "
+    local function Name(id)
+        local name, link = MasterOptions_Shared.GetItemInfo(id)
+        return link or name or ("item " .. id)
+    end
+    local remove, item = rest:match("^(remove)%s+(.+)$")
+    item = item or rest
+    local id = tonumber(item:match("item:(%d+)") or item:match("^(%d+)$"))
+    if id then
+        API.Set(id, not remove)
+        local where = API.Sources()
+        print(head .. Name(id) .. (remove and " taken off" or " put on") .. " the never-sell list"
+            .. (#where > 0 and (" (" .. table.concat(where, ", ") .. ")") or "") .. ".")
+        return
+    end
+    if item ~= "" then print(head .. "/mo never <item link or ID> adds, /mo never remove <item> takes off, /mo never lists.") return end
+    API.Sync()
+    local list = API.List()
+    local where = API.Sources()
+    print(head .. #list .. " item" .. (#list == 1 and "" or "s") .. " on the never-sell list, kept in sync with "
+        .. (#where > 0 and table.concat(where, ", ") or "no installed addon") .. ":")
+    for i, itemID in ipairs(list) do
+        if i > 40 then print(("  ... and %d more"):format(#list - 40)) break end
+        print("  " .. Name(itemID))
+    end
+end, "never [remove] <item> - the never-sell list (no item: list it)")
+
 -- Baganator: a lock in the corner of every bag slot whose item is on the list (Baganator > Icons, or /mo >
 -- Bags: "Never-sell lock in bags"). First in the top-right corner, before GearMatic's skull.
 local LOCK_TEXTURE = "Interface\\Buttons\\LockButton-Locked-Up"

@@ -141,5 +141,6 @@ elseif ChatFrame_AddMessageEventFilter then
     ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", Filter)
 end
 
-MasterOptions_AddonWhispers = { List = List, Recent = function() return recent end } -- (Recent: for the tests)
+MasterOptions_AddonWhispers = { List = List, Recent = function() return recent end } -- (for the tests)
+MasterOptions_Shared.Command("whispers", List, "whispers - which addon whispered whom (the hidden \"No player named\" lines)")
 end)

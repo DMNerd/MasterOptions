@@ -82,6 +82,20 @@ function M.SetEnabled(name, on)
     MasterOptionsDB.modulesOff = type(MasterOptionsDB.modulesOff) == "table" and MasterOptionsDB.modulesOff or {}
     MasterOptionsDB.modulesOff[Short(name)] = (not on) or nil
 end
+-- /mo <word> commands a module brings (MasterOptions_Shared.Command, from its body: there only while it runs).
+-- fn(rest of the line); usage: one line for /mo help
+local commands = {}
+function M.RegisterCommand(word, fn, usage)
+    commands[word:lower()] = { fn = fn, usage = usage }
+end
+function M.Command(word) return commands[(word or ""):lower()] end
+function M.Commands()
+    local out = {}
+    for word, c in pairs(commands) do out[#out + 1] = { word = word, usage = c.usage } end
+    table.sort(out, function(a, b) return a.word < b.word end)
+    return out
+end
+
 function M.Names()
     local out = {}
     for _, m in ipairs(list) do out[#out + 1] = m.name end

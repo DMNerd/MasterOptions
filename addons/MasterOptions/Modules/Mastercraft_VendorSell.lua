@@ -168,6 +168,7 @@ local function Explain()
 end
 
 MasterOptions_MastercraftVendorSell = { WouldSell = WouldSell, Explain = Explain }
+S.Command("vendor", Explain, "vendor - what Mastercraft says to VENDOR in your bags, and why each is (not) sold")
 
 ---------------------------------------------------------------------------
 -- The bags: every slot Mastercraft says to VENDOR (read fresh)

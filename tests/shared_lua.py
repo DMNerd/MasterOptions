@@ -15,6 +15,36 @@ def load_shared(lua, tested_path):
     raise FileNotFoundError("Shared.lua not found above " + tested_path)
 
 
+def load_pawn(lua, tested_path):
+    """Pawn.lua (Master Options' Pawn code: MasterOptions_Pawn, MasterOptions_GearKeeps ...) for a module's test, with
+    the few core accessors it takes from MasterOptions.lua: Loaded (IsAddOnLoaded, or C_AddOns'), GM, PAWN."""
+    d = os.path.dirname(os.path.abspath(tested_path))
+    for _ in range(3):
+        p = os.path.join(d, "Pawn.lua")
+        if os.path.exists(p):
+            break
+        d = os.path.dirname(d)
+    else:
+        raise FileNotFoundError("Pawn.lua not found above " + tested_path)
+    ns = lua.eval(r'''function()
+      local function Loaded(n)
+        local f = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+        if f then return f(n) and true or false end
+        return n == "Pawn" and type(PawnCommon) == "table" or n == "GearMatic" and type(GearMatic) == "table"
+      end
+      return { Loaded = Loaded,
+        GM = function() local g = GearMatic; return type(g) == "table" and g.db and g.db.profile or nil end,
+        PAWN = function() return type(PawnCommon) == "table" and PawnCommon or nil end }
+    end''')()
+    # (a test that makes its frame stubs later: a plain one for Pawn.lua's event frames meanwhile)
+    lua.execute("if not CreateFrame then CreateFrame = function() return { RegisterEvent = function() end, "
+                "SetScript = function() end } end; PAWN_TEMP_FRAMES = true end")
+    load = lua.eval("function(s, n) local f, e = load(s, '=' .. n); if not f then error(e) end; return f end")
+    load(open(p, encoding="utf-8").read(), "Pawn.lua")("MasterOptions", ns)
+    lua.execute("if PAWN_TEMP_FRAMES then CreateFrame, PAWN_TEMP_FRAMES = nil, nil end")
+    return ns
+
+
 def load_master_options(lua, mo_path):
     """MasterOptions.lua and the files that follow it in the .toc (AddonSettings.lua ... Startup.lua), in that order,
     sharing one addon table as the game gives them (local _, ns = ...)."""

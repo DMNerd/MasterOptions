@@ -177,5 +177,6 @@ local function Explain()
     end
 end
 
-MasterOptions_DJSpoken = { InstanceOf = InstanceOf, Explain = Explain }
+MasterOptions_DJSpoken = { InstanceOf = InstanceOf, Explain = Explain } -- (for the tests)
+MasterOptions_Shared.Command("story", Explain, "story - why a dungeon's story did or didn't show beside the world map")
 end)

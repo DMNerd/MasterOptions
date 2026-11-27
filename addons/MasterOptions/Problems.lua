@@ -49,14 +49,13 @@ end
 
 -- (MO.ShowErrorText: the copy window, made with the window in Window.lua)
 
-local function Problems()
-    local ignored = (MasterOptionsDB and MasterOptionsDB.ignoredProblems) or {}
-    local out = {}
-    local function add(id, text, fixLabel, fix)
-        if not ignored[id] then out[#out + 1] = { id = id, text = text, fixLabel = fixLabel, fix = fix } end
-    end
+-- Each check: { name, function(add, out) }. add(id, text, fixLabel, fix) adds a problem (unless ignored); out is
+-- the list itself, for a row with more to it (the errors row). Run one by one, each on its own: one that fails
+-- doesn't keep the others from being looked at.
+local CHECKS = {}
 
-    -- 0. errors in Master Options or our patches (ErrorLog.lua): Copy for a bug report, Clear when done
+-- 0. errors in Master Options or our patches (ErrorLog.lua): Copy for a bug report, Clear when done
+CHECKS[#CHECKS + 1] = { "errors", function(_, out)
     local log = _G.MasterOptions_ErrorLog
     local errs = log and log.List() or {}
     if #errs > 0 then
@@ -77,8 +76,10 @@ local function Problems()
             onIgnore = function() log.Clear() end,
         }
     end
+end }
 
-    -- 1. enabled addons that didn't load
+-- 1. enabled addons that didn't load
+CHECKS[#CHECKS + 1] = { "addons that didn't load", function(add)
     for i = 1, (NumAddOns and NumAddOns() or 0) do
         local name, _, _, _, reason = AddOnInfo(i)
         if name and not name:find("^Blizzard_") and AddonEnabled(name) and not Loaded(name)
@@ -103,17 +104,21 @@ local function Problems()
             end
         end
     end
+end }
 
-    -- 2. old copies of our patches
+-- 2. old copies of our patches
+CHECKS[#CHECKS + 1] = { "old copies", function(add)
     for _, old in ipairs(RENAMED) do
         if Exists(old) then
             add("old:" .. old, ("Old copy %s is still installed (now built into Master Options). Delete its folder from Interface\\AddOns."):format(old),
                 AddonEnabled(old) and "Disable" or nil, function() SetAddonEnabled(old, false) end)
         end
     end
+end }
 
-    -- 2b. our patch addons from before they became modules of Master Options: while one is installed and
-    -- enabled its module stands aside (else every hook ran twice)
+-- 2b. our patch addons from before they became modules of Master Options: while one is installed and
+-- enabled its module stands aside (else every hook ran twice)
+CHECKS[#CHECKS + 1] = { "old patch addons", function(add)
     local mods = _G.MasterOptions_Modules
     for _, short in ipairs(mods and mods.Names() or {}) do
         local old = "MasterOptions_" .. short
@@ -122,8 +127,10 @@ local function Problems()
                 AddonEnabled(old) and "Disable" or nil, function() SetAddonEnabled(old, false) end)
         end
     end
+end }
 
-    -- 3. entries a protection patch added, left behind after the patch was turned off or removed
+-- 3. entries a protection patch added, left behind after the patch was turned off or removed
+CHECKS[#CHECKS + 1] = { "leftover entries", function(add)
     local dci = _G.DCI_CharDB
     if Loaded("DeleteCheapestItem") and not Loaded("MasterOptions_DeleteCheapestItem_Protect")
         and type(dci) == "table" and type(dci.moProtected) == "table" and next(dci.moProtected) then
@@ -150,9 +157,11 @@ local function Problems()
             gdb.moSell = nil
         end)
     end
+end }
 
-    -- Details in a chat tab: it hooks the game's chat tabs (FCF_SetWindowName, FCF_Close), which Chattynator
-    -- replaces with its own - the two can't work together
+-- Details in a chat tab: it hooks the game's chat tabs (FCF_SetWindowName, FCF_Close), which Chattynator
+-- replaces with its own - the two can't work together
+CHECKS[#CHECKS + 1] = { "Details in a chat tab", function(add)
     local det = _G.Details
     if Loaded("Details") and Loaded("Chattynator") and type(det) == "table" and type(det.chat_tab_embed) == "table"
         and det.chat_tab_embed.enabled then
@@ -163,8 +172,10 @@ local function Problems()
             det.chat_tab_embed.enabled = false
         end)
     end
+end }
 
-    -- BetterBlizzFrames options that move the same minimap / chat pieces as OpenMap_MiniMap / Chattynator
+-- BetterBlizzFrames options that move the same minimap / chat pieces as OpenMap_MiniMap / Chattynator
+CHECKS[#CHECKS + 1] = { "BetterBlizzFrames", function(add)
     local bbf = _G.BetterBlizzFramesDB
     if Loaded("BetterBlizzFrames") and type(bbf) == "table" then
         local clashes = {
@@ -182,10 +193,13 @@ local function Problems()
             end
         end
     end
+end }
 
-    -- addons a newer patch of ours now does the job of
-    -- (the ones without the MasterOptions_ prefix are older "local patch" addons: the loader doesn't
-    -- see them, so their module would run as well)
+-- addons a newer patch of ours now does the job of
+-- (the ones without the MasterOptions_ prefix are older "local patch" addons: the loader doesn't
+-- see them, so their module would run as well)
+CHECKS[#CHECKS + 1] = { "replaced addons", function(add)
+    local mods = _G.MasterOptions_Modules
     for old, new in pairs({ OpenMap_NoDungeonMap = "MasterOptions_DungeonJournal_OpenMap",
                             OpenMapTweaks_Mastercraft = "MasterOptions_OpenMapTweaks_Mastercraft",
                             CheapUpgrades_Baganator = "MasterOptions_CheapUpgrades_Baganator",
@@ -197,18 +211,22 @@ local function Problems()
                 function() SetAddonEnabled(old, false); if Exists(new) then SetAddonEnabled(new, true) end end)
         end
     end
+end }
 
-    -- Pawn without Pawn Forever: GearMatic's weights, CheapUpgrades' badges, the quest reward pick and Baganator's
-    -- upgrade arrow all follow the scales Pawn shows, and Pawn's stock Classic scales aren't made for WoW Forever
-    -- (enabled but not loaded yet is left to the "didn't load" check above, or to the reload after Enable)
+-- Pawn without Pawn Forever: GearMatic's weights, CheapUpgrades' badges, the quest reward pick and Baganator's
+-- upgrade arrow all follow the scales Pawn shows, and Pawn's stock Classic scales aren't made for WoW Forever
+-- (enabled but not loaded yet is left to the "didn't load" check above, or to the reload after Enable)
+CHECKS[#CHECKS + 1] = { "Pawn Forever", function(add)
     if Loaded("Pawn") and not Exists("Pawn_Forever") then
         add("pawnforever:missing", "Pawn is installed without Pawn Forever, so stat weights (GearMatic, CheapUpgrades, quest rewards, bag upgrade arrows) come from Pawn's stock Classic scales. Install Pawn Forever for weights made for WoW Forever.")
     elseif Loaded("Pawn") and not AddonEnabled("Pawn_Forever") then
         add("pawnforever:off", "Pawn Forever is disabled, so stat weights (GearMatic, CheapUpgrades, quest rewards, bag upgrade arrows) come from Pawn's stock Classic scales.",
             "Enable", function() SetAddonEnabled("Pawn_Forever", true) end)
     end
+end }
 
-    -- Companion addons made for one version of the addon they extend
+-- Companion addons made for one version of the addon they extend
+CHECKS[#CHECKS + 1] = { "companion versions", function(add)
     local Meta = AO.GetAddOnMetadata or _G.GetAddOnMetadata
     local function Field(name, key)
         local ok, v = pcall(Meta, name, key)
@@ -244,8 +262,10 @@ local function Problems()
             end
         end
     end
+end }
 
-    -- Sparkles_Forever with Mastercraft
+-- Sparkles_Forever with Mastercraft
+CHECKS[#CHECKS + 1] = { "Sparkles", function(add)
     local spk, mcs = SPK(), MC()
     if spk and mcs then
         -- Mastercraft's bobber mark on, Sparkles' bobber effect off: Sparkles then turns the bobber's nameplate off,
@@ -262,8 +282,10 @@ local function Problems()
                 "Turn off", function() spk.minimapAutoAlternate = false end)
         end
     end
+end }
 
-    -- 4. Baganator settings pointing at addons that aren't loaded
+-- 4. Baganator settings pointing at addons that aren't loaded
+CHECKS[#CHECKS + 1] = { "Baganator", function(add)
     local p = BAG()
     if p then
         local j = p.junk_plugin
@@ -282,6 +304,19 @@ local function Problems()
             add("bagcoin:gearmatic", "GearMatic's vendor badge is the gold coin, the same icon as Baganator's junk coin - so a coin in your bags may mean \"sold\" or only \"worth most at a vendor\". Switch GearMatic's badge to the gold $.",
                 "Use Gold $", function() gs.vendorMarkerStyle = "dollar"; GMRefreshBagIcons() end)
         end
+    end
+end }
+
+local function Problems()
+    local ignored = (MasterOptionsDB and MasterOptionsDB.ignoredProblems) or {}
+    local out = {}
+    local function add(id, text, fixLabel, fix)
+        if not ignored[id] then out[#out + 1] = { id = id, text = text, fixLabel = fixLabel, fix = fix } end
+    end
+    for _, check in ipairs(CHECKS) do
+        local ok, err = pcall(check[2], add, out)
+        -- (a row here, not the error log: a new error there refreshes this list - and would fail again)
+        if not ok then add("check:" .. check[1], ("Master Options couldn't check %s: %s"):format(check[1], tostring(err))) end
     end
     return out
 end

@@ -78,7 +78,7 @@ function Reset() for _, i in ipairs(BAG) do i.sold = nil end; SOLD = {}; GMQ = {
 function List(t) local o = {} for _, v in ipairs(t) do o[#o+1] = tostring(type(v) == "table" and v.itemID or v) end table.sort(o) return table.concat(o, ",") end
 ''')
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, sys.argv[1])
+from shared_lua import load_shared; load_shared(lua, sys.argv[1]); from shared_lua import load_pawn; load_pawn(lua, sys.argv[1])
 # (the advice store and the Baganator pieces are modules of their own, next to VendorSell)
 _mods = _os.path.dirname(_os.path.abspath(sys.argv[1]))
 for _name in ("Mastercraft_Advice", "Mastercraft_VendorSell", "Baganator_Mastercraft"):

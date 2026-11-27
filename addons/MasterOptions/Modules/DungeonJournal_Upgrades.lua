@@ -5,7 +5,7 @@ MasterOptions_Module("DungeonJournal_Upgrades", { "ForeverDungeonJournal" }, fun
 --
 -- Dungeon Journal lists every boss's loot (and recipes' items, quest rewards, PvP rewards), but whether a piece
 -- is an upgrade for you only shows when you hover it. This marks each item row, by the same judge as the rest
--- of Master Options (MasterOptions_Shared.UpgradeJudge: Pawn with Pawn Forever installed, else GearMatic):
+-- of Master Options (MasterOptions_Pawn.Judge: Pawn with Pawn Forever installed, else GearMatic):
 --   arrow, top left of the icon   an upgrade: Pawn's arrow, or GearMatic's chevron (its alt colour when it's an
 --                                 upgrade for one of your other characters only)
 --   "+23%", left of the star      how big: Pawn's percent, or CheapUpgrades' badge (which follows GearMatic's
@@ -40,8 +40,9 @@ local function Marks(itemID)
     local bo = type(gm) == "table" and gm.BagOverlay
     local verdict = bo and type(bo.MarkerVerdict) == "function" and bo.MarkerVerdict(link) or nil
     if type(verdict) == "table" then out.skull = verdict.skull == true end
-    if Shared.UpgradeJudge() == "Pawn" then
-        local pct = Shared.PawnUpgradePercent(link)
+    local pawn = _G.MasterOptions_Pawn -- (Master Options' Pawn.lua: who judges, and Pawn's word)
+    if pawn and pawn.Judge() == "Pawn" then
+        local pct = pawn.UpgradePercent(link)
         if pct == false then return nil end
         if pct then
             out.arrow = "pawn"

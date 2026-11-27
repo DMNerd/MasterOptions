@@ -7,6 +7,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.14.0] - 2026-11-27
+
+### Added
+
+- **`/mo help`** lists every `/mo` command there is now. Each module brings its own (`never`, `vendor`, `story`,
+  `whispers`, `farm`), so a module turned off takes its command with it. A word that isn't a command now says
+  so, instead of opening the window.
+
+### Changed
+
+- **Code organisation** (nothing changes in game):
+  - All of Master Options' Pawn code is in one file, `Pawn.lua`. The shared code modules use no longer knows Pawn;
+    the modules that need it ask Master Options' Pawn file.
+  - The recommended setup, the same choices on every character and which rows are available moved from the
+    window's file to `Settings.lua`.
+  - The addon problem checks are one named check each. One that fails no longer stops the others: it shows as a
+    problem row instead.
+
 ## [2.13.0] - 2026-11-27
 
 ### Changed

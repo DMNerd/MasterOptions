@@ -222,5 +222,6 @@ local function Command(args)
     Start(only, false)
 end
 
-MasterOptions_FarmTour = { Command = Command, Stop = Stop }
+MasterOptions_FarmTour = { Command = Command, Stop = Stop } -- (for the tests)
+MasterOptions_Shared.Command("farm", Command, "farm [herbs | ores | stop] - a farming tour of this zone's nodes worth it to you")
 end)

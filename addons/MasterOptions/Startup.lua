@@ -2,9 +2,9 @@
 
 local _, MO = ...
 -- from the files before this one
-local ApplyRecommended, ApplyShared, Available, BuildWindow, ClearPawnHidden, DEFAULTS_VERSION, FollowSpec, GMUsesPawn = MO.ApplyRecommended, MO.ApplyShared, MO.Available, MO.BuildWindow, MO.ClearPawnHidden, MO.DEFAULTS_VERSION, MO.FollowSpec, MO.GMUsesPawn
-local Loaded, OPTIONS, OpenWindow, Problems, RecOf, RefreshAll, RefreshGearMatic, Remember = MO.Loaded, MO.OPTIONS, MO.OpenWindow, MO.Problems, MO.RecOf, MO.RefreshAll, MO.RefreshGearMatic, MO.Remember
-local SyncIcons, SyncPawnHidden, win = MO.SyncIcons, MO.SyncPawnHidden, MO.win
+local ApplyRecommended, ApplyShared, Available, BuildWindow, DEFAULTS_VERSION = MO.ApplyRecommended, MO.ApplyShared, MO.Available, MO.BuildWindow, MO.DEFAULTS_VERSION
+local Loaded, OPTIONS, OpenWindow, Problems, RecOf, RefreshAll, Remember = MO.Loaded, MO.OPTIONS, MO.OpenWindow, MO.Problems, MO.RecOf, MO.RefreshAll, MO.Remember
+local SyncIcons, win = MO.SyncIcons, MO.win
 
 ---------------------------------------------------------------------------
 -- Options > AddOns > Master Options: every row of the window as the game's own checkbox or dropdown
@@ -251,136 +251,49 @@ ev:SetScript("OnEvent", function()
     end
 end)
 
--- Pawn -> GearMatic bridge events (see SyncPawnHidden)
-local bridge = CreateFrame("Frame")
-bridge:RegisterEvent("PLAYER_LOGIN")
-bridge:RegisterEvent("PLAYER_LOGOUT")
-bridge:RegisterEvent("PLAYER_LEVEL_UP")
--- druids: a talent change can change which Pawn scale GearMatic should use (see DruidPawnSpec)
-for _, e in ipairs({ "CHARACTER_POINTS_CHANGED", "PLAYER_TALENT_UPDATE" }) do pcall(bridge.RegisterEvent, bridge, e) end
-local resyncPending, specPending = false, false
-local function Resync()
-    resyncPending = false
-    SyncPawnHidden()
-    if GMUsesPawn() then RefreshGearMatic() end
-end
-bridge:SetScript("OnEvent", function(_, event)
-    if event == "PLAYER_LOGIN" then
-        -- Pawn (an optional dependency, so loaded first) has set up its scales by now, and
-        -- GearMatic copies them 2 s after login: flag them before that, and again to be sure.
-        SyncPawnHidden()
-        C_Timer.After(1, SyncPawnHidden)
-        C_Timer.After(3, function() if GMUsesPawn() then Resync() end end)
-        -- Pawn and CheapUpgrades follow GearMatic's spec (after GearMatic and Pawn are set up)
-        C_Timer.After(3.5, function() pcall(FollowSpec) end)
-        -- showing or hiding a scale in Pawn (or /pff stock|forever) changes what GearMatic uses
-        local function QueueResync()
-            if resyncPending then return end
-            resyncPending = true
-            C_Timer.After(0.2, Resync)
-        end
-        if type(_G.PawnSetScaleVisible) == "function" then hooksecurefunc("PawnSetScaleVisible", QueueResync) end
-        -- GearMatic's Cat/Bear choice (/gm feral) picks the druid's Feral scale
-        local gm = _G.GearMatic
-        if type(gm) == "table" and type(gm.SetFeralRole) == "function" then
-            hooksecurefunc(gm, "SetFeralRole", QueueResync)
-            hooksecurefunc(gm, "SetFeralRole", function() C_Timer.After(0.3, function() pcall(FollowSpec) end) end)
-        end
-    elseif event == "PLAYER_LEVEL_UP" then
-        -- Pawn Forever switches to its level-60 values 1 s after the level-up
-        if GMUsesPawn() then C_Timer.After(2, RefreshGearMatic) end
-    elseif event == "CHARACTER_POINTS_CHANGED" or event == "PLAYER_TALENT_UPDATE" then
-        if select(2, UnitClass("player")) == "DRUID" and GMUsesPawn() and not resyncPending then
-            resyncPending = true
-            C_Timer.After(0.5, Resync)
-        end
-        -- a spec change: Pawn and CheapUpgrades follow (once GearMatic has seen the new talents)
-        if not specPending then
-            specPending = true
-            C_Timer.After(0.6, function() specPending = false; pcall(FollowSpec) end)
-        end
-    elseif event == "PLAYER_LOGOUT" then
-        ClearPawnHidden()
-    end
-end)
-
 SLASH_MASTEROPTIONS1 = "/mo"
 SLASH_MASTEROPTIONS2 = "/masteroptions"
--- /mo never [remove] <item link or ID>, /mo never: the shared never-sell list (Modules\NeverSell.lua)
-local function NeverSellCommand(rest)
-    local ns = _G.MasterOptions_NeverSell
-    local head = "|cffffd200Master Options:|r "
-    if not ns then print(head .. "the NeverSell module is off (/mo > Modules).") return end
-    local function Name(id)
-        local name, link = (C_Item and C_Item.GetItemInfo or GetItemInfo)(id)
-        return link or name or ("item " .. id)
-    end
-    local remove, item = rest:match("^(remove)%s+(.+)$")
-    item = item or rest
-    local id = tonumber(item:match("item:(%d+)") or item:match("^(%d+)$"))
-    if id then
-        ns.Set(id, not remove)
-        local where = ns.Sources()
-        print(head .. Name(id) .. (remove and " taken off" or " put on") .. " the never-sell list"
-            .. (#where > 0 and (" (" .. table.concat(where, ", ") .. ")") or "") .. ".")
-        return
-    end
-    if item ~= "" then print(head .. "/mo never <item link or ID> adds, /mo never remove <item> takes off, /mo never lists.") return end
-    ns.Sync()
-    local list = ns.List()
-    local where = ns.Sources()
-    print(head .. #list .. " item" .. (#list == 1 and "" or "s") .. " on the never-sell list, kept in sync with "
-        .. (#where > 0 and table.concat(where, ", ") or "no installed addon") .. ":")
-    for i, itemID in ipairs(list) do
-        if i > 40 then print(("  ... and %d more"):format(#list - 40)) break end
-        print("  " .. Name(itemID))
-    end
+-- /mo <word>: Master Options' own commands below; every module brings its own (MasterOptions_Shared.Command - only
+-- while it runs: /mo help lists what there is now)
+local HEAD = "|cffffd200Master Options:|r "
+local CORE = {
+    { "arrow", "arrow - unlock or lock Shortest Path's direction arrow" },
+    { "minimap", "minimap - hide or show this minimap button" },
+    { "options", "options - Master Options in the game's Options" },
+    { "errors", "errors - the text of Master Options' caught errors, to copy" },
+}
+local function Help()
+    print(HEAD .. "/mo opens the window. Also:")
+    for _, c in ipairs(CORE) do print("  /mo " .. c[2]) end
+    local mods = _G.MasterOptions_Modules
+    for _, c in ipairs(mods and mods.Commands and mods.Commands() or {}) do print("  /mo " .. (c.usage or c.word)) end
 end
 
 SlashCmdList.MASTEROPTIONS = function(msg)
     msg = (msg or ""):match("^%s*(.-)%s*$")
-    local never = msg:match("^[Nn][Ee][Vv][Ee][Rr]%s*(.*)$")
-    if never then NeverSellCommand(never) return end
-    if msg:lower() == "arrow" then
+    local word, rest = msg:match("^(%S*)%s*(.-)$")
+    local mods = _G.MasterOptions_Modules
+    local cmd = word ~= "" and mods and mods.Command and mods.Command(word)
+    if cmd then
+        local ok, err = pcall(cmd.fn, rest)
+        if not ok and _G.MasterOptions_ReportError then MasterOptions_ReportError("MasterOptions", "/mo " .. word, err) end
+        return
+    end
+    if word:lower() == "arrow" then
         -- /mo arrow: Shortest Path's "Move the arrow" on / off (its own setting, through the game's Settings)
         local s = Settings and Settings.GetSetting and Settings.GetSetting("ShortestPathForever_arrowMove")
         if not (s and s.GetValue and s.SetValue) then
-            print("|cffffd200Master Options:|r Shortest Path Forever's arrow setting isn't there (is the addon loaded?).")
+            print(HEAD .. "Shortest Path Forever's arrow setting isn't there (is the addon loaded?).")
             return
         end
         local on = not (s:GetValue() == true)
         s:SetValue(on)
-        print("|cffffd200Master Options:|r Shortest Path's arrow " .. (on
+        print(HEAD .. "Shortest Path's arrow " .. (on
             and "unlocked - drag it (Shift-drag or arrow keys to nudge, right-click to reset). /mo arrow again to lock it."
             or "locked where it is."))
         return
     end
-    if msg:lower() == "vendor" then
-        -- /mo vendor: what Mastercraft says to VENDOR in your bags, and why each is (not) sold
-        local v = _G.MasterOptions_MastercraftVendorSell
-        if v and v.Explain then v.Explain()
-        else print("|cffffd200Master Options:|r the Mastercraft / VendorSell module isn't running (needs Mastercraft; /mo > Modules).") end
-        return
-    end
-    if msg:lower() == "story" then
-        -- /mo story: why a dungeon's story did or didn't show beside the world map
-        local s = _G.MasterOptions_DJSpoken
-        if s and s.Explain then s.Explain()
-        else print("|cffffd200Master Options:|r the DungeonJournal / SpokenBosses module isn't running (needs ForeverDungeonJournal and Spoken_Bosses; /mo > Modules).") end
-        return
-    end
-    if msg:lower() == "whispers" then
-        local w = _G.MasterOptions_AddonWhispers
-        if w then w.List() else print("|cffffd200Master Options:|r the Chat / AddonWhispers module is off (/mo > Modules).") end
-        return
-    end
-    local farm = msg:match("^[Ff][Aa][Rr][Mm]%s*(.*)$")
-    if farm then
-        local tour = _G.MasterOptions_FarmTour
-        if tour then tour.Command(farm)
-        else print("|cffffd200Master Options:|r farming tours need Mastercraft and ShortestPathForever (and the Mastercraft / FarmTour module on).") end
-        return
-    end
+    if word:lower() == "help" then Help() return end
     msg = msg:lower()
     if msg == "minimap" then
         local DBI = LibStub and LibStub("LibDBIcon-1.0", true)
@@ -397,6 +310,10 @@ SlashCmdList.MASTEROPTIONS = function(msg)
     end
     if msg == "errors" then
         MO.ShowErrorText()
+        return
+    end
+    if msg ~= "" then
+        print(HEAD .. "no command \"" .. word .. "\" (or its module is off - /mo > Modules). /mo help lists them.")
         return
     end
     win:SetShown(not win:IsShown())

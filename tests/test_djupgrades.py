@@ -6,7 +6,7 @@ from lupa import LuaRuntime
 src = open(sys.argv[1], encoding="utf-8").read()
 lua = LuaRuntime()
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
+from shared_lua import load_shared; load_shared(lua, _sys.argv[1]); from shared_lua import load_pawn; load_pawn(lua, _sys.argv[1])
 lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
 lua.execute(r'''
   FRAMES, TIMERS, ERRS = {}, {}, 0

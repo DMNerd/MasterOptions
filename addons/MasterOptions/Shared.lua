@@ -75,6 +75,12 @@ function S.Debounce(fn, defaultDelay)
     end
 end
 
+-- A module's /mo command: /mo <word> ... calls fn(the rest of the line); usage is its line in /mo help
+function S.Command(word, fn, usage)
+    local m = _G.MasterOptions_Modules
+    if m and m.RegisterCommand then m.RegisterCommand(word, fn, usage) end
+end
+
 -- A module's own ADDON_LOADED, run now: Master Options starts a module after the saved variables are in, so the
 -- setup it did on that event as a separate addon happens here. (frame.OnEvent: the sandbox tests' frames)
 function S.ReplayAddonLoaded(frame, addon)
@@ -118,24 +124,10 @@ end
 ---------------------------------------------------------------------------
 -- Gear to keep (selling, deleting)
 ---------------------------------------------------------------------------
-local function NonEmpty(t) return type(t) == "table" and next(t) ~= nil end
-
--- Pawn, with the scales as they are: an upgrade for a scale you show, or already your best or second-best item
--- for one (Pawn's 3rd / 4th returns: an off-spec piece you keep in your bags is never "an upgrade", but it is
--- your best). False without Pawn.
-function S.PawnSaysKeep(link)
-    if type(_G.PawnGetItemData) ~= "function" or type(_G.PawnIsItemAnUpgrade) ~= "function" then return false end
-    local ok, item = pcall(_G.PawnGetItemData, link)
-    if not ok or type(item) ~= "table" then return false end
-    local ok2, up, _, best, second = pcall(_G.PawnIsItemAnUpgrade, item)
-    return ok2 and (NonEmpty(up) or NonEmpty(best) or NonEmpty(second)) or false
-end
-
--- Pawn or GearMatic: Master Options' MasterOptions_GearKeeps (Pawn with every spec's scale while it follows
--- GearMatic's spec, or GearMatic's best / 2nd best for any spec); Pawn alone where that isn't loaded.
+-- Gear to keep: Master Options' own check (Pawn.lua: MasterOptions_GearKeeps - the upgrade judges' word, and
+-- GearMatic's best for any of your specs with GearMatic_SpecKeep). true, and why - or false.
 function S.KeepsGear(link)
     if type(_G.MasterOptions_GearKeeps) == "function" then return _G.MasterOptions_GearKeeps(link) end
-    if S.PawnSaysKeep(link) then return true, "Pawn: an upgrade, or your best / 2nd best for a scale" end
     return false
 end
 
@@ -197,32 +189,6 @@ end
 ---------------------------------------------------------------------------
 -- Upgrades
 ---------------------------------------------------------------------------
--- Who judges upgrades, for every choice that involves Pawn (one judge, so the stat weights, bag arrows,
--- CheapUpgrades, quest rewards and Dungeon Journal's loot marks agree): "Pawn" with Pawn Forever installed
--- (weights made for WoW Forever), otherwise "GearMatic", whose own weights are simulated for WoW Forever - Pawn
--- without Pawn Forever only has its stock Classic scales. Pawn alone (no GearMatic) is still Pawn.
-function S.UpgradeJudge()
-    if AddOnLoaded("Pawn") and (AddOnLoaded("Pawn_Forever") or not AddOnLoaded("GearMatic")) then return "Pawn" end
-    return "GearMatic"
-end
-
--- Pawn: the biggest upgrade % across the scales Pawn shows for this character (nil = not an upgrade, or no Pawn;
--- false = Pawn hasn't got the item yet)
-function S.PawnUpgradePercent(link)
-    if type(_G.PawnGetItemData) ~= "function" or type(_G.PawnIsItemAnUpgrade) ~= "function" then return nil end
-    local ok, item = pcall(_G.PawnGetItemData, link)
-    if not ok or type(item) ~= "table" then return false end
-    local ok2, list = pcall(_G.PawnIsItemAnUpgrade, item)
-    if not ok2 or type(list) ~= "table" then return nil end
-    local best
-    for _, u in pairs(list) do
-        if type(u) == "table" and type(u.PercentUpgrade) == "number" and (not best or u.PercentUpgrade > best) then
-            best = u.PercentUpgrade
-        end
-    end
-    return best
-end
-
 -- Same rule as CheapUpgrades' own Bigger(): an empty slot (no %) beats any %.
 local function Bigger(a, b)
     if not b then return true end

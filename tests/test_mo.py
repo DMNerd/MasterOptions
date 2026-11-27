@@ -109,6 +109,8 @@ if os.path.exists(errlog):  # (loaded first, as the .toc does)
     loader(open(errlog, encoding="utf-8").read(), "ErrorLog.lua")("MasterOptions")
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
 from shared_lua import load_shared; load_shared(lua, mo_path)
+# (the module loader and its command registry, loaded before Shared.lua in the .toc; no modules here)
+lua.eval("function(s) return load(s, '=Modules.lua') end")(open(_os.path.join(_os.path.dirname(_os.path.abspath(mo_path)), "Modules.lua"), encoding="utf-8").read())()
 from shared_lua import load_master_options; load_master_options(lua, mo_path) # (MasterOptions.lua ... Startup.lua)
 L = lua.execute
 L('Fire("ADDON_LOADED", "MasterOptions")')
@@ -255,6 +257,28 @@ if not (judge_with == "0/1" and judge_without == "1/0"):
 
 print("synced:", lua.eval("MasterOptionsDB.syncChars"), "shared:", lua.eval("(function() local o = {} for k, v in pairs(MasterOptionsDB.shared or {}) do o[#o+1] = k .. '=' .. tostring(v) end table.sort(o) return table.concat(o, '; ') end)()"))
 print("errlog rows:", lua.eval("MasterOptions_ErrorLog and MasterOptions_ErrorLog.Count()"), "copy window:", lua.eval("MasterOptionsErrorFrame ~= nil"))
+# /mo <word>: a module's own command (registered while it runs), /mo help, an unknown word
+lua.execute(r"""
+  GOT = nil
+  MasterOptions_Shared.Command("testcmd", function(rest) GOT = rest end, "testcmd <x> - a test")
+  local p = print; SAID = {}; print = function(...) SAID[#SAID + 1] = table.concat({ ... }, " ") end
+  SlashCmdList.MASTEROPTIONS("TestCmd  some thing")
+  SlashCmdList.MASTEROPTIONS("help")
+  HELP = table.concat(SAID, "\n"); SAID = {}
+  WAS_SHOWN = MasterOptionsFrame:IsShown()
+  SlashCmdList.MASTEROPTIONS("nosuchword")
+  UNKNOWN = table.concat(SAID, "\n")
+  STILL = MasterOptionsFrame:IsShown() == WAS_SHOWN
+  print = p
+""")
+cmds = {
+    "a module's command gets the rest of the line": lua.eval("GOT") == "some thing",
+    "/mo help lists it and the core ones": "/mo testcmd <x> - a test" in lua.eval("HELP") and "/mo arrow" in lua.eval("HELP"),
+    "an unknown word says so (the window left as it was)": "no command" in lua.eval("UNKNOWN") and lua.eval("STILL") is True,
+}
+print("commands:", cmds)
+if not all(cmds.values()):
+    lua.execute('ERRORS[#ERRORS+1] = "/mo commands wrong"')
 errs = lua.eval("ERRORS")
 print("ERRORS:", len(errs))
 for i in range(1, len(errs) + 1):

@@ -31,8 +31,12 @@ local function DialogKey()
 end
 
 -- Pawn: the biggest upgrade % across the scales Pawn shows for this character (nil = not an upgrade,
--- false = Pawn hasn't got the item yet)
-local PawnUpgrade = MasterOptions_Shared.PawnUpgradePercent
+-- false = Pawn hasn't got the item yet) - Master Options' Pawn.lua
+local function PawnUpgrade(link)
+    local p = _G.MasterOptions_Pawn
+    if not p then return nil end
+    return p.UpgradePercent(link)
+end
 
 -- GearMatic: is it an upgrade for this character (not only for an alt)?
 local function GearMaticUpgrade(link)
