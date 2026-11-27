@@ -53,8 +53,9 @@ if api.RegisterCornerWidget then
             local advice = id and Advice(id)
             local path = advice and ICONS[advice]
             if not path then return false end
-            -- the junk coin (and grey) already says it goes at the next vendor: no second icon for it
-            if advice == "VENDOR" and details.isJunk == true then return false end
+            -- the junk coin (and grey) already says it goes at the next vendor: no second icon for it, whatever the
+            -- advice (VENDOR; DISENCHANT on a soulbound piece you can't disenchant, sold too)
+            if details.isJunk == true then return false end
             tex:SetTexture(path)
             return true
         end,

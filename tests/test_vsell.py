@@ -191,7 +191,7 @@ check("silk: auction icon", "Auctioneer" in E("I_SILK"))
 check("pole: keep tick", "ReadyCheck-Ready" in E("I_POLE"))
 check("grey (no advice): no icon", E("I_GREY") == "none")
 check("VENDOR with the junk coin already: no second icon", E("I_LINEN_COIN") is False)
-check("other advice still shows next to a junk coin", E("I_POLE_COIN") is True)
+check("any advice next to a junk coin (DISENCHANT sold too): no second icon", E("I_POLE_COIN") is False)
 L('ACTIVE = false; Baganator.API.IsCornerWidgetActive = function(id) return ACTIVE and id == "masteroptions_mc_advice" end; '
   'GMRefreshed = 0; MasterOptions_GMRefreshBagIcons = function() GMRefreshed = GMRefreshed + 1 end; '
   'MasterOptions_BaganatorMastercraft.OneVerdictPerSlot()')

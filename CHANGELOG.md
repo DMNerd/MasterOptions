@@ -14,6 +14,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
   enchanter alt or the auction house. Upgrades, set and loadout pieces and the never-sell list still keep it, and
   `/mo vendor` lists these too.
 
+### Fixed
+
+- A bag slot with the junk coin no longer also shows Mastercraft's advice icon, whatever the advice: the coin already
+  says it goes at the next vendor. Before, only VENDOR's icon stepped aside, so the DISENCHANT pieces sold under
+  the rule above showed two icons.
+
 ## [2.15.2] - 2026-11-27
 
 ### Changed
