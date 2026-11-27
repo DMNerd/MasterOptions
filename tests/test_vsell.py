@@ -200,4 +200,5 @@ L('ACTIVE = true; GMProf.bestGoldShowAuction = true; Fire("PLAYER_LOGIN"); Run()
 check("advice icons on: at login all three GearMatic badges off, its bags redrawn",
       E("GMProf.bestGoldShowVendor") is False and E("GMProf.bestGoldShowAuction") is False
       and E("GMProf.bestGoldShowDisenchant") is False and E("GMRefreshed") == 1)
+check("...and its Bind on Equip badge (the price tag it falls back to) off too", E("GMProf.boeBadgeMode") == "off")
 print("ERRORS:", errors)

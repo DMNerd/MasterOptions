@@ -415,3 +415,4 @@ GearMatic|config-key|bestGoldShowDisenchant|Options.lua (Mastercraft advice in b
 Spoken_Places|function|function SpokenPlaces:SelectMap|DungeonJournal_SpokenBosses.lua (story back after a pick)
 Spoken_Places|function|function SpokenPlaces:SelectSubzone|DungeonJournal_SpokenBosses.lua (story back after a pick)
 ShortestPathForever|config-key|tourLine|Mastercraft_FarmTour.lua (1.49+: the calmer tour line)
+GearMatic|config-key|boeBadgeMode|Baganator_Mastercraft.lua (one verdict per slot: its Bind on Equip price tag off)

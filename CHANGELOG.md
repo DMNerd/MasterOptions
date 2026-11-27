@@ -19,6 +19,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 - A bag slot with the junk coin no longer also shows Mastercraft's advice icon, whatever the advice: the coin already
   says it goes at the next vendor. Before, only VENDOR's icon stepped aside, so the DISENCHANT pieces sold under
   the rule above showed two icons.
+- Two "auction" icons on bind-on-equip gear. With its best-gold badges off, GearMatic falls back to its Bind on
+  Equip badge, the same gold price tag, next to Mastercraft's AUCTION icon. While the advice icons show, that badge
+  is turned off too. Baganator's own "BoE" corner text can still show the binding.
 
 ## [2.15.2] - 2026-11-27
 
