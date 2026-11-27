@@ -46,6 +46,7 @@ $tests = @(
     @("CheapUpgrades_GearMatic (weights profile)", "test_cugm.py", @((F "MasterOptions_CheapUpgrades_GearMatic"))),
     @("Mastercraft_FishingView",     "test_fish.py",   @((F "MasterOptions_Mastercraft_FishingView"))),
     @("Mastercraft_Chattynator",     "test_played.py", @((F "MasterOptions_Mastercraft_Chattynator"))),
+    @("Questie_Chattynator (re-linked quest links)", "test_questiechatty.py", @((F "MasterOptions_Questie_Chattynator"))),
     @("Chat_AddonWhispers (not-online lines)", "test_addonwhispers.py", @((F "MasterOptions_Chat_AddonWhispers")))
 )
 

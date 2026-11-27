@@ -16,6 +16,19 @@ MasterOptions_Module("ShortestPathForever_OpenMapMiniMap", { "ShortestPathForeve
 -- ShortestPathForever makes the frame when its route first draws: looked for at login and whenever a journey changes
 -- (its API's Subscribe), until it's there - once a second only where that API is missing.
 
+-- OpenMap_MiniMap 1.4.0 does it itself: textures made on Minimap count as other addons' icons too (its Frame.lua scans
+-- Minimap:GetRegions as well as its children), kept seen through the fade and hidden while you drag the map. From that
+-- version on this stands aside; for an older one it still does the job.
+local function OpenMapMiniMapDoesIt()
+    local meta = (C_AddOns and C_AddOns.GetAddOnMetadata) or _G.GetAddOnMetadata
+    local ok, v = pcall(meta or error, "OpenMap_MiniMap", "Version")
+    if not ok or type(v) ~= "string" then return false end
+    local a, b = v:match("^v?(%d+)%.(%d+)")
+    a, b = tonumber(a), tonumber(b)
+    return a ~= nil and (a > 1 or (a == 1 and b >= 4))
+end
+if OpenMapMiniMapDoesIt() then return end
+
 local Report = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 local done = false
 local function Apply()

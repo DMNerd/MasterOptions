@@ -38,6 +38,7 @@ Modules\Mastercraft_Auctionator.lua
 Modules\Mastercraft_FishingView.lua
 Modules\Mastercraft_Chattynator.lua
 Modules\Chat_AddonWhispers.lua
+Modules\Questie_Chattynator.lua
 Modules\DeleteCheapestItem_Protect.lua
 Modules\OpenMapTweaks_Mastercraft.lua
 Modules\OpenMapMiniMap_Border.lua

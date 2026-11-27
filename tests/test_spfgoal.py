@@ -22,7 +22,7 @@ STUBS = r'''
     return goal
   end
 '''
-def runtime(with_api):
+def runtime(with_api, omm_version=None):
     lua = LuaRuntime()
     load_shared(lua, sys.argv[1])
     lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
@@ -30,6 +30,8 @@ def runtime(with_api):
     if with_api:
         lua.execute("SUBS = {}; ShortestPathForever = { API = { Subscribe = function(fn) SUBS[#SUBS + 1] = fn end } }"
                     "; function Journey() for _, fn in ipairs(SUBS) do fn() end end")
+    if omm_version:
+        lua.execute('C_AddOns = { GetAddOnMetadata = function(a, k) if a == "OpenMap_MiniMap" and k == "Version" then return "%s" end end }' % omm_version)
     lua.eval("function(s) return load(s, '=p') end")(src)("MasterOptions_ShortestPathForever_OpenMapMiniMap")
     return lua
 
@@ -59,6 +61,11 @@ L('ShortestPathForeverMinimapRoute:SetIgnoreParentAlpha(false)')
 res["OpenMap_MiniMap hides the route while you drag the map: the goal hides with it"] = E("GOAL.ignore == false")
 L('ShortestPathForeverMinimapRoute:SetIgnoreParentAlpha(true)')
 res["...and shows again with it"] = E("GOAL.ignore == true")
+# OpenMap_MiniMap 1.4.0 keeps textures on Minimap seen itself: the module stands aside
+lua = runtime(True, "1.4.0")
+L, E = lua.execute, lua.eval
+L('GOAL = MakeGoal(); Journey(); Fire("PLAYER_LOGIN"); RunTimers()')
+res["OpenMap_MiniMap 1.4.0 or newer: stands aside (it keeps the goal seen itself)"] = E("CALLS") is None
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)
 print("ERRORS:", sum(1 for v in res.values() if not v))

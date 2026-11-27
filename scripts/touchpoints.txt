@@ -419,3 +419,5 @@ ShortestPathForever|config-key|"ShortestPathForever_" ..|AddonSettings.lua, Opti
 Sparkles_Forever|config-key|corpseEnemyPlates|Problems.lua (corpse enemy plates vs BetterBlizzPlates' nameplate toggles)
 BetterBlizzPlates|config-key|avoidCVarPickup|Problems.lua (corpse enemy plates: BBP not picking up nameplate CVar changes)
 BetterBlizzPlates|config-key|nameplateToggles_|Problems.lua (its nameplate toggle sets: enemy plates off somewhere)
+Questie|function|GetQuestLinkStringById|Questie_Chattynator.lua (a quest link rebuilt on shift-click)
+Chattynator|function|GetHyperlinkHandler|Questie_Chattynator.lua (its chat's link clicks)

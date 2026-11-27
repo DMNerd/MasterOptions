@@ -861,7 +861,7 @@ local MODULES = {
     { "ShortestPathForever_OpenMapPins", "One trip, one OpenMap pin", { "ShortestPathForever", "OpenMap" }, since = 32,
       tip = "One trip, one pin: every ShortestPathForever journey (Shift-click, a pin you follow in OpenMap, Dungeon Journal's Show on Map, a quest or recipe waypoint) has an OpenMap pin at its destination, and ShortestPathForever's own goal marker is hidden meanwhile (at the minimap's rim it stays, pointing the way). Any end - arriving, clearing, stopping, a new journey - clears the pin and OpenMap's following. A pin you wrote a note on stays." },
     { "ShortestPathForever_OpenMapMiniMap", "Journey goal visible on OpenMap's minimap", { "ShortestPathForever", "OpenMap_MiniMap" }, since = 23,
-      tip = "Shortest Path's journey goal on the minimap stays visible over OpenMap's painted minimap (it faded with the game's terrain, and was gone at far zoom)." },
+      tip = "Shortest Path's journey goal on the minimap stays visible over OpenMap's painted minimap (it faded with the game's terrain, and was gone at far zoom). OpenMap_MiniMap 1.4.0 and newer does this itself: then this module stands aside." },
     { "Mastercraft_FarmTour", "Farming tours", { "Mastercraft", "ShortestPathForever" }, since = 30,
       tip = "Start farming in Mastercraft and ShortestPathForever walks you through this zone's herbs and veins worth it to you, nearest first (Mastercraft's own nodes and its Which nodes rule), and stops when you do. ShortestPathForever's own farming tour needs GatherMate2. /mo farm starts one without Mastercraft's session (/mo farm herbs, ores, stop)." },
     { "Mastercraft_RecipeMap", "Recipe map markers", { "Mastercraft", "Questie" }, since = 31,
@@ -909,7 +909,9 @@ local MODULES = {
       tip = "Mastercraft's Scan prices button on Auctionator's page (next to Full Scan) instead of the tab row or the bottom corner, where it covered Buyout." },
     { "Mastercraft_Chattynator", "Mastercraft's /played kept out of chat", { "Mastercraft", "Chattynator" }, since = 14,
       tip = "Mastercraft's own /played request (it records your play time) stays out of Chattynator's chat, as it already does in the game's chat. Your own /played still shows." },
-    { "Chat_AddonWhispers", "Hide not-online lines from addons' whispers", {}, since = 33,
+    { "Questie_Chattynator", "Questie quest links re-linked in Chattynator", { "Questie", "Chattynator" }, since = 38,
+      tip = "Shift-clicking a Questie quest link in Chattynator's chat puts Questie's fresh link in the chat box (its current title and level), as Questie does in the game's own chat - and keeps what you typed around it." },
+    { "Chat_AddonWhispers","Hide not-online lines from addons' whispers", {}, since = 33,
       tip = "Hides \"No player named ... is currently playing\" when an addon's hidden whisper (OpenMap's map sharing, Questie's sync, Mastercraft's crafter search ...) went to someone who just logged off - you sent nothing. Your own whispers' answers always show. /mo whispers lists which addon whispered whom." },
 }
 -- addon folder names as the AddOns list shows them

@@ -9,6 +9,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ### Added
 
+- **Questie quest links re-linked in Chattynator** (new module): shift-click a Questie quest link in Chattynator's
+  chat and the chat box gets Questie's fresh link (current title and level), as it does in the game's own chat.
+  What you typed around it stays.
 - **Problems: Sparkles' corpse plates and BetterBlizzPlates.** Sparkles' "Enemy plates at corpses" switches enemy
   nameplates on for a moment, and BetterBlizzPlates saves every change to them as your choice. A logout or reload
   during a fight at a corpse could leave enemy plates on for good. Problems now flags it, only when BetterBlizzPlates
@@ -16,6 +19,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ### Changed
 
+- **Journey goal visible on OpenMap's minimap** stands aside with OpenMap_MiniMap 1.4.0 and newer, which keeps
+  Shortest Path's minimap goal visible itself. It still does the job with older versions.
 - **Quest and recipe waypoints** (Shortest Path journey or the game's waypoint) takes effect at once, through
   Shortest Path's own setting. Before, it took a reload.
 
