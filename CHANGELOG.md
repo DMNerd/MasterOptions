@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.11.1] - 2026-11-27
+
+### Fixed
+
+- Questie's "A frame is lacking the GetIconScale function for resizing!" error when the world map changes zone.
+  Questie resizes every icon in its map-pin library, and our recipe vendor and trainer markers live there too. It
+  now leaves ours alone (the same kind of fix as 2.9.1's "iconData is nil").
+
 ## [2.11.0] - 2026-11-27
 
 ### Added

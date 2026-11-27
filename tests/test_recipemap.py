@@ -159,6 +159,21 @@ lua.execute(r'''
 res["Questie's walk over its pins (hovering one of its icons): no 'iconData is nil' error, ours passed by"] = (
     E("#WORLD") > 0 and E("QUESTIE_ERRS") == 0 and E("QUESTIE_USED") == 0)
 res["Questie's gamepad hover never picks one of ours"] = E("GAMEPAD") == 0
+# Questie's rescale on every map change (QuestieMap.utils.RescaleIcon over every world map pin's icon)
+lua.execute(r'''
+  RESCALE_ERRS, RESIZED = 0, 0
+  for _, p in ipairs(WORLD) do
+    local frame = p.icon
+    if frame and frame.data then
+      if frame.data.GetIconScale then
+        frame.data.IconScale = frame.data:GetIconScale()
+        local scale = (16 * (frame.data.IconScale or 1) * 0.7) * 1
+        if scale > 1 then RESIZED = RESIZED + 1 end
+      else RESCALE_ERRS = RESCALE_ERRS + 1 end
+    end
+  end
+''')
+res["Questie's rescale: no 'lacking the GetIconScale' error, ours not resized"] = E("RESCALE_ERRS") == 0 and E("RESIZED") == 0
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

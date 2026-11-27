@@ -237,9 +237,11 @@ local function Marker(e, name, mini)
         -- its own: hovering a Questie icon (MapIconTooltip handleMapIcon) printed "iconData is nil! ... Aborting!" in
         -- chat for each of ours. A data table and Questie's own "fake hidden" flag make each of its walks pass ours
         -- by - the tooltip (skips hidden icons before reading anything), the gamepad hover (_IsIconVisible), the
-        -- rescale (no GetIconScale: nothing done) and the minimap fade (only miniMapIcon frames). Nothing reads this
+        -- rescale on every map change (QuestieMap.utils.RescaleIcon: a data table without GetIconScale printed "A
+        -- frame is lacking the GetIconScale function"; scale 0 makes its size 0, under its "> 1" - nothing resized,
+        -- no GlowUpdate, which ours haven't got) and the minimap fade (only miniMapIcon frames). Nothing reads this
         -- flag to hide a pin: not HereBeDragons, not OpenMap (its .hidden check is for Questie's quest lines).
-        m.data = { MasterOptions = true }
+        m.data = { MasterOptions = true, GetIconScale = function() return 0 end }
         m.hidden = true
         m:EnableMouse(true)
         m:SetScript("OnEnter", function(self)
