@@ -161,6 +161,23 @@ end
 
 local function Scale() return (DB and DB.scale) or 1.6 end -- (1: as thick as on a button; thicker by default - a player's ask)
 
+-- the map (body) moved by dx, dy in its own units: every anchor's offset. Not in a fight if it's protected; less than
+-- half a unit is left as it is (no back and forth over rounding). True if it moved
+local function MoveBody(dx, dy)
+    if math.abs(dx) < 0.5 and math.abs(dy) < 0.5 then return false end
+    if body.IsProtected and body:IsProtected() and InCombatLockdown and InCombatLockdown() then return false end
+    if body.AdjustPointsOffset then
+        body:AdjustPointsOffset(dx, dy)
+        return true
+    end
+    local points = {}
+    for i = 1, (body.GetNumPoints and body:GetNumPoints() or 0) do points[i] = { body:GetPoint(i) } end
+    if #points == 0 then return false end
+    body:ClearAllPoints()
+    for _, p in ipairs(points) do body:SetPoint(p[1], p[2], p[3], (p[4] or 0) + dx, (p[5] or 0) + dy) end
+    return true
+end
+
 local function Layout(top, bottom)
     local s = Scale()
     local k = BUTTON * CUT * s       -- (the corner's size on screen)
@@ -184,6 +201,15 @@ local function Layout(top, bottom)
     local bl, br, bt, bb = body:GetLeft(), body.GetRight and body:GetRight(), body:GetTop(), body:GetBottom()
     if ue and be and be > 0 and bl and br and bt and bb then
         local W, H = (UIParent:GetWidth() or 0) * ue / be, (UIParent:GetHeight() or 0) * ue / be -- (the screen, in the map's units)
+        -- the map itself moved in from the edge, so the whole rim is on the screen and nothing of the map is past it (a
+        -- player's ask: "the whole map is snapped to the edge again"). Moved by its anchors' offsets: OpenMap_MiniMap
+        -- places it again (its SetPoint, hooked) and it's moved in again - once each time, no change when it fits
+        local dx, dy = 0, 0
+        if bl + L < 0 then dx = -(bl + L) elseif br + R > W then dx = W - (br + R) end
+        if bt + T > H then dy = H - (bt + T) elseif bb + B < 0 then dy = -(bb + B) end
+        if (dx ~= 0 or dy ~= 0) and MoveBody(dx, dy) then
+            bl, br, bt, bb = bl + dx, br + dx, bt + dy, bb + dy
+        end
         local inL, inR = o * LINE_IN, o * (1 - LINE_OUT) -- (the line, in from the frame's edge: left/top, right/bottom)
         if bl + L + inL < 0 then L = -bl - inL end
         if br + R - inR > W then R = W - br + inR end
@@ -609,8 +635,9 @@ local function Hook()
     body:HookScript("OnShow", function() ApplySoon() end)
     body:HookScript("OnHide", function() ApplySoon(0) end) -- (OpenMap_MiniMap's look off: the game's coordinates back)
     body:HookScript("OnSizeChanged", function() ApplySoon() end)
-    -- OpenMap_MiniMap places the map again (Edit Mode, its snap, a size change): the rim kept on the screen (Layout)
-    if body.SetPoint and hooksecurefunc then hooksecurefunc(body, "SetPoint", function() ApplySoon() end) end
+    -- OpenMap_MiniMap places the map again (Edit Mode, its snap, a size change): the map moved in again, the rim on the
+    -- screen (Layout) - the next frame, not after the usual wait (no blink of the map at the edge)
+    if body.SetPoint and hooksecurefunc then hooksecurefunc(body, "SetPoint", function() ApplySoon(0) end) end
     -- OpenMap sets its border up again when its look changes (any of its settings): shown, and its colour set -
     -- SetVertexColor(1, 1, 1, 1) puts its alpha back too. Hidden again at once, not after the 0.2 s wait
     -- (its gold frame blinked through - a player's report); the rest a moment later.

@@ -16,9 +16,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
   everywhere else in the game. The pin's tooltip says so.
 
 - **OpenMap_MiniMap's "Snap to the screen's edge":** with the map flush against the screen, the action-bar border
-  around it went partly off the screen. OpenMap_MiniMap only leaves room for its own thinner border. On a side
-  against the screen's edge, the border's line now sits on the screen's edge itself: the map ends at the line, and
-  only the faint shading past it is cut off.
+  around it went partly off the screen. OpenMap_MiniMap only leaves room for its own thinner border. The map is now
+  moved in from the screen's edge by the border's width, so the whole border shows and no map is past it. When
+  OpenMap_MiniMap places the map again, it's moved in again on the next frame. In a fight, where the map can't be
+  moved, the border's line sits on the screen's edge instead.
 
 ## [2.17.0] - 2026-11-27
 

@@ -171,17 +171,22 @@ L(r'''
 check("coordinates tab: a minimap button where it sits - moved along the edge clear of it", E("X1 ~= X0 and (X1 > X0 + 30 or X1 < X0 - 30)"), True)
 check("...the button gone: back where asked", E("X2 == X0"), True)
 
-# OpenMap_MiniMap's "Snap to the screen's edge": the map flush against the screen's right and top edges - the rim
-# comes in over the map's edge there, not off the screen
+# OpenMap_MiniMap's "Snap to the screen's edge": the map flush against the screen's right and top edges - the map is
+# moved in from the edge (its anchors' offsets) so the whole rim is on the screen, the rim as it always is
 L(r'''
   UIParent = NewRegion("frame"); UIParent.w, UIParent.h = 298, 500 -- (the map: 100..298 across, its top at 500)
+  function Body:AdjustPointsOffset(dx, dy) self.left = (self.left or 100) + dx; self.top = self.top + dy; Bar.top = Bar.top + dy; MOVED = { dx, dy } end
   MasterOptions_MinimapBorderDB.coords = "inside"; Bar.top = 500
   MasterOptions_MinimapBorder.Apply(); Run()
   P = MasterOptionsMinimapBorder.points
 ''')
-check("map flush against the screen's right and top: the rim's line on the screen's edge (only its shading past it cut; no map showing past the line)", E("math.abs(P[2][4] - 6.4 * 0.75) < 0.01 and math.abs(P[1][5] - 6.4 * 0.15) < 0.01"), True)
+check("map flush against the screen's right and top: moved in by the rim's width (left) and its top's (down)", E("MOVED ~= nil and math.abs(MOVED[1] + 6.4) < 0.01 and math.abs(MOVED[2] + 6.4 / 3) < 0.01"), True)
+check("...the rim whole round it, on the screen", E("math.abs(P[2][4] - 6.4) < 0.01 and math.abs(P[1][5] - 6.4 / 3) < 0.01"), True)
+L('MOVED = nil; MasterOptions_MinimapBorder.Apply(); Run()')
+check("...applied again: it fits, not moved again", E("MOVED == nil"), True)
 L('UIParent.w, UIParent.h = 2000, 2000; MasterOptions_MinimapBorder.Apply(); Run(); P = MasterOptionsMinimapBorder.points')
 check("...with room round it: the rim outside the map as before", E("P[2][4] > 0"), True)
+L('Body.AdjustPointsOffset = nil; Body.left = nil; Body.top = 500')
 L('UIParent = nil; Bar.top = 525')
 
 # "inside": the numbers alone in the map's top-right corner - no tab
