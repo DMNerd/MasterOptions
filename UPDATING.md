@@ -33,13 +33,14 @@ Look for:
 
 Addons with no heading in `touchpoints.txt` aren't used by Master Options. Skip their changelogs.
 
-## 3. Check the AddOns folder (2 minutes)
+## 3. The AddOns folder (checked in step 1)
 
-- **Missing dependencies:** an addon whose `## Dependencies` aren't installed doesn't load. Master Options'
-  Problems page (`/mo`, Problems) lists addons that didn't load.
-- **Old patches still installed:** any folder whose `.toc` says `## Author: local patch`, other than
-  `MasterOptions`, is an old patch that a module now replaces. Zip it into `backups/`, then delete the folder.
-  The Problems page names the ones it knows about.
+The same script also checks the AddOns folder and fails if it finds either of these:
+
+- **`<Addon> won't load: needs <X>`:** a dependency isn't installed. Install it, or delete the addon.
+- **`<Addon>: an old patch`:** an addon listed in `scripts/retired.txt`, or one whose `.toc` says
+  `## Author: local patch`. A Master Options module does its job now, so both would run. Zip the folder into
+  `backups/`, then delete it.
 
 ## 4. Check in the game (5 minutes)
 

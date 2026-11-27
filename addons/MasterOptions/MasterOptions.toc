@@ -29,5 +29,6 @@ Modules\OpenMapTweaks_Mastercraft.lua
 Modules\OpenMapMiniMap_Border.lua
 Modules\ShortestPathForever_OpenMapMiniMap.lua
 Modules\NeverSell.lua
+Modules\GearMatic_SpecKeep.lua
 Modules\GearMatic_SellGuard.lua
 Modules\DungeonJournal_OpenMap.lua

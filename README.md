@@ -26,7 +26,7 @@ public data and settings; the third-party addons themselves are never edited.
 .\scripts\pack.ps1      # dist\MasterOptionsPack.zip
 .\scripts\pull.ps1      # copy changes made directly in AddOns back into the repo
 .\scripts\lint.ps1      # luacheck (.luacheckrc); first run downloads luacheck 1.2.0 into .tools\ (checksum pinned)
-.\scripts\check-addons.ps1  # after updating other addons: is every name we use (scripts\touchpoints.txt) still there?
+.\scripts\check-addons.ps1  # after updating other addons: every name we use still there? missing dependencies, old patches?
 ```
 
 Edit in `addons/`, run the tests, deploy, then check in game.
@@ -73,7 +73,8 @@ The workflow checks that the tag matches the `.toc` version, builds the pack, an
 | Mastercraft / FishingView | Mastercraft | Bags, popups and loot rolls stay visible in the fishing view |
 | Mastercraft / Chattynator | Mastercraft, Chattynator | Mastercraft's /played request stays out of Chattynator |
 | ShortestPathForever / OpenMapMiniMap | ShortestPathForever, OpenMap_MiniMap | Shortest Path's journey goal stays visible on OpenMap's painted minimap |
-| GearMatic / SellGuard | GearMatic | GearMatic's gear and low-value selling keeps the never-sell list, materials Mastercraft's guides need, and gear Pawn calls an upgrade or your best for a spec (GearMatic's own sell guard) |
+| GearMatic / SellGuard | GearMatic | GearMatic's gear and low-value selling keeps the never-sell list, materials Mastercraft's guides need, and gear Pawn calls an upgrade or your best for a spec, or that GearMatic rates your best or 2nd best for any spec (GearMatic's own sell guard) |
+| GearMatic / SpecKeep | GearMatic | Gear that is your best or 2nd best in GearMatic for any of your specs (off-spec pieces too) is kept from selling and from DeleteCheapestItem. GearMatic alone only looks at the spec you play now; with this, Pawn isn't needed for it |
 | NeverSell | any of GearMatic, Mastercraft, DeleteCheapestItem | One never-sell list, the same in GearMatic (never auto-sold), Mastercraft (no VENDOR / AUCTION advice) and DeleteCheapestItem (never offered for deletion): change it in any of them, or with `/mo never <item>` / `/mo never remove <item>`, and all follow. `/mo never` lists it, and /mo > Never sell shows it (add by shift-click, drag or item ID; Remove per item). Keep's and Protect's automatic entries aren't part of it |
 
 ## Supported addons

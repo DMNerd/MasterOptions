@@ -44,7 +44,7 @@ local function GM() local g = _G.GearMatic; return type(g) == "table" and g or n
 
 local function PawnUpgrade(link)
     -- (Master Options' shared check: also every spec's scale while Pawn follows GearMatic's spec)
-    if type(_G.MasterOptions_PawnKeeps) == "function" then return MasterOptions_PawnKeeps(link) end
+    if type(_G.MasterOptions_GearKeeps) == "function" then return MasterOptions_GearKeeps(link) end
     if type(_G.PawnGetItemData) ~= "function" or type(_G.PawnIsItemAnUpgrade) ~= "function" then return false end
     local ok, item = pcall(_G.PawnGetItemData, link)
     if not ok or type(item) ~= "table" then return false end
@@ -115,7 +115,7 @@ local function Protected()
         end
     end
     -- 2. the gear: Pawn all at once (Master Options widens its scales once for the lot), then GearMatic
-    local many = _G.MasterOptions_PawnKeepsMany
+    local many = _G.MasterOptions_GearKeepsMany
     local pawnKeeps = type(many) == "function" and many(gearLinks) or nil
     for _, g in ipairs(gear) do
         if not want[g.id] then

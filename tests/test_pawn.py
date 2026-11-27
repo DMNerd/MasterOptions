@@ -19,6 +19,7 @@ function print(...) local t = {} for i = 1, select("#", ...) do t[#t+1] = tostri
 local loaded = {}
 for _, n in ipairs(ADDON_LIST) do loaded[n] = true end
 loaded["FakeOutdated"] = false; loaded["CheapUpgrades_Baganator"] = false -- an old copy: exists, enabled, not loaded
+LOADED = loaded
 local enabled = {}
 for _, n in ipairs(ADDON_LIST) do enabled[n] = true end
 C_AddOns = {
@@ -307,6 +308,55 @@ else:
 print("bag icon rows:", bag)
 if not all(bag.values()):
     lua.execute('ERRORS[#ERRORS+1] = "Bag icon rows wrong"')
+# keeping, Pawn or GearMatic (2.6.0): GearKeeps = Pawn's check, or GearMatic_SpecKeep's best / 2nd best for any spec
+lua.execute(r"""
+  MasterOptions_GearMaticSpecKeeps = { KeepsMany = function(links)
+    local o = {} for _, l in ipairs(links) do if l == "item:OFF" then o[l] = true end end return o end }
+  REAL_UP, REAL_DATA = PawnIsItemAnUpgrade, PawnGetItemData
+  function PawnGetItemData(link) return { Link = link } end
+  function PawnIsItemAnUpgrade(item) if item.Link == "item:PAWN" then return { { "s", "S", 0.1 } } end end
+  K1, K2, K3 = MasterOptions_GearKeeps("item:PAWN"), MasterOptions_GearKeeps("item:OFF"), MasterOptions_GearKeeps("item:NONE")
+  KM = MasterOptions_GearKeepsMany({ "item:PAWN", "item:OFF", "item:NONE" })
+  -- Pawn not installed: its globals are gone
+  LOADED.Pawn = false; PawnGetItemData, PawnIsItemAnUpgrade = nil, nil
+  N1, N2 = MasterOptions_GearKeeps("item:PAWN"), MasterOptions_GearKeeps("item:OFF")
+  NM = MasterOptions_GearKeepsMany({ "item:OFF", "item:NONE" })
+""")
+nopawn = {
+    "keeps: Pawn's upgrade, GearMatic's off-spec best, not the rest": lua.eval("K1") is True and lua.eval("K2") is True and lua.eval("K3") is False,
+    "keeps many: both answers together": lua.eval('KM["item:PAWN"] and KM["item:OFF"] and KM["item:NONE"] == nil') is True,
+    "without Pawn: GearMatic's answer alone": lua.eval("N1") is False and lua.eval("N2") is True and lua.eval('NM["item:OFF"] and NM["item:NONE"] == nil') is True,
+}
+# without Pawn: the quest reward pick shows what the patch does (GearMatic), Pawn's arrow hands over to GearMatic
+lua.execute(r"""
+  for _, s in ipairs(SETTINGS) do
+    if s.name == "Pre-select best quest reward" then QPICK = s end
+    if s.name:find("Upgrade arrow in bags", 1, true) == 1 then ARROW = s end
+  end
+  MasterOptions_DialogKeyPawnDB = { mode = "pawn" }
+""")
+if lua.eval("QPICK") is not None:
+    nopawn["quest pick: 'Pawn' reads GearMatic without Pawn"] = lua.eval("QPICK.get()") == "GearMatic"
+lua.execute(r"""
+  LOADED.Pawn = true
+  ARROW.set("Pawn") -- (picked in the row: not "Match", and the same on every character)
+  LOADED.Pawn = false
+  Fire("PLAYER_LOGIN"); RunTimers(); RunTimers()
+  STANDIN_TL = table.concat(BagProfile().icon_top_left_corner_array, ","); STANDIN_PLUGIN = BagProfile().upgrade_plugin
+  STANDIN_FLAG = MasterOptionsDB.arrowStandIn
+  LOADED.Pawn = true
+  Fire("PLAYER_LOGIN"); RunTimers(); RunTimers()
+  BACK_TL = table.concat(BagProfile().icon_top_left_corner_array, ","); BACK_PLUGIN = BagProfile().upgrade_plugin
+  BACK_FLAG = MasterOptionsDB.arrowStandIn
+  PawnGetItemData, PawnIsItemAnUpgrade = REAL_DATA, REAL_UP
+  MasterOptions_GearMaticSpecKeeps = nil
+""")
+st, sp, back, bp = lua.eval("STANDIN_TL"), lua.eval("STANDIN_PLUGIN"), lua.eval("BACK_TL"), lua.eval("BACK_PLUGIN")
+nopawn["Pawn's arrow without Pawn: GearMatic's chevron stands in"] = "gearmatic_upgrade_corner" in st and "pawn" not in st and sp == "gearmatic_upgrade" and lua.eval("STANDIN_FLAG") is True
+nopawn["Pawn back: its arrow back"] = "pawn" in back and "gearmatic_upgrade_corner" not in back and bp == "pawn" and lua.eval("BACK_FLAG") is None
+print("without Pawn:", nopawn)
+if not all(nopawn.values()):
+    lua.execute('ERRORS[#ERRORS+1] = "Without-Pawn checks wrong"')
 print("synced:", lua.eval("MasterOptionsDB.syncChars"), "shared:", lua.eval("(function() local o = {} for k, v in pairs(MasterOptionsDB.shared or {}) do o[#o+1] = k .. '=' .. tostring(v) end table.sort(o) return table.concat(o, '; ') end)()"))
 errs = lua.eval("ERRORS")
 print("ERRORS:", len(errs))

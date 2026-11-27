@@ -269,3 +269,9 @@ Baganator|function|Baganator.API.Skins.RegisterListener|MasterOptions.lua (Bag i
 Baganator|function|Baganator.API.Skins.GetAllFrames|MasterOptions.lua (Bag icon size)
 Baganator|literal|AddFrame("CornerWidget"|MasterOptions.lua (Bag icon size: corner icons reach the skin listeners)
 Baganator|literal|corner.sizeFont|MasterOptions.lua (Bag icon size: text widgets left to Baganator)
+# --- added in 2.6.0 (GearMatic_SpecKeep: off-spec gear kept without Pawn)
+GearMatic|function|function SI.GetScalesForClass|GearMatic_SpecKeep.lua
+GearMatic|function|function BestItems.IsItemBestOrSecondBest|GearMatic_SpecKeep.lua
+GearMatic|function|BestItems.BadgeLevelBandPasses|GearMatic_SpecKeep.lua
+GearMatic|function|function C.CurrentCharKey|GearMatic_SpecKeep.lua
+GearMatic|function|Scoring2|GearMatic_SpecKeep.lua

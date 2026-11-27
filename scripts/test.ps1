@@ -35,6 +35,7 @@ $tests = @(
     @("ShortestPathForever_OpenMapMiniMap", "test_spfgoal.py", @((F "MasterOptions_ShortestPathForever_OpenMapMiniMap"))),
     @("NeverSell (shared never-sell list)", "test_neversell.py", @((F "MasterOptions_NeverSell"))),
     @("GearMatic_SellGuard",          "test_sellguard.py", @((F "MasterOptions_GearMatic_SellGuard"))),
+    @("GearMatic_SpecKeep (off-spec gear kept)", "test_speckeep.py", @((F "MasterOptions_GearMatic_SpecKeep"))),
     @("Mastercraft_FishingView",     "test_fish.py",   @((F "MasterOptions_Mastercraft_FishingView"))),
     @("Mastercraft_Chattynator",     "test_played.py", @((F "MasterOptions_Mastercraft_Chattynator")))
 )

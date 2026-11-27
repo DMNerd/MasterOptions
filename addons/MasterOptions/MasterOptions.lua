@@ -57,6 +57,9 @@ end
 -- showed. GearMatic skips a scale flagged Hidden (a flag Pawn itself no longer reads on its scales),
 -- so while GearMatic uses Pawn, every scale this character doesn't show in Pawn gets that flag.
 -- The flags are cleared at logout: nothing of this is saved into Pawn's settings.
+-- (the recommended pick for a "Pawn or GearMatic" row: Pawn while it's installed, GearMatic without it)
+local function PawnElseGearMatic() return Loaded("Pawn") and "Pawn" or "GearMatic" end
+
 local function GMUsesPawn()
     local g = GM()
     return g ~= nil and g.usePawnWeights == true and PAWN() ~= nil
@@ -275,6 +278,36 @@ function MasterOptions_PawnKeepsMany(links)
         if PawnKeepsOne(link) then out[link] = true end
     end
     RestorePawn(widened)
+    return out
+end
+
+-- Should an item be kept, by Pawn or by GearMatic? Pawn's check above (when Pawn is installed), or GearMatic's
+-- best / 2nd best for any of your specs (Modules\GearMatic_SpecKeep.lua, when GearMatic is loaded) - either
+-- one keeps it. Used by Mastercraft_VendorSell, DeleteCheapestItem_Protect and GearMatic_SellGuard.
+local function SpecKeep()
+    local m = _G.MasterOptions_GearMaticSpecKeeps
+    return type(m) == "table" and type(m.KeepsMany) == "function" and m or nil
+end
+
+function MasterOptions_GearKeeps(link)
+    if MasterOptions_PawnKeeps(link) then return true end
+    local m = SpecKeep()
+    if not m then return false end
+    local ok, out = pcall(m.KeepsMany, { link })
+    return ok and type(out) == "table" and out[link] == true
+end
+
+function MasterOptions_GearKeepsMany(links)
+    local out = MasterOptions_PawnKeepsMany(links)
+    local m = SpecKeep()
+    if m then
+        local rest = {}
+        for _, link in ipairs(links) do if not out[link] then rest[#rest + 1] = link end end
+        if #rest > 0 then
+            local ok, more = pcall(m.KeepsMany, rest)
+            if ok and type(more) == "table" then for link in pairs(more) do out[link] = true end end
+        end
+    end
     return out
 end
 
@@ -684,6 +717,18 @@ local function SyncIcons()
     if m.arrow then
         local want = MatchedArrow()
         if ArrowState(p) ~= want then ApplyUpgradeArrow(p, want); changed = true end
+    else
+        -- Pawn's arrow picked, Pawn not installed: Baganator only has Pawn's widget while Pawn is loaded, so no
+        -- arrow would show - GearMatic's chevron stands in (remembered: Pawn's comes back with Pawn)
+        local pawnOut = not Loaded("Pawn") and Loaded("GearMatic")
+        if pawnOut and ArrowState(p) == "Pawn" then
+            ApplyUpgradeArrow(p, "GearMatic")
+            MasterOptionsDB.arrowStandIn = true
+            changed = true
+        elseif MasterOptionsDB.arrowStandIn and Loaded("Pawn") then
+            if ArrowState(p) == "GearMatic" then ApplyUpgradeArrow(p, "Pawn"); changed = true end
+            MasterOptionsDB.arrowStandIn = nil
+        end
     end
     if m.junk then
         local before = p.junk_plugin
@@ -983,7 +1028,7 @@ local OPTIONS = {
           function() return mcTip("tipVendor") end,
           function(on) mcSetTip("tipVendor", on) end },
     }, "Game's own line"),
-    Multi("Upgrade % per spec", "Pawn", 4,
+    Multi("Upgrade % per spec", PawnElseGearMatic, 4,
         "Pawn, GearMatic and CheapUpgrades can each list an upgrade size for every spec. With \"Stat weights\" below set to Pawn they all value items with Pawn's scales; Pawn's own line is the most compact and matches Baganator's bag arrows.", {
         { "Pawn",
           function() local pw = PAWN(); return pw and pw.ShowUpgradesOnTooltips and true or false end,
@@ -1185,12 +1230,14 @@ local OPTIONS = {
 
     { header = "Quests" },
     {
-        kind = "choice", label = "Pre-select best quest reward", rec = "Pawn", since = 7,
+        kind = "choice", label = "Pre-select best quest reward", rec = PawnElseGearMatic, since = 7,
         needs = "MasterOptions_DialogKey_Pawn", choices = { "Pawn", "GearMatic", "Off" },
         tip = "On the quest reward screen the best choice is selected for you, so DialogKey's key (or Complete Quest) takes it. Pawn: the biggest upgrade by the Pawn scales you show. GearMatic: the choice GearMatic marks as an upgrade for this character. With no upgrade, the one worth most at a vendor. Needs the MasterOptions_DialogKey_Pawn patch.",
         get = function()
             local d = _G.MasterOptions_DialogKeyPawnDB
             local m = type(d) == "table" and d.mode or "pawn"
+            -- (what the patch does: Pawn's pick without Pawn installed is GearMatic's - DialogKey_Pawn.lua Mode)
+            if m == "pawn" and not Loaded("Pawn") and Loaded("GearMatic") then m = "gearmatic" end
             return (m == "gearmatic" and "GearMatic") or (m == "off" and "Off") or "Pawn"
         end,
         set = function(v)
@@ -1203,8 +1250,8 @@ local OPTIONS = {
         -- chevron top-right, or a gold $ on the best vendor choice) both mark rewards - on the same buttons, and with
         -- GearMatic's own weights not always the same one. Only the markers: GearMatic's autoDetect (bag arrows,
         -- tooltips) and the pre-select above stay as they are.
-        kind = "choice", label = "Quest reward marker", rec = "Pawn", since = 23,
-        needs = { "Pawn", "GearMatic" }, choices = { "Pawn", "GearMatic", "Both", "Off" },
+        kind = "choice", label = "Quest reward marker", rec = PawnElseGearMatic, since = 23,
+        choices = { "Pawn", "GearMatic", "Both", "Off" },
         tip = "Pawn and GearMatic both mark the best quest reward, so the same reward button can get two markers (and, with GearMatic's own weights, on different rewards). Pick one - the same as Pre-select best quest reward above, so the selected reward and its marker agree. Pawn's setting is its \"quest upgrade advisor\" (also its world quest upgrade marks); GearMatic's only its quest reward marks.",
         get = function()
             local pw, g = PAWN(), GM()
@@ -1348,7 +1395,8 @@ local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions
                       MasterOptions_Mastercraft_BankMats = 18,
                       MasterOptions_OpenMapMiniMap_Border = 19,
                       MasterOptions_ShortestPathForever_OpenMapMiniMap = 23,
-                      MasterOptions_NeverSell = 24, MasterOptions_GearMatic_SellGuard = 25 }
+                      MasterOptions_NeverSell = 24, MasterOptions_GearMatic_SellGuard = 25,
+                      MasterOptions_GearMatic_SpecKeep = 27 }
 local PATCH_TIP = {
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
     MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
@@ -1363,7 +1411,8 @@ local PATCH_TIP = {
     MasterOptions_Mastercraft_VendorSell = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank.",
     MasterOptions_Mastercraft_BankMats = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank.",
     MasterOptions_OpenMapMiniMap_Border = "OpenMap's square minimap framed with the action bar buttons' border (Look > Minimap border).",
-    MasterOptions_GearMatic_SellGuard = "GearMatic's gear and low-value selling keeps what Master Options protects: the never-sell list, materials your Mastercraft guides need, and gear Pawn calls an upgrade or already your best for a spec (through GearMatic's own sell guard).",
+    MasterOptions_GearMatic_SpecKeep = "Gear that is your best or 2nd best for any of your specs in GearMatic is kept from selling (Master Options' and GearMatic's own) and from DeleteCheapestItem - off-spec pieces too. GearMatic itself only looks at the spec you play now. Works with or without Pawn.",
+    MasterOptions_GearMatic_SellGuard = "GearMatic's gear and low-value selling keeps what Master Options protects: the never-sell list, materials your Mastercraft guides need, and gear Pawn calls an upgrade or your best for a spec, or GearMatic rates your best or 2nd best for any spec (with GearMatic_SpecKeep) - through GearMatic's own sell guard.",
     MasterOptions_NeverSell = "One never-sell list, kept the same in GearMatic (never auto-sold), Mastercraft (no VENDOR / AUCTION advice) and DeleteCheapestItem (never offered for deletion): add or remove an item in any of them, or with /mo never <item>, and it changes in all. /mo never lists it.",
     MasterOptions_ShortestPathForever_OpenMapMiniMap = "Shortest Path's journey goal on the minimap stays visible over OpenMap's painted minimap (it faded with the game's terrain, and was gone at far zoom).",
     MasterOptions_DungeonJournal_OpenMap = "Dungeon Journal's Show on Map also puts a blue OpenMap pin there (named, followed like a pin you drop), gone again when Dungeon Journal clears its mark. And the map inside dungeons (Maps > Map inside dungeons). Replaces OpenMap_NoDungeonMap.",
@@ -1625,7 +1674,7 @@ local function Problems()
         local u = p.upgrade_plugin
         if BAG_UPGRADE_OWNER[u] and not OwnerLoaded(BAG_UPGRADE_OWNER[u]) then
             add("bagupgrade:" .. u, ("Baganator's upgrade plugin is set to \"%s\", whose addon isn't loaded."):format(u), "Reset",
-                function() SetBagPlugin(p, "upgrade", Loaded("Pawn") and "pawn" or "none") end)
+                function() SetBagPlugin(p, "upgrade", (Loaded("Pawn") and "pawn") or (Loaded("GearMatic") and "gearmatic_upgrade") or "none") end)
         end
         -- GearMatic 6.10's "Gold coin" vendor badge is the same icon as Baganator's junk coin ("will be sold")
         local gs = GM()
@@ -1658,13 +1707,20 @@ local Available
 
 -- Recommended setup, applied once per character on first load (and by the button).
 -- Skips anything whose addon isn't loaded; returns how many rows it set.
-local DEFAULTS_VERSION = 26
+-- An option's recommended value: a value, or a function (a choice that depends on what's installed, such as
+-- Pawn when it is there and GearMatic when it isn't)
+local function RecOf(opt)
+    if type(opt.rec) == "function" then return opt.rec() end
+    return opt.rec
+end
+
+local DEFAULTS_VERSION = 27
 local Remember -- set below
 local function ApplyRecommended(after, manual) -- after: only options added after this defaults version
     local n = 0
     for _, opt in ipairs(OPTIONS) do
         if opt.rec ~= nil and Available(opt) and (opt.since or 1) > (after or 0) then
-            local want = opt.rec
+            local want = RecOf(opt)
             if opt.kind == "choice" and not opt.needs and want ~= "Off" and want ~= opt.off and not Loaded(want) then want = nil end
             if want ~= nil and opt.get() ~= want then
                 local ok = pcall(opt.set, want)
@@ -1895,7 +1951,7 @@ local function OpenMenu(owner, opt)
             r.text:SetJustifyH("LEFT")
             menu.rows[i] = r
         end
-        r.text:SetText(c .. (c == opt.rec and "  |cff9d9d9d(recommended)|r" or ""))
+        r.text:SetText(c .. (c == RecOf(opt) and "  |cff9d9d9d(recommended)|r" or ""))
         r.check:SetShown(c == cur)
         r:SetScript("OnClick", function() Choose(opt, c) end)
         width = math.max(width, (r.text:GetStringWidth() or 0) + 40)
@@ -1960,7 +2016,7 @@ local function BuildRow(parent, opt, y)
             btn:SetEnabled(ok)
             local v = ok and select(2, pcall(opt.get)) or "not installed"
             v = tostring(v)
-            local text = v == opt.rec and (v .. " *") or v
+            local text = v == RecOf(opt) and (v .. " *") or v
             btn:SetText(v == "Both (conflict)" and ("|cffff5555" .. text .. "|r") or text)
             label:SetFontObject(ok and "GameFontHighlight" or "GameFontDisable")
             row.bg:SetColorTexture(RED[1], RED[2], RED[3], (ok and v == "Both (conflict)") and 0.12 or 0)
@@ -1977,7 +2033,7 @@ local function BuildRow(parent, opt, y)
         end)
         local recText = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
         recText:SetPoint("LEFT", cb, "RIGHT", 2, 0)
-        if opt.rec ~= nil then recText:SetText(opt.rec and "rec: on" or "rec: off") end
+        if opt.rec ~= nil then recText:SetText(RecOf(opt) and "rec: on" or "rec: off") end
         function row:Refresh()
             local ok = Available(opt)
             cb:SetEnabled(ok)
@@ -2467,7 +2523,7 @@ local function RegisterSettingsPanel()
             local tip = opt.tip
             if type(tip) == "function" then local ok, t = pcall(tip); tip = ok and t or nil end
             if opt.kind == "toggle" then
-                local default = opt.rec
+                local default = RecOf(opt)
                 if default == nil then default = SafeGet(opt) and true or false end
                 local setting = Settings.RegisterProxySetting(category, variable, Settings.VarType.Boolean, name, default,
                     function() return Available(opt) and SafeGet(opt) and true or false end,
@@ -2480,7 +2536,7 @@ local function RegisterSettingsPanel()
                     end)
                 Settings.CreateCheckbox(category, setting, tip)
             else
-                local default = opt.rec
+                local default = RecOf(opt)
                 if default == nil or not IsChoice(opt, default) then default = opt.choices[1] end
                 local setting = Settings.RegisterProxySetting(category, variable, Settings.VarType.String, name, default,
                     function() return tostring(SafeGet(opt) or default) end,
@@ -2495,7 +2551,7 @@ local function RegisterSettingsPanel()
                     for _, choice in ipairs(opt.choices) do
                         -- (as the window's button: choices whose addon isn't loaded are left out)
                         if choice == "Off" or choice == opt.off or opt.needs or Loaded(choice) then
-                            c:Add(choice, choice == opt.rec and (choice .. " *") or choice)
+                            c:Add(choice, choice == RecOf(opt) and (choice .. " *") or choice)
                         end
                     end
                     -- a state that isn't a choice ("Both (conflict)", "Mixed") is shown, in red

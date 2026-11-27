@@ -1,7 +1,9 @@
 # After updating other addons: checks that every name Master Options relies on (scripts\touchpoints.txt) is
 # still in the installed copies - functions, frames, settings keys, tooltip texts. A missing one means that
 # addon renamed or removed something we use: look closer before playing (and tell Claude which).
-# It reads the addons' files only. Exit code 1 if anything is missing.
+# Then the AddOns folder itself: addons whose dependencies aren't installed (WoW won't load them), and old patches
+# a Master Options module replaces (retired.txt, or a .toc by "local patch") - zip those into backups\ and delete.
+# It reads the addons' files only. Exit code 1 if anything is found.
 param([string]$AddOns = $(if ($IsMacOS) { "/Applications/World of Warcraft/_forever_/Interface/AddOns" } else { "D:\World of Warcraft\_forever_\Interface\AddOns" }))
 $ErrorActionPreference = "Stop"
 $list = Join-Path $PSScriptRoot "touchpoints.txt"
@@ -30,5 +32,35 @@ foreach ($group in ($entries | Group-Object Addon)) {
     $missing += $bad
 }
 if ($skipped.Count) { Write-Host ("not installed (skipped): " + ($skipped -join ", ")) -ForegroundColor DarkGray }
-if ($missing.Count) { Write-Host "`n$($missing.Count) name(s) missing - those addons changed something Master Options uses." -ForegroundColor Red; exit 1 }
+
+# --- the AddOns folder
+$folders = Get-ChildItem $AddOns -Directory
+$installed = @{}
+foreach ($f in $folders) { $installed[$f.Name] = $true }
+$retired = Get-Content (Join-Path $PSScriptRoot "retired.txt") | Where-Object { $_ -and -not $_.StartsWith("#") } | ForEach-Object { $_.Trim() }
+$noDeps = @()
+$oldPatches = @()
+foreach ($f in $folders) {
+    # the .toc WoW reads: <folder>.toc, else the first one (flavour .tocs such as _Mainline list the same deps)
+    $toc = Join-Path $f.FullName "$($f.Name).toc"
+    if (-not (Test-Path $toc)) { $toc = (Get-ChildItem $f.FullName -Filter *.toc | Select-Object -First 1).FullName }
+    if (-not $toc) { continue }
+    $lines = Get-Content $toc
+    $deps = @()
+    foreach ($l in $lines) {
+        if ($l -match '^##\s*(Dependencies|RequiredDeps|Dep[0-9]*)\s*:\s*(.*)$') {
+            $deps += $Matches[2] -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        }
+    }
+    $lacking = @($deps | Select-Object -Unique | Where-Object { -not $installed[$_] })
+    if ($lacking.Count) { $noDeps += [pscustomobject]@{ Addon = $f.Name; Lacking = $lacking -join ", " } }
+    $author = [string](($lines | Where-Object { $_ -match '^##\s*Author\s*:' } | Select-Object -First 1) -replace '^##\s*Author\s*:\s*', '')
+    if ($f.Name -ne "MasterOptions" -and (($retired -contains $f.Name) -or ($author.Trim() -match '^local( patch)?$'))) { $oldPatches += $f.Name }
+}
+foreach ($d in $noDeps) { Write-Host ("{0} won't load: needs {1}, which isn't installed" -f $d.Addon, $d.Lacking) -ForegroundColor Red }
+foreach ($o in $oldPatches) { Write-Host ("{0}: an old patch - a Master Options module does its job now. Zip it into the backups folder and delete it." -f $o) -ForegroundColor Red }
+if (-not ($noDeps.Count -or $oldPatches.Count)) { Write-Host "AddOns folder: every dependency installed, no old patches." -ForegroundColor Green }
+
+if ($missing.Count) { Write-Host "`n$($missing.Count) name(s) missing - those addons changed something Master Options uses." -ForegroundColor Red }
+if ($missing.Count -or $noDeps.Count -or $oldPatches.Count) { exit 1 }
 Write-Host "`nEverything Master Options relies on is still there." -ForegroundColor Green
