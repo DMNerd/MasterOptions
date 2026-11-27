@@ -11,7 +11,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 - **OpenMap_MiniMap's "Snap to the screen's edge":** with the map flush against the screen, the action-bar border
   around it went partly off the screen. OpenMap_MiniMap only leaves room for its own thinner border. On a side
-  against the screen's edge, the border now comes in over the map's edge and stays whole.
+  against the screen's edge, the border's line now sits on the screen's edge itself: the map ends at the line, and
+  only the faint shading past it is cut off.
 
 ## [2.17.0] - 2026-11-27
 

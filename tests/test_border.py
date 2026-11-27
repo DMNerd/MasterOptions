@@ -179,7 +179,7 @@ L(r'''
   MasterOptions_MinimapBorder.Apply(); Run()
   P = MasterOptionsMinimapBorder.points
 ''')
-check("map flush against the screen's right and top: the rim's right and top kept on the screen", E("P[2][4] <= 0.001 and P[1][5] <= 0.001"), True)
+check("map flush against the screen's right and top: the rim's line on the screen's edge (only its shading past it cut; no map showing past the line)", E("math.abs(P[2][4] - 6.4 * 0.75) < 0.01 and math.abs(P[1][5] - 6.4 * 0.15) < 0.01"), True)
 L('UIParent.w, UIParent.h = 2000, 2000; MasterOptions_MinimapBorder.Apply(); Run(); P = MasterOptionsMinimapBorder.points')
 check("...with room round it: the rim outside the map as before", E("P[2][4] > 0"), True)
 L('UIParent = nil; Bar.top = 525')

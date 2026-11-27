@@ -175,16 +175,20 @@ local function Layout(top, bottom)
     local L, T = -o * LEFT_SHARE, o * LEFT_SHARE + math.max(0, up)
     local R, B = o, -o - math.max(0, down)
     -- on the screen: OpenMap_MiniMap's "Snap to the screen's edge" puts the map flush against it, leaving room for its
-    -- own thin border only - the rim past it went off the screen (a player's report). There the rim comes in over the
-    -- map's edge instead, whole.
+    -- own thin border only - the rim's line past it went off the screen (a player's report), and brought in whole,
+    -- the map showed between its line and the screen's edge (the next screenshot). On a side where the line would be
+    -- off the screen, the line goes on the screen's edge itself: only the shading past it is cut, the map ends at it.
+    -- (Where the line is in the atlas: LINE_IN in from the frame's edge on the left and top, LINE_OUT out from the
+    -- map on the right and bottom - as BarFill has them.)
     local ue, be = UIParent and UIParent.GetEffectiveScale and UIParent:GetEffectiveScale(), body.GetEffectiveScale and body:GetEffectiveScale()
     local bl, br, bt, bb = body:GetLeft(), body.GetRight and body:GetRight(), body:GetTop(), body:GetBottom()
     if ue and be and be > 0 and bl and br and bt and bb then
         local W, H = (UIParent:GetWidth() or 0) * ue / be, (UIParent:GetHeight() or 0) * ue / be -- (the screen, in the map's units)
-        if bl + L < 0 then L = -bl end
-        if br + R > W then R = W - br end
-        if bt + T > H then T = H - bt end
-        if bb + B < 0 then B = -bb end
+        local inL, inR = o * LINE_IN, o * (1 - LINE_OUT) -- (the line, in from the frame's edge: left/top, right/bottom)
+        if bl + L + inL < 0 then L = -bl - inL end
+        if br + R - inR > W then R = W - br + inR end
+        if bt + T - inL > H then T = H - bt + inL end
+        if bb + B + inR < 0 then B = -bb - inR end
     end
     frame:ClearAllPoints()
     frame:SetPoint("TOPLEFT", body, "TOPLEFT", L, T)
