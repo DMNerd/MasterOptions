@@ -18,7 +18,6 @@ MasterOptions_Module("ShortestPathForever_OpenMapPins", { "ShortestPathForever",
 
 local Shared = MasterOptions_Shared
 local _, Check = Shared.ErrorReporters(ADDON)
-local OPENMAP_OWNER = "OpenMap:Pin" -- (ShortestPathForever's owner for OpenMap's handoff: UI\OpenMap.lua's PinOwner)
 local GOLD = 1                       -- (OpenMap's pin colours: 1 gold, 2 red, 3 green, 4 blue, 5 purple)
 local FROM = "Master Options"        -- (a trip pin's `from`: OpenMap shows where a pin came from)
 local Pins = Shared.OpenMapPins      -- (OpenMap's pin list, as every module of ours uses it)

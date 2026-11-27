@@ -37,7 +37,7 @@ read_globals = {
     "CreateFrame", "DisableAddOn", "EnableAddOn", "GetAddOnDependencies", "GetAddOnEnableState", "GetAddOnInfo",
     "GetAddOnMetadata", "GetBuildInfo", "GetCVar", "GetCoinTextureString", "GetItemInfo", "GetNumAddOns",
     "GetNumQuestChoices", "GetNumSkillLines", "GetProfessionInfo", "GetProfessions", "GetQuestItemInfo",
-    "GetQuestItemLink", "GetRealmName", "GetSkillLineInfo", "GetSpellInfo", "GetTime", "GetTrackingTexture",
+    "GetQuestItemLink", "GetRealmName", "GetSkillLineInfo", "GetSpellInfo", "GetTime", "IsShiftKeyDown", "IsAltKeyDown", "IsControlKeyDown", "EnumerateFrames","GetTrackingTexture",
     "HideUIPanel", "InCombatLockdown", "IsAddOnLoadOnDemand", "IsAddOnLoaded", "IsEquippableItem", "IsInInstance",
     "IsModifierKeyDown", "IsResting", "ReloadUI", "UnitClass", "UnitFactionGroup", "UnitLevel", "UnitGUID", "UnitName", "UseContainerItem",
     "GameTooltip_Hide", "QuestInfoItem_OnClick", "QuestInfo_GetRewardButton",
