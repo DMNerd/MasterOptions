@@ -7,6 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.16.0] - 2026-11-27
+
 ### Added
 
 - **Selling what Mastercraft says to DISENCHANT, when you can't** (sell mode "Goods and gear"): a soulbound piece
@@ -518,7 +520,31 @@ Not released on its own: part of 2.6.0.
   them work together (until now separate `MasterOptions_<Addon>_<Addon>` addons). Each module runs only when the
   addons it works with are loaded.
 
-[Unreleased]: https://github.com/DMNerd/MasterOptions/compare/v2.9.0...HEAD
+[Unreleased]: https://github.com/DMNerd/MasterOptions/compare/v2.16.0...HEAD
+[2.16.0]: https://github.com/DMNerd/MasterOptions/compare/v2.15.2...v2.16.0
+[2.15.2]: https://github.com/DMNerd/MasterOptions/compare/v2.15.1...v2.15.2
+[2.15.1]: https://github.com/DMNerd/MasterOptions/compare/v2.15.0...v2.15.1
+[2.15.0]: https://github.com/DMNerd/MasterOptions/compare/v2.14.1...v2.15.0
+[2.14.1]: https://github.com/DMNerd/MasterOptions/compare/v2.14.0...v2.14.1
+[2.14.0]: https://github.com/DMNerd/MasterOptions/compare/v2.13.0...v2.14.0
+[2.13.0]: https://github.com/DMNerd/MasterOptions/compare/v2.12.6...v2.13.0
+[2.12.6]: https://github.com/DMNerd/MasterOptions/compare/v2.12.5...v2.12.6
+[2.12.5]: https://github.com/DMNerd/MasterOptions/compare/v2.12.4...v2.12.5
+[2.12.4]: https://github.com/DMNerd/MasterOptions/compare/v2.12.3...v2.12.4
+[2.12.3]: https://github.com/DMNerd/MasterOptions/compare/v2.12.2...v2.12.3
+[2.12.2]: https://github.com/DMNerd/MasterOptions/compare/v2.12.1...v2.12.2
+[2.12.1]: https://github.com/DMNerd/MasterOptions/compare/v2.12.0...v2.12.1
+[2.12.0]: https://github.com/DMNerd/MasterOptions/compare/v2.11.1...v2.12.0
+[2.11.1]: https://github.com/DMNerd/MasterOptions/compare/v2.11.0...v2.11.1
+[2.11.0]: https://github.com/DMNerd/MasterOptions/compare/v2.10.4...v2.11.0
+[2.10.4]: https://github.com/DMNerd/MasterOptions/compare/v2.10.3...v2.10.4
+[2.10.3]: https://github.com/DMNerd/MasterOptions/compare/v2.10.2...v2.10.3
+[2.10.2]: https://github.com/DMNerd/MasterOptions/compare/v2.10.1...v2.10.2
+[2.10.1]: https://github.com/DMNerd/MasterOptions/compare/v2.10.0...v2.10.1
+[2.10.0]: https://github.com/DMNerd/MasterOptions/compare/v2.9.3...v2.10.0
+[2.9.3]: https://github.com/DMNerd/MasterOptions/compare/v2.9.2...v2.9.3
+[2.9.2]: https://github.com/DMNerd/MasterOptions/compare/v2.9.1...v2.9.2
+[2.9.1]: https://github.com/DMNerd/MasterOptions/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/DMNerd/MasterOptions/compare/v2.8.1...v2.9.0
 [2.8.1]: https://github.com/DMNerd/MasterOptions/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/DMNerd/MasterOptions/compare/v2.7.0...v2.8.0

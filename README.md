@@ -17,8 +17,8 @@ public data and settings; the third-party addons themselves are never edited.
 | Path | What |
 |---|---|
 | `addons/MasterOptions/` | The addon as it goes into `Interface\AddOns` |
-| `addons/MasterOptions/*.lua` | In the `.toc`'s order: `ErrorLog.lua`, `Modules.lua` (the module loader), `Shared.lua` (checks the modules use too), then the window's files sharing one addon table (`local _, MO = ...`): `MasterOptions.lua` (access to each addon, Pawn and spec), `AddonSettings.lua` (Annoying mode, bag icons, profiles, UI style), `Options.lua` (the rows), `Problems.lua` (the health check), `Window.lua` (/mo, the recommended setup), `Startup.lua` (the game's Options page, login) |
-| `addons/MasterOptions/Modules/` | One file per module: `MasterOptions_Module(name, { needed addons }, function(ADDON) ... end)`, run by `Modules.lua` |
+| `addons/MasterOptions/*.lua` | In the `.toc`'s order: `ErrorLog.lua`, `Modules.lua` (the module loader and its `/mo` command registry), `Shared.lua` (`MasterOptions_Shared`: what the modules share - Mastercraft's tooltip reader, OpenMap pins, GearMatic / Baganator access; no Pawn), then the core files sharing one addon table (`local _, MO = ...`): `MasterOptions.lua` (access to each addon), `Pawn.lua` (every Pawn thing: the upgrade judge, Pawn's weights in GearMatic, spec following, gear to keep - `MasterOptions_Pawn` for the modules), `AddonSettings.lua` (Annoying mode, bag icons, profiles, UI style), `Options.lua` (the rows; the module list), `Problems.lua` (the health check: one named check each), `Settings.lua` (the recommended setup, the same choices on every character, what's available), `Window.lua` (/mo), `Startup.lua` (the game's Options page, login, `/mo`) |
+| `addons/MasterOptions/Modules/` | One file per module: `MasterOptions_Module(name, { needed addons }, function(ADDON) ... end)`, run by `Modules.lua`. A module's `/mo` command: `MasterOptions_Shared.Command(word, fn, usage)`. Every addon a module needs must be in the `.toc`'s OptionalDeps (a test checks), or it loads after Master Options and the module never starts |
 | `tests/` | Sandbox tests: Lua run through lupa with stubbed WoW APIs |
 | `tests/fixtures/` | Copies of real SavedVariables and the installed-addon list, used by the tests |
 | `scripts/` | test / deploy / pack / pull; `migrate.ps1` (once, WoW closed: the 1.x patches' saved data into MasterOptions) |
@@ -113,20 +113,39 @@ purpose (no `.pkgmeta`).
 | Mastercraft / Auctionator | Mastercraft, Auctionator | Scan prices button on Auctionator's page |
 | DeleteCheapestItem / Protect | DeleteCheapestItem | Never offers upgrades, sets, tools or needed materials |
 | Mastercraft / Keep | Mastercraft | Needed / KEEP items go on GearMatic's never-sell list |
-| Mastercraft / VendorSell | Mastercraft | Items Mastercraft marks VENDOR are sold by your junk seller, and get the junk coin |
+| Mastercraft / Advice | Mastercraft | Mastercraft's advice per item (KEEP / VENDOR / AUCTION / DISENCHANT) remembered from its tooltips, and read for new bag items in the background: what the junk coins and advice icons show |
+| Mastercraft / VendorSell | Mastercraft | Items Mastercraft marks VENDOR are sold by your junk seller (Goods, or Goods and gear), and so are soulbound DISENCHANT pieces when you have no Enchanting; `/mo vendor` tells, item by item, what will be sold and why not |
+| Baganator / Mastercraft | Baganator, Mastercraft | Mastercraft's junk coin in Baganator, and an icon with its advice on every bag slot; GearMatic's best-gold badges kept off meanwhile (one verdict per slot) |
 | Mastercraft / RecipeMap | Mastercraft, Questie | Map markers on vendors selling patterns for recipes you haven't learned, the creatures and chests they drop from (specific drops, with GearMatic's chance), and on your profession's trainers when you're near your cap and can train the next rank (Mastercraft's recipe list + QuestieDB, drawn with HereBeDragons) |
 | Mastercraft / FarmTour | Mastercraft, ShortestPathForever | Start farming in Mastercraft and ShortestPathForever walks you through the zone's herbs and veins worth it to you (Mastercraft's nodes and rule), nearest first; `/mo farm` (`herbs`, `ores`, `stop`) without Mastercraft's session |
 | Mastercraft / BankMats | Mastercraft | At the bank, guide materials go in; VENDOR / AUCTION items stay in bags |
-| OpenMapMiniMap / Border | OpenMap_MiniMap | Square minimap framed with the action bar buttons' border |
-| ShortestPathForever / OpenMapPins | ShortestPathForever, OpenMap | Clearing the journey to a followed OpenMap pin clears the pin too |
-| DungeonJournal / SpokenBosses | ForeverDungeonJournal, Spoken_Bosses | Spoken_Bosses' dungeon and boss stories beside Dungeon Journal's map on the world map |
-| DungeonJournal / OpenMap | ForeverDungeonJournal, OpenMap | Show on Map puts an OpenMap pin; map inside dungeons (OpenMap's own switch); Dungeon entrance click: Dungeon Journal's map, its page, or OpenMap's map (written to OpenMap's option too) |
+| OpenMapMiniMap / Border | OpenMap_MiniMap | Square minimap framed with the action bar buttons' border (rounded corners), and a coordinates plate on its edge that moves clear of minimap buttons |
+| ShortestPathForever / OpenMapPins | ShortestPathForever, OpenMap | One trip, one pin: every journey has an OpenMap pin at its destination, cleared however the trip ends; Shortest Path's own goal marker hidden meanwhile |
+| DungeonJournal / SpokenBosses | ForeverDungeonJournal, Spoken_Bosses | Spoken_Bosses' dungeon and boss stories beside Dungeon Journal's map on the world map; `/mo story` tells what the last try did |
+| DungeonJournal / OpenMap | ForeverDungeonJournal, OpenMap | Map inside dungeons (OpenMap's own switch); Dungeon entrance click: Dungeon Journal's map, its page, or OpenMap's map (written to OpenMap's option too), closed again when the world map moves on |
+| DungeonJournal / ShowOnMap | ForeverDungeonJournal, OpenMap | Dungeon Journal's Show on Map puts an OpenMap pin there, gone when Dungeon Journal clears its mark |
+| Chat / AddonWhispers | — | Hides "No player named ..." when an addon's hidden whisper went to someone who just logged off; `/mo whispers` lists which addon whispered whom |
 | Mastercraft / FishingView | Mastercraft | Bags, popups and loot rolls stay visible in the fishing view |
 | Mastercraft / Chattynator | Mastercraft, Chattynator | Mastercraft's /played request stays out of Chattynator |
 | ShortestPathForever / OpenMapMiniMap | ShortestPathForever, OpenMap_MiniMap | Shortest Path's journey goal stays visible on OpenMap's painted minimap |
 | GearMatic / SellGuard | GearMatic | GearMatic's gear and low-value selling keeps the never-sell list, materials Mastercraft's guides need, and gear Pawn calls an upgrade or your best for a spec, or that GearMatic rates your best or 2nd best for any spec (GearMatic's own sell guard) |
 | GearMatic / SpecKeep | GearMatic | Gear that is your best or 2nd best in GearMatic for any of your specs (off-spec pieces too) is kept from selling and from DeleteCheapestItem. GearMatic alone only looks at the spec you play now; with this, Pawn isn't needed for it |
-| NeverSell | any of GearMatic, Mastercraft, DeleteCheapestItem | One never-sell list, the same in GearMatic (never auto-sold), Mastercraft (no VENDOR / AUCTION advice) and DeleteCheapestItem (never offered for deletion): change it in any of them, or with `/mo never <item>` / `/mo never remove <item>`, and all follow. `/mo never` lists it, and /mo > Never sell shows it (add by shift-click, drag or item ID; Remove per item). Keep's and Protect's automatic entries aren't part of it |
+| NeverSell | any of GearMatic, Mastercraft, DeleteCheapestItem | One never-sell list, the same in GearMatic (never auto-sold), Mastercraft (no VENDOR / AUCTION advice) and DeleteCheapestItem (never offered for deletion): change it in any of them - chat says the others followed - or with `/mo never <item>` / `/mo never remove <item>`. `/mo never` lists it, /mo > Never sell shows it (add by shift-click, drag or item ID; Remove per item), and a lock marks its items in Baganator's bags. Keep's and Protect's automatic entries aren't part of it |
+
+## Commands
+
+`/mo` opens the window; `/mo help` lists every command there is now. Each module brings its own, so a module that's
+off takes its command with it.
+
+| Command | What |
+|---|---|
+| `/mo never [remove] <item>` | The never-sell list (no item: list it) |
+| `/mo vendor` | What Mastercraft says to VENDOR in your bags, and why each is (not) sold |
+| `/mo story` | Why a dungeon's story did or didn't show beside the world map |
+| `/mo whispers` | Which addon whispered whom (the hidden "No player named" lines) |
+| `/mo farm [herbs \| ores \| stop]` | A farming tour of this zone's nodes worth it to you |
+| `/mo arrow` | Unlock or lock Shortest Path's direction arrow |
+| `/mo minimap`, `/mo options`, `/mo errors` | The minimap button; Master Options in the game's Options; caught errors, to copy |
 
 ## Supported addons
 
@@ -167,7 +186,10 @@ was found.
 - `UnitName("player")` returns first and last name. `GetRealmName()` returns "".
 - SavedVariables are written only at logout or `/reload`.
 - Mastercraft decorates only GameTooltip and ItemRefTooltip. Its advice can be read through a hidden
-  GameTooltip, which is how VendorSell reads it.
+  GameTooltip: `MasterOptions_Shared` reads every item tooltip once for all the modules (`OnMastercraftAdvice`,
+  `MastercraftSlotAdvice`).
+- An addon a module needs has to load before Master Options (the `.toc`'s OptionalDeps); one that loads after it
+  is "not loaded" when the modules start, and /mo > Problems says so.
 
 ## License
 
