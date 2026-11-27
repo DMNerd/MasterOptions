@@ -130,6 +130,55 @@ res["...and it goes when you arrive"] = E("PinAtSpot(0.3) == nil")
 # a newly followed pin elsewhere is never unfollowed by the old trip ending
 L('Go("TomTom", 1434, 0.2, 0.5, "Quest C"); P4 = Pin(4, "", nil, 0.9); WM.TrackPoint(1434, 0.9, 0.5); C3 = CLEARS; Go("OpenMap:Pin", 1434, 0.9, 0.5, "Pin")')
 res["replaced by a pin you follow: the old trip's pin goes, the new pin stays followed"] = E("PinAtSpot(0.2) == nil") and E("CLEARS") == E("C3") and E("Has(4)")
+
+# Shift-click on an OpenMap pin (Dungeon Journal's): a journey there, not OpenMap's share in chat
+L(r'''
+  SHIFT, ALT, CHAT, SHARED, NAV, COMBAT = false, false, false, 0, nil, false
+  function IsShiftKeyDown() return SHIFT end
+  function IsAltKeyDown() return ALT end
+  function IsControlKeyDown() return false end
+  ChatEdit_GetActiveWindow = function() return CHAT end
+  ShortestPathForever.API.Navigate = function(owner, m, x, y, title)
+    if COMBAT then return false end
+    NAV = { owner = owner, map = m, x = x, y = y, title = title }; return true end
+  function OpenMapClick(self) if IsAltKeyDown() then DELETED = self.data elseif IsShiftKeyDown() then SHARED = SHARED + 1 end end
+  local function Kids(t) return function(self) return table.unpack(self.kids) end end
+  ROOT = { kids = {} }; ROOT.GetChildren = Kids()
+  CELL = { kids = {}, GetParent = function() return ROOT end }; CELL.GetChildren = Kids()
+  ROOT.kids[1] = CELL
+  DJ = Pin(30, "Dungeon Journal: Deadmines", "Dungeon Journal", 0.33)
+  BTN = { data = DJ, GetParent = function() return CELL end, hooks = {} }
+  function BTN:HookScript(k, fn) self.hooks[#self.hooks + 1] = fn end
+  CELL.kids[1] = BTN
+  local OTHER = { GetParent = function() return nil end }
+  function EnumerateFrames(f) if f == nil then return OTHER elseif f == OTHER then return BTN end end
+  function WM.RefreshPins() REFRESH = REFRESH + 1; BTN.OnClick = OpenMapClick; BTN.hooks = {} end
+  -- (the module hooked RefreshPins at login: hook the new one as OpenMap's own would be)
+''')
+L('Fire("PLAYER_LOGIN")')  # (a second login in the sandbox: hooks the replaced RefreshPins)
+L('WM.RefreshPins()')
+res["pin buttons found and wrapped after RefreshPins"] = E("BTN.OnClick ~= OpenMapClick") and E("#BTN.hooks") == 1
+L('SHIFT = true; BTN:OnClick()')
+res["Shift-click on a pin: a journey there, named after its note, not shared"] = E(
+    'NAV ~= nil and NAV.owner == "OpenMap" and NAV.map == 1434 and math.abs(NAV.x - 0.33) < 1e-9 and NAV.title == "Dungeon Journal: Deadmines"') and E("SHARED") == 0
+L('NAV = nil; CHAT = true; BTN:OnClick()')
+res["chat box open: Shift-click still shares the pin"] = E("NAV == nil") and E("SHARED") == 1
+L('CHAT = false; COMBAT = true; BTN:OnClick()')
+res["journey refused (in a fight): OpenMap's own click"] = E("SHARED") == 2
+L('COMBAT = false; ALT = true; BTN:OnClick()')
+res["Alt-click: still OpenMap's delete"] = E("DELETED == DJ") and E("NAV == nil")
+L('ALT = false; SHIFT = false; WM.RefreshPins()')
+res["wrapped again after the next RefreshPins"] = E("BTN.OnClick ~= OpenMapClick") and E("#BTN.hooks") == 1
+# the tooltip's Shift-click line says what it does now
+L(r'''
+  LINES = { { t = "Dungeon Journal: Deadmines" }, { t = "|cffffd200Shift-click:|r share in chat" }, { t = "|cffffd200Alt-click:|r delete it" } }
+  for i, l in ipairs(LINES) do
+    l.GetText = function(self) return self.t end; l.SetText = function(self, s) self.t = s end
+    _G["GameTooltipTextLeft" .. i] = l end
+  GameTooltip = { GetOwner = function() return BTN end, NumLines = function() return #LINES end, Show = function() end }
+  BTN.hooks[1](BTN)
+''')
+res["tooltip: Shift-click line says journey, colour kept"] = E("LINES[2].t").startswith("|cffffd200Shift-click:|r journey there") and E("LINES[3].t") == "|cffffd200Alt-click:|r delete it"
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

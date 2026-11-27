@@ -211,6 +211,103 @@ HideGoals = function()
 end
 
 ---------------------------------------------------------------------------
+-- Shift-click on an OpenMap pin: a journey there
+---------------------------------------------------------------------------
+-- On the map Shift-click is Shortest Path's journey, but on one of OpenMap's pins (yours, Dungeon Journal's,
+-- shared ones) OpenMap takes it to share the pin in chat, and Alt-click deletes it: no click on a pin journeyed
+-- there. Now Shift-click journeys there, as on the map around it - with a chat box open it still shares the pin
+-- (the game's Shift-click into chat; OpenMap's own map click does the same, WorldMap.lua's PathTo).
+-- OpenMap's pin buttons (Stitch.lua's S.AddPin: pin.data = the pin, pin.OnClick its click, given again by every
+-- RefreshPins) are found once - their set's frame - and their click wrapped after each RefreshPins.
+local function ChatOpen()
+    local active = (_G.ChatFrameUtil and ChatFrameUtil.GetActiveWindow) or _G.ChatEdit_GetActiveWindow
+    return active and active() and true or false
+end
+
+local function Journey(p)
+    if not (IsShiftKeyDown and IsShiftKeyDown()) then return false end
+    if (IsAltKeyDown and IsAltKeyDown()) or (IsControlKeyDown and IsControlKeyDown()) then return false end
+    if ChatOpen() then return false end
+    local spf = _G.ShortestPathForever
+    local api = type(spf) == "table" and spf.API
+    if type(api) ~= "table" or type(api.Navigate) ~= "function" then return false end
+    if type(p) ~= "table" or type(p.map) ~= "number" or type(p.x) ~= "number" or type(p.y) ~= "number" then return false end
+    local title = type(p.note) == "string" and p.note ~= "" and p.note or nil
+    local ok, started = pcall(api.Navigate, "OpenMap", p.map, p.x, p.y, title)
+    if ok and started then
+        if GameTooltip_Hide then GameTooltip_Hide() end
+        return true
+    end
+    return false -- (refused - in a fight: OpenMap's own click)
+end
+
+local theirs = setmetatable({}, { __mode = "k" }) -- pin button -> OpenMap's click
+local function Click(self, ...)
+    if Journey(self.data) then return end
+    local own = theirs[self]
+    if own then return own(self, ...) end
+end
+
+local SHIFT_LINE = " journey there (Shortest Path) - chat box open: share in chat"
+local function TooltipLine(self)
+    if not (GameTooltip and GameTooltip.NumLines) or GameTooltip:GetOwner() ~= self then return end
+    for i = 1, GameTooltip:NumLines() do
+        local line = _G["GameTooltipTextLeft" .. i]
+        local text = line and line:GetText()
+        if type(text) == "string" and text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):find("^Shift%-click:") then
+            local head = text:match("^(.-:|r)") or text:match("^(.-:)")
+            line:SetText(head .. SHIFT_LINE)
+            GameTooltip:Show()
+            return
+        end
+    end
+end
+
+local roots = {} -- the frames OpenMap's pin buttons are in (their set's frame: cells, then pins)
+local function IsOurPin(f, list)
+    if type(f) ~= "table" or type(f.data) ~= "table" or type(f.OnClick) ~= "function" then return false end
+    for _, p in ipairs(list) do if p == f.data then return true end end
+    return false
+end
+local function FindRoots(list)
+    if not EnumerateFrames or #list == 0 then return end
+    local f = EnumerateFrames()
+    while f do
+        if IsOurPin(f, list) then
+            local cell = f.GetParent and f:GetParent()
+            local root = cell and cell.GetParent and cell:GetParent()
+            if root then roots[root] = true end
+        end
+        f = EnumerateFrames(f)
+    end
+end
+local function WrapPins()
+    local mod = WorldMap()
+    if not mod then return end
+    local list = mod.db.pins.list
+    if next(roots) == nil then FindRoots(list) end
+    for root in pairs(roots) do
+        for _, cell in ipairs({ root:GetChildren() }) do
+            for _, pin in ipairs({ cell:GetChildren() }) do
+                if pin.OnClick ~= Click and IsOurPin(pin, list) then
+                    theirs[pin] = pin.OnClick
+                    pin.OnClick = Click
+                    if pin.HookScript then pin:HookScript("OnEnter", TooltipLine) end -- (its OnEnter set again with it)
+                end
+            end
+        end
+    end
+end
+
+local function WatchPinClicks()
+    local mod = WorldMap()
+    if not mod or type(mod.RefreshPins) ~= "function" or not hooksecurefunc then return false end
+    hooksecurefunc(mod, "RefreshPins", function() Check("Shift-click on OpenMap's pins", pcall(WrapPins)) end)
+    Check("Shift-click on OpenMap's pins", pcall(WrapPins))
+    return true
+end
+
+---------------------------------------------------------------------------
 -- Watching
 ---------------------------------------------------------------------------
 local subscribed = false
@@ -230,6 +327,7 @@ f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function()
     Shared.WatchOpenMapFollow()
     if not Subscribe() then C_Timer.After(3, Subscribe) end
+    if not WatchPinClicks() then C_Timer.After(3, WatchPinClicks) end
     -- the world map: its goal pins are made as it opens and as you zoom - looked at while it's open. A pin found once
     -- hides itself (its Show is hooked): later, only when the canvas has new frames (every map pin is one, Questie's
     -- too - no list of them all built twice a second)

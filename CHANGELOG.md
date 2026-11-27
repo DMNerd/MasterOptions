@@ -9,6 +9,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ### Fixed
 
+- **Shift-click on an OpenMap pin starts a Shortest Path journey:** on the map, Shift-click plans a journey, but on
+  an OpenMap pin (your own, Dungeon Journal's Show on Map pins, shared ones) OpenMap used Shift-click to share the
+  pin in chat, and Alt-click deletes it, so no click on a pin could start a journey there. Shift-click on a pin now
+  journeys there, named after the pin's note. With a chat box open it still shares the pin, as Shift-click does
+  everywhere else in the game. The pin's tooltip says so.
+
 - **OpenMap_MiniMap's "Snap to the screen's edge":** with the map flush against the screen, the action-bar border
   around it went partly off the screen. OpenMap_MiniMap only leaves room for its own thinner border. On a side
   against the screen's edge, the border's line now sits on the screen's edge itself: the map ends at the line, and
