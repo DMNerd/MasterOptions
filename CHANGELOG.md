@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.9.3] - 2026-11-27
+
+### Changed
+
+- **Minimap coordinates on the other edge say why.** When your minimap is right at the top of the screen, a tab
+  "Top" would stick off it, so it goes under the minimap instead - as before, but the setting gave no sign of it.
+  Its row in /mo now says "On the bottom edge now: no room above your minimap", and the tooltip explains it. Move
+  the minimap a little away from the screen's edge to have it where you picked.
+
 ## [2.9.2] - 2026-11-27
 
 ### Fixed

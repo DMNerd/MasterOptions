@@ -261,9 +261,12 @@ local ApplySoon = MasterOptions_Shared.Debounce(function()
     Check("drawing the minimap border", pcall(Apply))
     Check("placing the coordinates", pcall(PlaceCoords)) -- (the tab sits on the frame)
 end, 0.2)
+local coordsSide -- { wanted = "top" | "bottom", used = the edge the tab is on } once placed
 MasterOptions_MinimapBorder = {
     Apply = function() ApplySoon(0) end,
     PlaceCoords = function() Check("placing the coordinates", pcall(PlaceCoords)) end,
+    -- the edge asked for and the one used: they differ when the asked one would put the tab off the screen
+    CoordsSide = function() if coordsSide then return coordsSide.wanted, coordsSide.used end end,
 }
 
 ---------------------------------------------------------------------------
@@ -370,7 +373,9 @@ PlaceCoords = function()
     tab.text:SetText(PlayerXY())
     local h = math.max(12, tab.text:GetStringHeight() or 12) + 2 * RIM * s * 0.5 + 4
     tab:SetSize(math.max(62, (tab.text:GetStringWidth() or 50) + 2 * k + 8), h + tuck)
+    local wanted = side
     side = OnScreenSide(side, top, bottom, h)
+    coordsSide = { wanted = wanted, used = side } -- (for the /mo row: says so when it had to use the other edge)
     tab:ClearAllPoints()
     tab.text:ClearAllPoints()
     if side == "bottom" then

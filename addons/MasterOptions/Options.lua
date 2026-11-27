@@ -746,7 +746,18 @@ local OPTIONS = {
         kind = "choice", label = "Minimap coordinates", rec = "Top center", since = 22,
         needs = "MasterOptions_OpenMapMiniMap_Border",
         choices = { "Top left", "Top center", "Top right", "Bottom left", "Bottom center", "Bottom right", "Game's place" },
-        tip = "The coordinates in a small tab sticking out of the minimap's frame, like the zone bar (same background and border): on its top or bottom edge, at the left, centre or right. Shown while the game's coordinates setting is on (Edit Mode's minimap \"show coordinates\", or OpenMap's \"Coordinates under the map\"). Game's place: the game's own line on the map's bottom edge, where OpenMap's bottom row of addon buttons covers it. Changes at once.",
+        tip = "The coordinates in a small tab sticking out of the minimap's frame, like the zone bar (same background and border): on its top or bottom edge, at the left, centre or right. When the minimap is so close to the top (or bottom) of the screen that the tab would stick off it, the tab goes on the other edge, and this row says so - move the minimap away from the screen's edge to have it where you picked. Shown while the game's coordinates setting is on (Edit Mode's minimap \"show coordinates\", or OpenMap's \"Coordinates under the map\"). Game's place: the game's own line on the map's bottom edge, where OpenMap's bottom row of addon buttons covers it. Changes at once.",
+        -- (the row's short text: says so when the tab had to go on the other edge)
+        desc = function()
+            local b = _G.MasterOptions_MinimapBorder
+            local wanted, used
+            if b and b.CoordsSide then wanted, used = b.CoordsSide() end
+            if wanted and used and wanted ~= used then
+                return ("|cffffd200On the %s edge now:|r no room %s your minimap - it's at the %s of the screen. Move it away from the edge to have it %s."):format(
+                    used, wanted == "top" and "above" or "below", wanted, wanted == "top" and "on top" or "at the bottom")
+            end
+            return "The coordinates in a small tab sticking out of the minimap's frame, like the zone bar: on its top or bottom edge."
+        end,
         get = function()
             local d = _G.MasterOptions_MinimapBorderDB
             local m = type(d) == "table" and d.coords or nil

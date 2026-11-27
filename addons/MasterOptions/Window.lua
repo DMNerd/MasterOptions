@@ -395,6 +395,14 @@ local function BuildRow(parent, opt, y)
             label:SetFontObject(ok and "GameFontHighlight" or "GameFontDisable")
         end
     end
+    -- a description worked out as it's shown (opt.desc a function: e.g. where the coordinates tab really is)
+    if type(opt.desc) == "function" then
+        local refresh = row.Refresh
+        function row:Refresh()
+            refresh(self)
+            desc:SetText(ShortDesc(opt) or "")
+        end
+    end
     rows[#rows + 1] = row
     return row:GetHeight()
 end
