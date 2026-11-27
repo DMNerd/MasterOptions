@@ -56,6 +56,9 @@ jobs:
         run: |
           .\scripts\pack.ps1
           Move-Item dist\MasterOptionsPack.zip "dist\MasterOptions-${{ steps.version.outputs.version }}.zip"
+          # CurseForge's file: only the MasterOptions folder at the top (the GitHub asset above stays as it is)
+          .\scripts\pack.ps1 -CurseForge
+          Move-Item dist\MasterOptions-curseforge.zip "dist\MasterOptions-${{ steps.version.outputs.version }}-curseforge.zip"
 
       - name: Release notes from CHANGELOG.md
         shell: pwsh
@@ -77,3 +80,64 @@ jobs:
           gh release create "${{ github.ref_name }}" "dist\MasterOptions-${{ steps.version.outputs.version }}.zip" `
             --title "Master Options ${{ steps.version.outputs.version }}" `
             --notes-file release-notes.md
+
+      - name: Upload to CurseForge
+        shell: pwsh
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_PROJECT_ID: "1834365"
+        run: |
+          # CurseForge upload API: https://support.curseforge.com/en/support/solutions/articles/9000197321
+          # (X-Api-Token header; POST /api/projects/{id}/upload-file, multipart "metadata" JSON + "file").
+          # The token is only ever sent as that header - never printed.
+          if (-not $env:CF_API_TOKEN) { throw "Secret CF_API_TOKEN is not set." }
+          $version = "${{ steps.version.outputs.version }}"
+          $zip     = "dist\MasterOptions-$version-curseforge.zip"
+          $api     = "https://wow.curseforge.com/api"
+          $headers = @{ "X-Api-Token" = $env:CF_API_TOKEN }
+
+          # the game version: "## Interface:" of the .toc as CurseForge writes it (16001 -> 1.60.1)
+          $toc = Get-Content addons\MasterOptions\MasterOptions.toc -Raw
+          if ($toc -notmatch '(?m)^## Interface:\s*(\d+)') { throw "No '## Interface:' line in MasterOptions.toc" }
+          $iface = [int]$Matches[1]
+          $gameVersionName = "{0}.{1}.{2}" -f [math]::Floor($iface / 10000), [math]::Floor(($iface % 10000) / 100), ($iface % 100)
+
+          # Its ID: the version of that name whose type is WoW Forever. /api/game/versions is documented
+          # (id, gameVersionTypeID, name, slug); /api/game/version-types isn't, so it only confirms the type when
+          # it answers. Without it, the name has to be unique (1.60.1 is no Retail or Classic version's name).
+          # Anything else fails: never a Retail or Classic version by guess.
+          $versions = @(Invoke-RestMethod "$api/game/versions" -Headers $headers)
+          $match = @($versions | Where-Object { $_.name -eq $gameVersionName })
+          $types = $null
+          try { $types = @(Invoke-RestMethod "$api/game/version-types" -Headers $headers) } catch { $types = $null }
+          if ($types) {
+            $forever = @($types | Where-Object { $_.name -match 'Forever' })
+            if ($forever.Count -ne 1) { throw "CurseForge has $($forever.Count) game version types named like 'Forever' (expected 1): $(@($types | ForEach-Object { $_.name }) -join ', ')" }
+            $match = @($match | Where-Object { $_.gameVersionTypeID -eq $forever[0].id })
+            $kind = "type '$($forever[0].name)'"
+          } else {
+            $kind = "unique name (no version types answer)"
+          }
+          if ($match.Count -ne 1) {
+            $seen = @($versions | Where-Object { $_.name -eq $gameVersionName } | ForEach-Object { "id $($_.id) type $($_.gameVersionTypeID)" }) -join "; "
+            throw "Expected exactly one WoW Forever game version $gameVersionName on CurseForge, found $($match.Count). Versions with that name: $seen"
+          }
+          "Game version: $gameVersionName = id $($match[0].id) ($kind)"
+
+          $metadata = @{
+            changelog     = (Get-Content release-notes.md -Raw)
+            changelogType = "markdown"
+            displayName   = "Master Options $version"
+            gameVersions  = @($match[0].id)
+            releaseType   = "release"
+          } | ConvertTo-Json -Compress
+          try {
+            $result = Invoke-RestMethod "$api/projects/$env:CF_PROJECT_ID/upload-file" -Method Post -Headers $headers `
+              -Form @{ metadata = $metadata; file = Get-Item $zip }
+          } catch {
+            # CurseForge's reason (its documentation doesn't describe error bodies): status and body, no headers
+            $status = $_.Exception.Response.StatusCode
+            $detail = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
+            throw "CurseForge upload failed$(if ($status) { " ($([int]$status) $status)" }): $detail"
+          }
+          "Uploaded to CurseForge as file $($result.id) (WoW Forever $gameVersionName)"
