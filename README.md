@@ -44,10 +44,41 @@ Then run them as `pwsh scripts/test.ps1` and so on. On a Mac, the default AddOns
 `/Applications/World of Warcraft/_forever_/Interface/AddOns` (pass `-AddOns` to use another one), and `lint.ps1`
 uses the `luacheck` on your PATH.
 
+## Thanks
+
+Master Options only makes these addons work together: everything it connects is their authors' work. Thank you to:
+
+| Addon | By |
+|---|---|
+| GearMatic | the GearMatic team |
+| Mastercraft | Shadowblade |
+| Questie and QuestieDB | Aero, Logon, Muehe, TheCrux (BreakBB), Drejjmit, Dyaxler, Cheeq, TechnoHunter, Yttrium and everyone else |
+| Baganator, Syndicator, Chattynator | plusmouse |
+| Auctionator | plusmouse, Borjamacare |
+| CheapUpgrades | KanIkkeKodeUI |
+| Pawn | Vger |
+| Pawn Forever | turlockmike |
+| OpenMap, OpenMap MiniMap | the OpenMap contributors |
+| OpenMap Tweaks | Austin |
+| Dungeon Journal (ForeverDungeonJournal) | Exehn |
+| Shortest Path Forever | cjber |
+| DeleteCheapestItem Reloaded | Sander Vispoel (sandervspl) |
+| DialogKey - Numy Edition | Numy (earlier versions: Foxthorn, N01ch, FuriousProgrammer) |
+| Sparkles [Forever] | Crogin / CGN |
+| BetterBlizzFrames, BetterBlizzPlates | Bodify |
+| Details! Damage Meter | Terciob |
+
+And to the libraries Master Options ships with or uses: LibStub (Kaelten, Cladhaire, ckknight, Mikk, Ammo, Nevcairiel,
+joshborke), CallbackHandler (the Ace3 team), LibDataBroker (tekkub), LibDBIcon (funkehdude) and HereBeDragons
+(Nevcairiel, through Questie's copy) - and to the WoWSims Forever and Wowhead Forever data GearMatic, CheapUpgrades
+and Mastercraft are built on.
+
 ## Releases
 
 GitHub Actions (`.github/workflows/release.yml`) runs the tests on every push to `main` and on pull requests.
-To publish a release, bump `## Version:` in `MasterOptions.toc`, commit, then tag that commit with the same version:
+To publish a release, move what's under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md) into a new
+`## [X.Y.Z] - date` section (and add its compare link at the bottom), bump `## Version:` in `MasterOptions.toc`,
+commit, then tag that commit with the same version:
 
 ```powershell
 git tag v2.0.1
@@ -55,7 +86,8 @@ git push origin main v2.0.1
 ```
 
 The workflow checks that the tag matches the `.toc` version, builds the pack, and attaches
-`MasterOptions-<version>.zip` to a new GitHub Release with notes generated from the commits.
+`MasterOptions-<version>.zip` to a new GitHub Release. Its notes are that version's section of CHANGELOG.md; a tag
+without one fails the release, so nothing goes out without notes. The zip carries CHANGELOG.md too.
 
 **Test data:** `tests/fixtures/` holds anonymised settings tables (characters renamed Testchar Alpha / Testchar Beta, realm
 "Test Realm", logs and other players' names removed).
@@ -126,3 +158,7 @@ was found.
 - SavedVariables are written only at logout or `/reload`.
 - Mastercraft decorates only GameTooltip and ItemRefTooltip. Its advice can be read through a hidden
   GameTooltip, which is how VendorSell reads it.
+
+## License
+
+MIT - see [LICENSE](LICENSE).

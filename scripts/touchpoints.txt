@@ -1,6 +1,6 @@
 # Names Master Options relies on in other addons, checked by scripts\check-addons.ps1 against the installed copies.
 # Addon folder | kind | literal text that would disappear if the addon renamed or removed it | our file using it
-# Verified against the installed versions on 2026-11-27 (GearMatic 6.11.0, CheapUpgrades 0.18.12, Baganator 870, ShortestPathForever 1.48.0, Mastercraft 2.1.2, OpenMap_Tweaks 1.5.4
+# Verified against the installed versions on 2026-11-27 (GearMatic 6.11.0, CheapUpgrades 0.18.12, Baganator 870, ShortestPathForever 1.48.1, Mastercraft 2.1.2, OpenMap_Tweaks 1.5.4
 # and the rest as audited).
 
 # --- Mastercraft (2.1.2)
