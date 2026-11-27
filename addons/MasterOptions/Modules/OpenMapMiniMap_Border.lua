@@ -208,17 +208,27 @@ end
 -- the zone bar's background stretched out under the rim on every side it touches: OpenMap draws the bar
 -- inside its own gold frame's band (narrower than the map) and the rim's shading is see-through - both showed
 -- the world between the rim and the bar (a player's screenshot). Back on the bar when ours is off.
--- The rim's corners are rounded (2.15: by the bar too - a player's ask): a background reaching the rim's lines there
--- showed its square corners past the curve. So it's three pieces: the middle, between the rounded corners, the whole
--- height; and a piece on each side under the corner, below its curve (styled as the bar: HeadFill).
-local barSides = {}
+-- The rim's corners are rounded (by the bar too - a player's ask): a background reaching the rim's lines there showed
+-- its square corners past the curve, and one stopping at the curve's start left the world showing inside the curve (a
+-- player's screenshot: gaps in the header). So it's three pieces: the middle, between the corners, the whole height;
+-- and in each corner a piece cut round by a circle (the game's round portrait mask) - filled inside the curve only.
+-- (Styled as the bar: HeadFill.)
+local MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
+local barSides, barMasks = {}, {}
 local function BarSide(b, tex, i)
     if not barSides[i] then
         local layer, sub = tex:GetDrawLayer()
-        barSides[i] = b:CreateTexture(nil, layer or "BACKGROUND", nil, sub)
-        HeadFill(barSides[i])
+        local s = b:CreateTexture(nil, layer or "BACKGROUND", nil, sub)
+        HeadFill(s)
+        if b.CreateMaskTexture and s.AddMaskTexture then
+            local m = b:CreateMaskTexture()
+            m:SetTexture(MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+            s:AddMaskTexture(m)
+            barMasks[i] = m
+        end
+        barSides[i] = s
     end
-    return barSides[i]
+    return barSides[i], barMasks[i]
 end
 
 local function BarFill(on)
@@ -246,28 +256,24 @@ local function BarFill(on)
         tex:SetPoint("TOPLEFT", body, "BOTTOMLEFT", inL, inner)
         tex:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", inR, outer)
     end
-    -- under the corners, past their curve: the part of the bar further from the rim's line than the corner reaches
-    local cornerEnd = above and (outer - k) or (outer + k)
-    local room = above and (cornerEnd - inner) or (inner - cornerEnd)
-    if room > 0.5 then
-        for i, x in ipairs({ { left, inL }, { inR, right } }) do
-            local s = BarSide(b, tex, i)
-            s:ClearAllPoints()
-            if above then
-                s:SetPoint("TOPLEFT", body, edgeY .. "LEFT", x[1], cornerEnd)
-                s:SetPoint("BOTTOMRIGHT", body, edgeY .. "LEFT", x[2], inner)
-            else
-                s:SetPoint("TOPLEFT", body, edgeY .. "LEFT", x[1], inner)
-                s:SetPoint("BOTTOMRIGHT", body, edgeY .. "LEFT", x[2], cornerEnd)
-            end
-            -- (the right one's x are from the map's right edge)
-            if i == 2 then
-                s:ClearAllPoints()
-                s:SetPoint(above and "TOPLEFT" or "BOTTOMLEFT", body, edgeY .. "RIGHT", x[1], above and cornerEnd or cornerEnd)
-                s:SetPoint(above and "BOTTOMRIGHT" or "TOPRIGHT", body, edgeY .. "RIGHT", x[2], inner)
-            end
-            s:Show()
+    -- the corners: from the rim's side line to the middle, the bar's whole height, cut round by a circle k across
+    -- from its centre (where the curve's centre is: k in from the frame's side and its rim line). Without masks on
+    -- this client: only below the curve (no square past it), as before.
+    local centreY = above and (outer - k) or (outer + k)
+    for i, c in ipairs({ { "LEFT", left, inL, inL }, { "RIGHT", inR, right, inR } }) do
+        local s, m = BarSide(b, tex, i)
+        local anchor = edgeY .. c[1]
+        s:ClearAllPoints()
+        local fromY = m and outer or centreY -- (masked: the whole height; else only below the curve)
+        local y1, y2 = above and fromY or inner, above and inner or fromY
+        s:SetPoint("TOPLEFT", body, anchor, c[2], y1)
+        s:SetPoint("BOTTOMRIGHT", body, anchor, c[3], y2)
+        if m then
+            m:ClearAllPoints()
+            m:SetSize(2 * k, 2 * k)
+            m:SetPoint("CENTER", body, anchor, c[4], centreY)
         end
+        s:SetShown(m ~= nil or (above and (centreY - inner) or (inner - centreY)) > 0.5)
     end
 end
 

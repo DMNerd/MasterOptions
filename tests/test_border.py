@@ -26,6 +26,8 @@ local function Region(kind)
   function r:GetLeft() return self.left or 100 end
   function r:GetRight() return (self.left or 100) + (self.w or 0) end
   function r:GetDrawLayer() return "BACKGROUND", 0 end
+  function r:CreateMaskTexture() local m = Region("mask"); self.masks = self.masks or {}; self.masks[#self.masks+1] = m; return m end
+  function r:AddMaskTexture(m) self.mask = m end
   function r:IsObjectType(t) return self.kind == "button" and t == "Button" end
   function r:SetAllPoints(rel) self.points = { { 'ALL', rel } } end
   function r:GetBottom() return self.bottom or (self.top - self.h) end
@@ -111,7 +113,7 @@ L("Edge.texture:SetVertexColor(1, 1, 1, 1)")
 check("OpenMap setting its border up again (a setting changed): hidden again at once", E("Edge.texture.alpha"), 0)
 check("rim drawn over the zone bar and its buttons (a higher strata than the map's border)", E("MasterOptionsMinimapBorder.strata == 'MEDIUM' and MasterOptionsMinimapBorder.level == 7"), True)
 check("zone bar's background: the middle between the rounded corners, up to the rim's top line", E("(function() local p = Bar.texture.points; return #p == 2 and p[1][2] == Body and p[1][4] > 0 and p[2][4] < 0 and p[1][5] > 25 end)()"), True)
-check("...and a piece each side, out under the rim below the corner's curve", E("(function() local t = Bar.textures; if not (t and #t == 2 and t[1].shown and t[2].shown) then return false end; local l, r = t[1].points, t[2].points; return l[1][4] < 0 and r[2][4] > 0 and l[1][5] < Bar.texture.points[1][5] end)()"), True)
+check("...and a piece in each corner, the bar's whole height, cut round by a circle on the curve's centre (no gap inside the curve, no square past it)", E("(function() local t = Bar.textures; if not (t and #t == 2 and t[1].shown and t[2].shown and t[1].mask and t[2].mask) then return false end; local l, r, m = t[1].points, t[2].points, t[1].mask; return l[1][4] < 0 and r[2][4] > 0 and l[1][5] == Bar.texture.points[1][5] and m.w == m.h and m.w > 30 and m.points[1][1] == 'CENTER' end)()"), True)
 check("OpenMap's own lines see-through", E("Edge.lines[1].alpha + Edge.texture.alpha"), 0)
 check("shown", E("MasterOptionsMinimapBorder.shown"), True)
 check("coordinates: a tab on the frame's top edge, centred", E("MasterOptionsMinimapCoords.shown and MasterOptionsMinimapCoords.points[1][1] == 'BOTTOM' and MasterOptionsMinimapCoords.points[1][2] == MasterOptionsMinimapBorder and MasterOptionsMinimapCoords.points[1][3] == 'TOP'"), True)
