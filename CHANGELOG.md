@@ -7,6 +7,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.12.6] - 2026-11-27
+
+### Fixed
+
+- A dungeon opened from its entrance still showed the zone's story (2.12.5 only caught a quick click). On OpenMap's
+  map every click picks the zone under it in Spoken Places, the entrance click too, and so does a click anywhere on
+  Dungeon Journal's map, which covers that zone. While that map is up, the story we showed (the dungeon's, or the
+  boss's you clicked) now goes back after any such pick.
+
+### Added
+
+- `/mo story`: what happened the last time Dungeon Journal's map went up on the world map. It shows the dungeon,
+  Spoken's instance for it, the map, and whether a story was shown.
+
 ## [2.12.5] - 2026-11-27
 
 ### Fixed

@@ -40,6 +40,10 @@ lua.execute(r'''
       for map, list in pairs(BOSSES) do for _, n in ipairs(list) do
         if key(n) == wanted and prefer and prefer(map) then return { map = map, key = wanted } end end end end,
   } }
+  -- Spoken Places: a click on the map picks a place (SelectMap on OpenMap's map, SelectSubzone on Blizzard's)
+  SpokenPlaces = { selected = nil }
+  function SpokenPlaces:SelectMap(mapID) self.selected = { mapID = mapID, map = true } end
+  function SpokenPlaces:SelectSubzone(mapID, area) self.selected = { mapID = mapID, areaName = area } end
   -- Dungeon Journal
   ATTACHED = false
   ForeverDungeonJournal_NS = {
@@ -90,22 +94,26 @@ L('Draw("Shadowfang Keep"); Log(); WorldMapFrame.scripts.OnHide()')
 res["world map closed: our story cleared"] = E("Log()") == "clear"
 L('ATTACHED = false; ForeverDungeonJournal_NS.OpenBossFromWorldMap("Shadowfang Keep", 1)')
 res["a boss opened from the journal (not the world map): nothing"] = E("Log()") == ""
-# the entrance click on OpenMap's map also picks the zone under it in Spoken Places, after our story went up
+# the entrance click on OpenMap's map also picks the zone under it in Spoken Places (after our story went up, and
+# however long the click took); so does any click on Dungeon Journal's map, which covers the zone
 L(r'''
   WorldMapFrame.scripts.OnHide(); Draw(nil); Log()
-  SpokenPlaces = { selected = nil }
   local show = SpokenBossesAddon.MapLore.ShowDungeon
   SpokenBossesAddon.MapLore.ShowDungeon = function(map, id) SpokenPlaces.selected = nil; return show(map, id) end
-  QUEUE = true
+  local boss = SpokenBossesAddon.MapLore.ShowBoss
+  SpokenBossesAddon.MapLore.ShowBoss = function(map, found) SpokenPlaces.selected = nil; return boss(map, found) end
   Draw("Shadowfang Keep")
-  SpokenPlaces.selected = "Tirisfal Glades"   -- (Spoken's click handler, same click)
-  RunTimers(); RunTimers()
-  QUEUE = false
+  SpokenPlaces:SelectMap(1421)   -- (Spoken's click handler, same click)
 ''')
-res["entrance click picked the zone in Spoken after ours: the dungeon's story put back, once"] = (
+res["Spoken picked the zone under Dungeon Journal's map: the dungeon's story put back"] = (
     E("Log()") == "dungeon 33@1421,dungeon 33@1421" and E("SpokenPlaces.selected") is None)
-L('SpokenPlaces.selected = "Tirisfal Glades"; QUEUE = true; ForeverDungeonJournal_NS.RefreshWorldMapOverlay(); RunTimers(); QUEUE = false')
-res["...a zone picked later (not right after ours went up): left alone"] = E("Log()") == ""
+L('ForeverDungeonJournal_NS.OpenBossFromWorldMap("Shadowfang Keep", 2); Log(); SpokenPlaces:SelectSubzone(1421, "Pyrewood Village")')
+res["...after a boss was clicked: the boss's story put back, not the dungeon's"] = E("Log()") == "boss 33:baron silverlaine"
+L('Draw(nil); Log(); SpokenPlaces:SelectMap(1421)')
+res["...with Dungeon Journal's map gone: Spoken's pick stays"] = E("Log()") == "" and E("SpokenPlaces.selected ~= nil") is True
+L('ForeverDungeonJournal_NS.OpenBossFromWorldMap("Shadowfang Keep", 1); SpokenPlaces.selected = nil; Log()')
+L('Draw("Shadowfang Keep"); Log(); OUT = {}; local p = print; print = function(s) OUT[#OUT + 1] = s end; MasterOptions_DJSpoken.Explain(); print = p')
+res["/mo story: says what the last try did"] = "Spoken's instance 33, on map 1421 -> story shown" in lua.eval("OUT[2]")
 L('SpokenBossesAddon.MapLore = nil; Draw("Shadowfang Keep")')
 res["Spoken's helper gone: nothing, no error"] = E("Log()") == "" and E("ERRS") == 0
 for k, v in res.items():

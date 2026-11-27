@@ -412,3 +412,5 @@ Baganator|function|function Baganator.API.RegisterCornerWidget|NeverSell.lua, Ma
 Baganator|config-key|icon_grey_junk|Options.lua (Grey out junk in bags)
 GearMatic|config-key|bestGoldShowAuction|Options.lua (Mastercraft advice in bags)
 GearMatic|config-key|bestGoldShowDisenchant|Options.lua (Mastercraft advice in bags)
+Spoken_Places|function|function SpokenPlaces:SelectMap|DungeonJournal_SpokenBosses.lua (story back after a pick)
+Spoken_Places|function|function SpokenPlaces:SelectSubzone|DungeonJournal_SpokenBosses.lua (story back after a pick)

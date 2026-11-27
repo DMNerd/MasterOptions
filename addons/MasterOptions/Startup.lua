@@ -356,6 +356,13 @@ SlashCmdList.MASTEROPTIONS = function(msg)
         else print("|cffffd200Master Options:|r the Mastercraft / VendorSell module isn't running (needs Mastercraft; /mo > Modules).") end
         return
     end
+    if msg:lower() == "story" then
+        -- /mo story: why a dungeon's story did or didn't show beside the world map
+        local s = _G.MasterOptions_DJSpoken
+        if s and s.Explain then s.Explain()
+        else print("|cffffd200Master Options:|r the DungeonJournal / SpokenBosses module isn't running (needs ForeverDungeonJournal and Spoken_Bosses; /mo > Modules).") end
+        return
+    end
     if msg:lower() == "whispers" then
         local w = _G.MasterOptions_AddonWhispers
         if w then w.List() else print("|cffffd200Master Options:|r the Chat / AddonWhispers module is off (/mo > Modules).") end
