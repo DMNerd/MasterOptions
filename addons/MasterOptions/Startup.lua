@@ -349,6 +349,13 @@ SlashCmdList.MASTEROPTIONS = function(msg)
             or "locked where it is."))
         return
     end
+    if msg:lower() == "vendor" then
+        -- /mo vendor: what Mastercraft says to VENDOR in your bags, and why each is (not) sold
+        local v = _G.MasterOptions_MastercraftVendorSell
+        if v and v.Explain then v.Explain()
+        else print("|cffffd200Master Options:|r the Mastercraft / VendorSell module isn't running (needs Mastercraft; /mo > Modules).") end
+        return
+    end
     if msg:lower() == "whispers" then
         local w = _G.MasterOptions_AddonWhispers
         if w then w.List() else print("|cffffd200Master Options:|r the Chat / AddonWhispers module is off (/mo > Modules).") end

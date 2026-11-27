@@ -129,17 +129,22 @@ local function Loadouts()
     return loadoutCache
 end
 
+-- sell, price - and when it isn't sold, why (for /mo vendor)
 local function SlotSells(bag, slot, info, fresh, readCache)
     local id, link = info and info.itemID, info and info.hyperlink
-    if not (id and link) or info.hasNoValue or (info.quality or 1) <= 0 then return false end
+    if not (id and link) then return false, nil, "no item" end
+    if info.hasNoValue or (info.quality or 1) <= 0 then return false, nil, "grey or no vendor price (the junk seller's)" end
     local gdb = _G.GearMaticDB
-    if type(gdb) == "table" and type(gdb.sellIgnore) == "table" and gdb.sellIgnore[id] then return false end
+    if type(gdb) == "table" and type(gdb.sellIgnore) == "table" and gdb.sellIgnore[id] then
+        return false, nil, "on GearMatic's never-sell list"
+    end
     local keep = _G.MasterOptions_MastercraftKeep
-    if keep and keep.IsNeeded and keep.IsNeeded(id) then return false end
+    if keep and keep.IsNeeded and keep.IsNeeded(id) then return false, nil, "kept (Mastercraft Keep: guide, tracker or KEEP)" end
     local price = select(11, GetInfo(link))
-    if not price or price <= 0 then return false end
+    if not price then return false, nil, "item info not loaded yet" end
+    if price <= 0 then return false, nil, "no vendor price" end
     local gear = IsEquippable(link) and true or false
-    if gear and Mode() ~= "all" then return false end
+    if gear and Mode() ~= "all" then return false, price, "gear (sell mode is Goods)" end
     local sell
     if fresh then
         sell = readCache and readCache[id]
@@ -151,8 +156,9 @@ local function SlotSells(bag, slot, info, fresh, readCache)
     else
         sell = DB and DB.sell[id] == true
     end
-    if sell and gear and GearStays(link, bag, slot, id, Loadouts()) then sell = false end
-    return sell, price
+    if not sell then return false, price, "Mastercraft doesn't say VENDOR" end
+    if gear and GearStays(link, bag, slot, id, Loadouts()) then return false, price, "gear GearMatic / Pawn keeps" end
+    return true, price
 end
 
 -- For the bag icons (MasterOptions_GearMatic_Baganator's junk coin): no tooltip reads, just what's known
@@ -163,7 +169,62 @@ local function WouldSell(bag, slot, itemID)
     local ok, sell = Check("bag icon", pcall(SlotSells, bag, slot, info, false))
     return ok and sell == true
 end
-MasterOptions_MastercraftVendorSell = { WouldSell = WouldSell }
+-- /mo vendor: every bag item Mastercraft says (or last said) to VENDOR, and whether it's sold - or the rule that
+-- stops it. Reads each item's advice fresh, like a vendor visit does; prints, sells nothing.
+local function Explain()
+    local head = "|cffffd200Master Options:|r "
+    local seller = Seller()
+    local p, va = GMProfile(), GM() and GM().VendorAutomation
+    local why
+    if not seller then
+        if not GM() then why = "GearMatic isn't loaded, and Mastercraft's own junk selling is off"
+        elseif not p then why = "GearMatic's settings aren't readable (GearMatic.db.profile)"
+        elseif p.autoSellJunk == false then why = "GearMatic's Sell junk is off, and so is Mastercraft's"
+        elseif not (va and va.SellJunk) then why = "GearMatic has no VendorAutomation.SellJunk"
+        else why = "?" end
+    end
+    print(head .. ("sell mode %s, junk seller %s%s."):format(Mode(), seller or "none",
+        why and (" (" .. why .. ")") or ""))
+    local bagAPI2 = _G.Baganator and _G.Baganator.API
+    local plugin
+    if bagAPI2 and bagAPI2.IsJunkPluginActive then
+        for _, id in ipairs({ "gearmatic", "mastercraft" }) do
+            if bagAPI2.IsJunkPluginActive(id) then plugin = id end
+        end
+        print(head .. "Baganator's junk coin: " .. (plugin or "another plugin (not GearMatic or Mastercraft)"))
+    end
+    if GameTooltip:IsShown() then GameTooltip:Hide() end
+    local shown, seen = 0, {}
+    for bag = 0, (NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4) do
+        for slot = 1, (numSlots(bag) or 0) do
+            local info = slotInfo(bag, slot)
+            local id = info and info.itemID
+            if id and not seen[id] and (info.quality or 1) > 0 and not info.hasNoValue then
+                seen[id] = true
+                local verdict, keepSome = SlotVerdict(bag, slot)
+                if verdict == "VENDOR" or (DB and DB.sell[id] == true) then
+                    local okS, sell, _, reason = pcall(SlotSells, bag, slot, info, true, nil)
+                    if not okS then sell, reason = false, "error: " .. tostring(sell) end
+                    if verdict == "VENDOR" and keepSome and not sell then reason = "your guide uses some of them" end
+                    if sell and Mode() == "off" then sell, reason = false, "sell mode is Off" end
+                    if sell and not seller then sell, reason = false, "no junk seller" end
+                    local icon = ""
+                    if plugin == "gearmatic" or plugin == "mastercraft" then
+                        local cb = WouldSell(bag, slot, id)
+                        icon = cb and "  |cff9d9d9d(junk coin)|r" or "  |cff9d9d9d(no junk coin)|r"
+                    end
+                    local said = verdict and (verdict .. (keepSome and ", keep some for a guide" or "")) or "no advice now"
+                    print(("  %s - Mastercraft: %s - %s%s"):format(info.hyperlink or ("item " .. id), said,
+                        sell and "|cff40ff40sold at the vendor|r" or ("|cffff6060not sold:|r " .. tostring(reason)), icon))
+                    shown = shown + 1
+                end
+            end
+        end
+    end
+    if shown == 0 then print(head .. "nothing in your bags that Mastercraft says to VENDOR.") end
+end
+
+MasterOptions_MastercraftVendorSell = { WouldSell = WouldSell, Explain = Explain }
 
 -- Baganator junk coin "Mastercraft": what Mastercraft sells (greys) and what this patch sells with it
 local bagAPI = _G.Baganator and _G.Baganator.API

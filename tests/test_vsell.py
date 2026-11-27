@@ -111,3 +111,26 @@ L('MasterOptions_MastercraftVendorDB.mode = "all"')
 print("mode all: sword:", E("MasterOptions_MastercraftVendorSell.WouldSell(0, 4, 2488)"), "| boots (upgrade):", E("MasterOptions_MastercraftVendorSell.WouldSell(0, 8, 2961)"))
 L('GMProf.autoSellJunk = false; MastercraftDB.settings.autoJunk = false')
 print("junk selling off: linen:", E("MasterOptions_MastercraftVendorSell.WouldSell(0, 1, 2589)"))
+
+print("== /mo vendor (why each VENDOR item is or isn't sold)")
+errors = 0
+def check(what, ok):
+    global errors
+    if not ok: errors += 1
+    print(("ok   " if ok else "FAIL ") + what)
+L('GMProf.autoSellJunk = true; MasterOptions_MastercraftVendorDB.mode = "goods"; Reset()')
+L('OUT = {}; local p = print; print = function(...) local t = {} for i = 1, select("#", ...) do t[#t+1] = tostring((select(i, ...))) end OUT[#OUT+1] = table.concat(t, " ") end; '
+  'MasterOptions_MastercraftVendorSell.Explain(); print = p')
+out = list(lua.eval("OUT").values())
+for line in out: print("   ", line)
+def line_for(item): return next((l for l in out if item in l), "")
+check("header: mode and seller", "sell mode goods, junk seller gearmatic" in out[0])
+check("linen: sold", "sold at the vendor" in line_for("item:2589"))
+check("sword: gear in Goods mode", "gear (sell mode is Goods)" in line_for("item:2488"))
+check("thread: keep some for a guide", "keep some for a guide" in line_for("item:2320"))
+check("herb: never-sell list", "never-sell" in line_for("item:765"))
+check("silk (AUCTION) not listed", line_for("item:4306") == "")
+L('GMProf.autoSellJunk = false; OUT = {}; local p = print; print = function(s) OUT[#OUT+1] = s end; MasterOptions_MastercraftVendorSell.Explain(); print = p')
+out = list(lua.eval("OUT").values())
+check("no seller: says why", "GearMatic's Sell junk is off" in out[0] and "no junk seller" in line_for("item:2589"))
+print("ERRORS:", errors)

@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.10.2] - 2026-11-27
+
+### Added
+
+- **`/mo vendor`**: lists every item in your bags that Mastercraft says to VENDOR, and for each one whether it
+  will be sold at the next vendor or the rule that stops it (gear while the sell mode is Goods, the never-sell
+  list, kept for a guide, no vendor price, no junk seller...). It also says who sells your junk and which junk
+  coin Baganator uses. It only reports and never sells anything.
+
 ## [2.10.1] - 2026-11-27
 
 ### Added
