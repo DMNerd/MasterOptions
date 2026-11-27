@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.10.3] - 2026-11-27
+
+### Changed
+
+- **`/mo vendor`** says which rule keeps a piece of gear: a GearMatic loadout, Pawn, GearMatic's best / 2nd best for
+  one of your specs, a GearMatic upgrade for you or an alt, best in slot, or an equipment set.
+
 ## [2.10.2] - 2026-11-27
 
 ### Added

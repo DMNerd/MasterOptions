@@ -92,6 +92,36 @@ local function GearStays(link, bag, slot, itemID, loadouts)
     return loadouts[itemID] or PawnUpgrade(link) or Shared.GearMaticKeeps(link, bag, slot, itemID)
 end
 
+-- which of those keeps it (for /mo vendor)
+local function GearStaysWhy(link, bag, slot, itemID, loadouts)
+    if loadouts[itemID] then return "in a GearMatic loadout" end
+    if type(_G.MasterOptions_PawnKeeps) == "function" and _G.MasterOptions_PawnKeeps(link) then
+        return "Pawn: an upgrade, or your best / 2nd best for a scale"
+    end
+    local sk = _G.MasterOptions_GearMaticSpecKeeps
+    if type(sk) == "table" and type(sk.KeepsMany) == "function" then
+        local ok, out = pcall(sk.KeepsMany, { link })
+        if ok and type(out) == "table" and out[link] then return "GearMatic: your best / 2nd best for one of your specs" end
+    end
+    local gm = GM()
+    local bo = gm and gm.BagOverlay
+    if bo and bo.MarkerVerdict then
+        local ok, v = pcall(bo.MarkerVerdict, link, bag, slot)
+        if ok and type(v) == "table" then
+            if v.upgrade then return "GearMatic: an upgrade for you" end
+            if v.alt then return "GearMatic: an upgrade for one of your alts" end
+            if v.skull then return "GearMatic: best in slot" end
+        end
+    end
+    local va = gm and gm.VendorAutomation
+    if va and va.InEquipmentSet then
+        local ok, inSet = pcall(va.InEquipmentSet, bag, slot, itemID)
+        if ok and inSet then return "in an equipment set" end
+    end
+    if PawnUpgrade(link) then return "Pawn / GearMatic keeps it" end
+    return nil
+end
+
 ---------------------------------------------------------------------------
 -- What Mastercraft last said per item (DB.sell[itemID] = true: VENDOR, false: anything else), for the bag
 -- icons - learned from every item tooltip GameTooltip shows (yours and the hidden reads below). Selling
@@ -157,7 +187,9 @@ local function SlotSells(bag, slot, info, fresh, readCache)
         sell = DB and DB.sell[id] == true
     end
     if not sell then return false, price, "Mastercraft doesn't say VENDOR" end
-    if gear and GearStays(link, bag, slot, id, Loadouts()) then return false, price, "gear GearMatic / Pawn keeps" end
+    if gear and GearStays(link, bag, slot, id, Loadouts()) then
+        return false, price, "kept gear - " .. (GearStaysWhy(link, bag, slot, id, Loadouts()) or "GearMatic / Pawn keeps it")
+    end
     return true, price
 end
 

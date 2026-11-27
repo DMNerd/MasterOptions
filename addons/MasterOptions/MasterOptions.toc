@@ -2,7 +2,7 @@
 ## Title: Master Options
 ## Notes: A meta settings manager and compatibility layer that makes your WoW Forever addons work together. /mo
 ## Author: DMNerd
-## Version: 2.10.2
+## Version: 2.10.3
 ## IconTexture: Interface\AddOns\MasterOptions\Icon
 ## OptionalDeps: Questie, BetterBlizzPlates, BetterBlizzFrames, GearMatic, Mastercraft, OpenMap, OpenMap_Tweaks, OpenMap_MiniMap, Pawn, Pawn_Forever, CheapUpgrades, Baganator, Chattynator, Details, DeleteCheapestItem, Auctionator, DialogKey_Numy, ForeverDungeonJournal, Sparkles_Forever, ShortestPathForever
 ## SavedVariables: MasterOptionsDB, MasterOptions_DialogKeyPawnDB, MasterOptions_DJOpenMapDB, MasterOptions_GearMaticForeverDB, MasterOptions_MastercraftBankDB, MasterOptions_MastercraftKeepDB, MasterOptions_MastercraftVendorDB, MasterOptions_MinimapBorderDB
