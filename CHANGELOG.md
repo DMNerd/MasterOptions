@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.11.0] - 2026-11-27
+
+### Added
+
+- **Grey out junk in bags** (Bags, Baganator), recommended and switched on with this update: every item with the
+  junk coin shows in grey, so what the next vendor visit sells (also what Mastercraft says to VENDOR) stands out.
+  Baganator's own "Grey out junk" setting. Takes effect after a `/reload`.
+
 ## [2.10.4] - 2026-11-27
 
 ### Fixed

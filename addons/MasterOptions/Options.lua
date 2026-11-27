@@ -561,6 +561,20 @@ local OPTIONS = {
         scope = "Baganator profile",
     }, "junk", MATCH_JUNK, "Greys only", JunkState, ApplyJunk, MatchedJunk),
     {
+        kind = "toggle", label = "Grey out junk in bags", rec = true, since = 34, reload = true,
+        needs = "Baganator",
+        tip = "Baganator shows every item with the junk coin in grey - so what will be sold at the next vendor (with the coin above: also what Mastercraft says to VENDOR) stands out at a glance. Baganator's own \"Grey out junk\" setting.",
+        get = function() local p = BAG(); return p ~= nil and p.icon_grey_junk == true end,
+        set = function(v)
+            local p = BAG(); if not p then return end
+            p.icon_grey_junk = v and true or false
+            if _G.Baganator and Baganator.API and Baganator.API.RequestItemButtonsRefresh then
+                pcall(Baganator.API.RequestItemButtonsRefresh)
+            end
+        end,
+        scope = "Baganator profile",
+    },
+    {
         -- (GearMatic's skull is Baganator's corner widget "gearmatic_bis", top right; Baganator auto-inserts a
         -- widget once only, so taking it out sticks)
         kind = "toggle", label = "Best-in-slot skull in bags", reload = true,
