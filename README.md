@@ -61,6 +61,7 @@ The workflow checks that the tag matches the `.toc` version, builds the pack, an
 | GearMatic / Baganator | GearMatic, Baganator | Junk coin from GearMatic's sell rules; loadouts as equipment sets |
 | GearMatic / Forever | GearMatic | Separate GearMatic data per character (Forever has no realm name) |
 | CheapUpgrades / Baganator | CheapUpgrades, Baganator | "+23%" badges on bag slots |
+| CheapUpgrades / GearMatic | CheapUpgrades, GearMatic | CheapUpgrades values items with GearMatic's stat weights: a "GearMatic" weights profile per spec (ratings converted to CheapUpgrades' per-1% units), kept up to date and used unless you picked a profile of your own |
 | OpenMapTweaks / Mastercraft | OpenMap_Tweaks, Mastercraft | Mastercraft's node rule filters OpenMap_Tweaks' pins |
 | DialogKey / Pawn | DialogKey | Pre-selects the best quest reward (Pawn / GearMatic) |
 | Mastercraft / Auctionator | Mastercraft, Auctionator | Scan prices button on Auctionator's page |

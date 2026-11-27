@@ -57,8 +57,15 @@ end
 -- showed. GearMatic skips a scale flagged Hidden (a flag Pawn itself no longer reads on its scales),
 -- so while GearMatic uses Pawn, every scale this character doesn't show in Pawn gets that flag.
 -- The flags are cleared at logout: nothing of this is saved into Pawn's settings.
--- (the recommended pick for a "Pawn or GearMatic" row: Pawn while it's installed, GearMatic without it)
-local function PawnElseGearMatic() return Loaded("Pawn") and "Pawn" or "GearMatic" end
+-- Who should judge upgrades, for every recommendation that involves Pawn (one judge, so the stat weights, bag
+-- arrows, CheapUpgrades, the quest reward pick and its marker agree): Pawn with Pawn Forever installed (weights
+-- made for WoW Forever); otherwise GearMatic, whose own weights are simulated for WoW Forever - Pawn without Pawn
+-- Forever only has its stock Classic scales. Pawn alone (no GearMatic) is still Pawn.
+local function Judge()
+    if Loaded("Pawn") and (Loaded("Pawn_Forever") or not Loaded("GearMatic")) then return "Pawn" end
+    return "GearMatic"
+end
+local function PawnElseGearMatic() return Judge() end
 
 local function GMUsesPawn()
     local g = GM()
@@ -1091,7 +1098,8 @@ local OPTIONS = {
         end,
     },
     {
-        kind = "choice", label = "GearMatic stat weights", rec = "Pawn", since = 5, scope = "character",
+        kind = "choice", label = "GearMatic stat weights", since = 5, scope = "character",
+        rec = function() return Judge() == "Pawn" and "Pawn" or "GearMatic's own" end,
         needs = { "GearMatic", "Pawn" }, off = "GearMatic's own",
         tip = "Pawn: GearMatic scores, marks and auto-equips with the Pawn scale this character shows in Pawn (Pawn Forever's, once it has swapped them in), and Pawn itself works out each item's value, so GearMatic agrees with Pawn. Show or hide scales in Pawn to change it. GearMatic's own: its Icy Veins guide weights.",
         choices = { "Pawn", "GearMatic's own" },
@@ -1117,9 +1125,10 @@ local OPTIONS = {
         end,
     },
     {
-        kind = "toggle", label = "CheapUpgrades: use Pawn's weights", rec = true, since = 5,
+        kind = "toggle", label = "CheapUpgrades: use Pawn's weights", since = 5,
+        rec = function() return Judge() == "Pawn" end,
         needs = { "CheapUpgrades", "Pawn" },
-        tip = "CheapUpgrades asks Pawn what each item is worth, with the Pawn scale shown for your spec. A weights profile of your own in CheapUpgrades still comes first, and a Pawn scale picked for a spec in CheapUpgrades' Stat weights is used instead of the one Pawn shows.",
+        tip = "CheapUpgrades asks Pawn what each item is worth, with the Pawn scale shown for your spec. A weights profile in CheapUpgrades still comes first (also the \"GearMatic\" one CheapUpgrades / GearMatic gives it), and a Pawn scale picked for a spec in CheapUpgrades' Stat weights is used instead of the one Pawn shows.",
         get = function() local c = CU(); return c ~= nil and c.usePawn == true end,
         set = function(v)
             local c = CU(); if not c then return end
@@ -1396,7 +1405,7 @@ local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions
                       MasterOptions_OpenMapMiniMap_Border = 19,
                       MasterOptions_ShortestPathForever_OpenMapMiniMap = 23,
                       MasterOptions_NeverSell = 24, MasterOptions_GearMatic_SellGuard = 25,
-                      MasterOptions_GearMatic_SpecKeep = 27 }
+                      MasterOptions_GearMatic_SpecKeep = 27, MasterOptions_CheapUpgrades_GearMatic = 27 }
 local PATCH_TIP = {
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
     MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
@@ -1411,6 +1420,7 @@ local PATCH_TIP = {
     MasterOptions_Mastercraft_VendorSell = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank.",
     MasterOptions_Mastercraft_BankMats = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank.",
     MasterOptions_OpenMapMiniMap_Border = "OpenMap's square minimap framed with the action bar buttons' border (Look > Minimap border).",
+    MasterOptions_CheapUpgrades_GearMatic = "CheapUpgrades values items with GearMatic's stat weights: a \"GearMatic\" weights profile for every spec, kept up to date (level, talents) and used unless you picked a profile of your own in CheapUpgrades. Off: CheapUpgrades' own weights again.",
     MasterOptions_GearMatic_SpecKeep = "Gear that is your best or 2nd best for any of your specs in GearMatic is kept from selling (Master Options' and GearMatic's own) and from DeleteCheapestItem - off-spec pieces too. GearMatic itself only looks at the spec you play now. Works with or without Pawn.",
     MasterOptions_GearMatic_SellGuard = "GearMatic's gear and low-value selling keeps what Master Options protects: the never-sell list, materials your Mastercraft guides need, and gear Pawn calls an upgrade or your best for a spec, or GearMatic rates your best or 2nd best for any spec (with GearMatic_SpecKeep) - through GearMatic's own sell guard.",
     MasterOptions_NeverSell = "One never-sell list, kept the same in GearMatic (never auto-sold), Mastercraft (no VENDOR / AUCTION advice) and DeleteCheapestItem (never offered for deletion): add or remove an item in any of them, or with /mo never <item>, and it changes in all. /mo never lists it.",
@@ -2601,6 +2611,17 @@ ev:SetScript("OnEvent", function()
         end
         -- then your account-wide choices for the per-character rows (they win over "recommended")
         local s = ApplyShared()
+        -- CheapUpgrades_GearMatic off (or GearMatic gone): specs on its "GearMatic" profile go back to
+        -- CheapUpgrades' own weights (the profiles stay, for when it's on again)
+        local cuAddon = _G.CheapUpgrades
+        if Loaded("CheapUpgrades") and not Loaded("MasterOptions_CheapUpgrades_GearMatic") and type(cuAddon) == "table"
+            and type(cuAddon.chardb) == "table" and type(cuAddon.chardb.profile) == "table" then
+            local was = false
+            for specKey, name in pairs(cuAddon.chardb.profile) do
+                if name == "GearMatic" then cuAddon.chardb.profile[specKey] = nil; was = true end
+            end
+            if was and cuAddon.Evaluate then pcall(cuAddon.Evaluate, cuAddon) end
+        end
         -- matched bag icons: a choice changed in the addon itself (GearMatic's weights, its junk selling)
         local okI, icons = pcall(SyncIcons)
         if okI and icons then

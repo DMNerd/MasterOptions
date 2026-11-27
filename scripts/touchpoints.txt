@@ -275,3 +275,14 @@ GearMatic|function|function BestItems.IsItemBestOrSecondBest|GearMatic_SpecKeep.
 GearMatic|function|BestItems.BadgeLevelBandPasses|GearMatic_SpecKeep.lua
 GearMatic|function|function C.CurrentCharKey|GearMatic_SpecKeep.lua
 GearMatic|function|Scoring2|GearMatic_SpecKeep.lua
+# --- added in 2.6.0 (CheapUpgrades_GearMatic: GearMatic's weights as a CheapUpgrades profile)
+GearMatic|config-key|specToken|CheapUpgrades_GearMatic.lua (GearMatic's spec lines)
+GearMatic|config-key|speclogic = true|CheapUpgrades_GearMatic.lua
+CheapUpgrades|function|function Profiles:Create(specKey, name, weights, class, model)|CheapUpgrades_GearMatic.lua
+CheapUpgrades|function|function Profiles:Get(class, specKey, name)|CheapUpgrades_GearMatic.lua
+CheapUpgrades|function|function Profiles:SetActive(specKey, name)|CheapUpgrades_GearMatic.lua
+CheapUpgrades|function|Profiles.Known = Known|CheapUpgrades_GearMatic.lua
+CheapUpgrades|config-key|CU.chardb.profile[specKey]|CheapUpgrades_GearMatic.lua, MasterOptions.lua (module off: back to CheapUpgrades' weights)
+CheapUpgrades|literal|1% = 14 crit, 10 hit, haste|CheapUpgrades_GearMatic.lua (the rating table its units use)
+CheapUpgrades|literal|key = "SVMELEE"|CheapUpgrades_GearMatic.lua (spec keys)
+GearMatic|function|function SI.PawnLiveScaleName|CheapUpgrades_GearMatic.lua (stands aside while GearMatic is on Pawn's scale)

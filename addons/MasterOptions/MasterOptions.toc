@@ -17,6 +17,7 @@ MasterOptions.lua
 Modules\GearMatic_Forever.lua
 Modules\GearMatic_Baganator.lua
 Modules\CheapUpgrades_Baganator.lua
+Modules\CheapUpgrades_GearMatic.lua
 Modules\DialogKey_Pawn.lua
 Modules\Mastercraft_Keep.lua
 Modules\Mastercraft_VendorSell.lua

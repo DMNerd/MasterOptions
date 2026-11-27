@@ -200,6 +200,23 @@ print("vendor coin problem: none with $", coin_ok, "/ coin", coin_on, "/ badge o
 if not (coin_ok and coin_on and not coin_hidden):
     lua.execute('ERRORS[#ERRORS+1] = "Vendor coin problem row wrong"')
 lua.execute('GearMatic.db.profile.vendorMarkerStyle = nil; GearMatic.db.profile.bestGoldShowVendor = nil')
+# one judge for every Pawn-or-GearMatic recommendation: Pawn with Pawn Forever, GearMatic without it
+lua.execute(r"""
+  function CountText(t) Reopen(); local n = 0 for _, f in ipairs(FRAMES) do if f._text == t then n = n + 1 end end return n end
+  GM_WAS = GearMatic.db.profile.usePawnWeights
+  GearMatic.db.profile.usePawnWeights = false
+  LOADED.Pawn, LOADED.Pawn_Forever = true, true
+  WITH_PF = CountText("GearMatic's own *") .. "/" .. CountText("GearMatic's own")
+  LOADED.Pawn_Forever = nil
+  WITHOUT_PF = CountText("GearMatic's own *") .. "/" .. CountText("GearMatic's own")
+  LOADED.Pawn_Forever = true
+  GearMatic.db.profile.usePawnWeights = GM_WAS
+""")
+judge_with, judge_without = lua.eval("WITH_PF"), lua.eval("WITHOUT_PF")
+print("one judge: GearMatic's own weights recommended (starred/plain) with Pawn Forever", judge_with, "/ without", judge_without)
+if not (judge_with == "0/1" and judge_without == "1/0"):
+    lua.execute('ERRORS[#ERRORS+1] = "Recommendations not following the judge"')
+
 print("synced:", lua.eval("MasterOptionsDB.syncChars"), "shared:", lua.eval("(function() local o = {} for k, v in pairs(MasterOptionsDB.shared or {}) do o[#o+1] = k .. '=' .. tostring(v) end table.sort(o) return table.concat(o, '; ') end)()"))
 print("errlog rows:", lua.eval("MasterOptions_ErrorLog and MasterOptions_ErrorLog.Count()"), "copy window:", lua.eval("MasterOptionsErrorFrame ~= nil"))
 errs = lua.eval("ERRORS")
