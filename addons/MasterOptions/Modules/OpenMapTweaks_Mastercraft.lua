@@ -83,10 +83,19 @@ local function ActiveNow(sl)
     return a
 end
 
+-- The answer per node kept until anything it depends on changes (RefreshAll, below: Mastercraft's filter and
+-- When, farming, tracking, your skill): the minimap's Show hook asks for every pin every frame - one lookup each
+-- then, not Mastercraft's settings read and its rule worked out (weak: the nodes are OpenMap_Tweaks')
+local wantedCache = setmetatable({}, { __mode = "k" })
+local function WantedNow(e)
+    if not ActiveNow(e.sl) then return false end
+    return Shared.GatherWanted(MC().nodesFilter or "skillups", ranks[e.sl], tonumber(e.l)) and true or false
+end
 local function Wanted(e)
     if type(e) ~= "table" or (e.sl ~= HERB and e.sl ~= MINE) then return true end
-    if not ActiveNow(e.sl) then return false end
-    return Shared.GatherWanted(MC().nodesFilter or "skillups", ranks[e.sl], tonumber(e.l))
+    local w = wantedCache[e]
+    if w == nil then w = WantedNow(e); wantedCache[e] = w end
+    return w
 end
 
 local function SpotWanted(spot)
@@ -237,6 +246,7 @@ local function RefreshAll()
     if not Same(7, ranks[HERB]) then same = false end
     if same then return end
     seenOnce = true
+    wantedCache = setmetatable({}, { __mode = "k" }) -- (what decides changed: every node asked again)
     RefreshMinimap()
     RefreshWorldMap()
 end

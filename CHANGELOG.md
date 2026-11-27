@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+### Changed
+
+- **Lighter on the minimap with OpenMap_Tweaks' ore and herb pins:** OpenMap_Tweaks shows every node pin on the
+  minimap on every frame, and each time Master Options worked out again whether Mastercraft's node settings want
+  it. The answer is now kept per node until something it depends on changes (Mastercraft's Show and When settings,
+  farming, tracking, your skill). After that, each pin on each frame is one lookup.
+- **Minimap coordinates:** no new text is made five times a second while you stand still.
+- **Shift-click on OpenMap's pins:** finding the pin buttons (a look through every frame of the game) happens only
+  with the world map open, and only until they're found. Before, it could run each time a pin was added before the
+  map was first opened.
+
 ### Fixed
 
 - **Shift-click on an OpenMap pin starts a Shortest Path journey:** on the map, Shift-click plans a journey, but on

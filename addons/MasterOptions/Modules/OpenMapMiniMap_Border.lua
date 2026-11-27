@@ -457,6 +457,9 @@ local function CoordsMode()
     return m
 end
 
+-- the text kept with the tenths it shows: five times a second while standing still (or walking within a tenth),
+-- no new string - the same one back, and the callers see it unchanged and redraw nothing
+local lastKey, lastText = nil, "--, --"
 local function PlayerXY()
     if not (C_Map and C_Map.GetBestMapForUnit and C_Map.GetPlayerMapPosition) then return "--, --" end
     local okM, map = pcall(C_Map.GetBestMapForUnit, "player")
@@ -464,8 +467,13 @@ local function PlayerXY()
     if okM and map then ok, pos = pcall(C_Map.GetPlayerMapPosition, map, "player") end
     if ok and pos then
         local x, y = pos:GetXY()
-        if x and y and (x > 0 or y > 0) then return ("%.1f, %.1f"):format(x * 100, y * 100) end
+        if x and y and (x > 0 or y > 0) then
+            local key = math.floor(x * 1000 + 0.5) * 2048 + math.floor(y * 1000 + 0.5) -- (both 0..1000: one number)
+            if key ~= lastKey then lastKey, lastText = key, ("%.1f, %.1f"):format(x * 100, y * 100) end
+            return lastText
+        end
     end
+    lastKey = nil
     return "--, --" -- (no position: in an instance, or between maps)
 end
 

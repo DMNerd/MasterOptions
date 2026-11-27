@@ -284,7 +284,13 @@ local function WrapPins()
     local mod = WorldMap()
     if not mod then return end
     local list = mod.db.pins.list
-    if next(roots) == nil then FindRoots(list) end
+    if next(roots) == nil then
+        -- (every frame of the game looked through: only with the map open, where the pins are made and clicked -
+        -- not on every pin added or removed before that; found once, never again)
+        local map = _G.WorldMapFrame
+        if map and map.IsShown and not map:IsShown() then return end
+        FindRoots(list)
+    end
     for root in pairs(roots) do
         for _, cell in ipairs({ root:GetChildren() }) do
             for _, pin in ipairs({ cell:GetChildren() }) do
@@ -303,6 +309,15 @@ local function WatchPinClicks()
     if not mod or type(mod.RefreshPins) ~= "function" or not hooksecurefunc then return false end
     hooksecurefunc(mod, "RefreshPins", function() Check("Shift-click on OpenMap's pins", pcall(WrapPins)) end)
     Check("Shift-click on OpenMap's pins", pcall(WrapPins))
+    -- (the map opened: its pins there now - found then if they weren't yet)
+    local map = _G.WorldMapFrame
+    if map and map.HookScript then
+        map:HookScript("OnShow", function()
+            if next(roots) == nil and C_Timer then
+                C_Timer.After(0, function() Check("Shift-click on OpenMap's pins", pcall(WrapPins)) end)
+            end
+        end)
+    end
     return true
 end
 
