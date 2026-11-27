@@ -141,6 +141,24 @@ L(r"""
 res["a camp blueprint's vendor marked"] = E('Lines("Alliance Vendor")') == "Anvil (Leatherworking)"
 res["looks like Questie's: a trainer with its profession's icon, a vendor with a pattern on it"] = E(
     "(function() local n = 0; for _, w in ipairs(WORLD) do if w.icon.kind == 'vendor' then n = n + 1; if not (w.icon.badge.shown and w.icon.icon.texture:find('trade_')) then return false end end end return n > 0 end)()")
+# Questie walks every pin in its HereBeDragons copy as its own (MapIconTooltip handleMapIcon: "iconData is nil!
+# ... Aborting!" for a pin without .data; then it skips hidden icons; the gamepad hover skips icons without data
+# or hidden). Ours must pass every walk by.
+lua.execute(r'''
+  QUESTIE_ERRS, QUESTIE_USED = 0, 0
+  local function HandleMapIcon(icon, hovered)  -- as Questie's MapIconTooltip:Show
+    if not icon.data then QUESTIE_ERRS = QUESTIE_ERRS + 1 return end
+    if icon ~= hovered and (icon.hidden or (icon.texture and icon.texture.a == 0)) then return end
+    QUESTIE_USED = QUESTIE_USED + 1
+  end
+  local function GamepadVisible(icon) return icon ~= nil and icon.data ~= nil and not icon.hidden end
+  GAMEPAD = 0
+  for _, p in ipairs(WORLD) do HandleMapIcon(p.icon, {}); if GamepadVisible(p.icon) then GAMEPAD = GAMEPAD + 1 end end
+  for _, p in ipairs(MINI) do HandleMapIcon(p.icon, {}) end
+''')
+res["Questie's walk over its pins (hovering one of its icons): no 'iconData is nil' error, ours passed by"] = (
+    E("#WORLD") > 0 and E("QUESTIE_ERRS") == 0 and E("QUESTIE_USED") == 0)
+res["Questie's gamepad hover never picks one of ours"] = E("GAMEPAD") == 0
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

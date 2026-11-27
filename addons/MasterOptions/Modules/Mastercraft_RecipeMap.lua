@@ -233,6 +233,14 @@ local function Marker(e, name, mini)
         m.badge = m:CreateTexture(nil, "OVERLAY")
         m.badge:SetPoint("BOTTOMRIGHT", 2, -2)
         m.badge:SetTexture(PATTERN_BADGE)
+        -- Our markers live in Questie's copy of HereBeDragons-Pins, and Questie walks every pin in it as if it were
+        -- its own: hovering a Questie icon (MapIconTooltip handleMapIcon) printed "iconData is nil! ... Aborting!" in
+        -- chat for each of ours. A data table and Questie's own "fake hidden" flag make each of its walks pass ours
+        -- by - the tooltip (skips hidden icons before reading anything), the gamepad hover (_IsIconVisible), the
+        -- rescale (no GetIconScale: nothing done) and the minimap fade (only miniMapIcon frames). Nothing reads this
+        -- flag to hide a pin: not HereBeDragons, not OpenMap (its .hidden check is for Questie's quest lines).
+        m.data = { MasterOptions = true }
+        m.hidden = true
         m:EnableMouse(true)
         m:SetScript("OnEnter", function(self)
             MasterOptions_Shared.MarkerTooltip(self, self.title, self.lines, HINT[self.kind], "Mastercraft + Questie")

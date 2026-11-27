@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.9.1] - 2026-11-27
+
+### Fixed
+
+- **Questie's "iconData is nil! ... Aborting!" errors in chat** when you hovered a Questie icon on the map or
+  minimap. Master Options' pattern vendor, trainer and drop markers (Mastercraft + Questie) share Questie's map
+  pin library, and Questie checks every pin in it as if it were its own. Questie now passes ours by; they still
+  show on the world map, OpenMap's map and the minimap.
+
 ## [2.9.0] - 2026-11-27
 
 ### Added
