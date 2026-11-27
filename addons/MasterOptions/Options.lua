@@ -9,6 +9,8 @@ local MATCH_ARROW, MATCH_JUNK, MC, MatchedArrow, MatchedJunk, OMT, PAWN, PawnEls
 local PawnShows, QuestieProfile, RefreshGearMatic, SPK, SYN, SetAnnoying, SetChatLines, SetOMT = MO.PawnShows, MO.QuestieProfile, MO.RefreshGearMatic, MO.SPK, MO.SYN, MO.SetAnnoying, MO.SetChatLines, MO.SetOMT
 local SetPawnScales, SyncPawnHidden, TownGet, TownSet, UIStyleGet, UIStyleSet, UIStyleTip, gmOn = MO.SetPawnScales, MO.SyncPawnHidden, MO.TownGet, MO.TownSet, MO.UIStyleGet, MO.UIStyleSet, MO.UIStyleTip, MO.gmOn
 local mcNotOff, mcOn, mcSetTip, mcTip = MO.mcNotOff, MO.mcOn, MO.mcSetTip, MO.mcTip
+local OMM = MO.OMM
+local GATHER_PX = { Small = { 12, 10 }, Medium = { 14, 12 }, Large = { 16, 14 } } -- (world map, minimap: pixels)
 
 ---------------------------------------------------------------------------
 -- The options. "choice" rows: who handles it. "toggle" rows: on/off.
@@ -167,24 +169,47 @@ local OPTIONS = {
             SetOMT("gather", "gather", v == "OpenMap_Tweaks")
         end,
     },
+    -- (OpenMap_MiniMap records the spots you gather from too, and draws them: a third pin on the same herb)
+    Multi("Minimap pins from", "OpenMap_Tweaks", 32,
+        "Mastercraft, OpenMap_Tweaks and OpenMap_MiniMap (its gathered spots: where you've looted a herb, ore or chest) can each put a pin on the minimap for the same node. Pick one. OpenMap_Tweaks can only show minimap pins while its world map pins are on.", {
+        { "Mastercraft", function() return MC() and mcNotOff("nodesMinimap") end,
+          function(on) local m = MC(); if m then m.nodesMinimap = on end end },
+        { "OpenMap_Tweaks", function() return OMT() and OMT().gather and OMT().gatherMinimap end,
+          function(on)
+              if on then SetOMT("gather", "gather", true) end
+              SetOMT("gatherMinimap", "gather minimap", on)
+          end },
+        { "OpenMap_MiniMap", function() local p = OMM(); return p and p.gatherPins ~= false end,
+          function(on) local p = OMM(); if p then p.gatherPins = on end end },
+    }, "Off"),
+
+    -- (one size for gathering pins, whichever addon draws them: Mastercraft's are 16 / 14 pixels x its size
+    -- settings, OpenMap_Tweaks' its own pixel sizes - by default 16 and 14 against 12 and 8)
     {
-        kind = "choice", label = "Minimap pins from", rec = "OpenMap_Tweaks",
-        tip = "OpenMap_Tweaks can only show minimap pins while its world map pins are on.",
-        choices = { "Mastercraft", "OpenMap_Tweaks", "Off" },
+        kind = "choice", label = "Gathering pin size", rec = "Medium",
+        needs_any = { "Mastercraft", "OpenMap_Tweaks" }, choices = { "Small", "Medium", "Large" },
+        tip = "One size for herb and ore pins on the world map and the minimap, whether Mastercraft or OpenMap_Tweaks draws them (by default Mastercraft's were bigger: 16 / 14 pixels against 12 / 8). Small: 12 / 10. Medium: 14 / 12. Large: 16 / 14.",
         get = function()
-            local m = MC() and mcNotOff("nodesMinimap")
-            local o = OMT() and OMT().gather and OMT().gatherMinimap
-            if m and o then return "Both (conflict)" end
-            return m and "Mastercraft" or o and "OpenMap_Tweaks" or "Off"
+            local m, o = MC(), OMT()
+            local function Name(world)
+                for name, px in pairs(GATHER_PX) do if math.abs(px[1] - world) < 0.6 then return name end end
+                return "Mixed"
+            end
+            local a = m and Name((m.nodesMapSize or 1) * 16)
+            local b = o and Name(o.gatherIconSize or 12)
+            if a and b and a ~= b then return "Mixed" end
+            return a or b or "Medium"
         end,
         set = function(v)
+            local px = GATHER_PX[v]; if not px then return end
             local m = MC()
-            if m then m.nodesMinimap = (v == "Mastercraft") end
-            if v == "OpenMap_Tweaks" then SetOMT("gather", "gather", true) end
-            SetOMT("gatherMinimap", "gather minimap", v == "OpenMap_Tweaks")
+            if m then m.nodesMapSize, m.nodesMiniSize = px[1] / 16, px[2] / 14 end
+            local o = OMT()
+            -- (written straight in: its /omt gather size prints its whole status each time; its minimap pins read
+            -- the size as they draw, its world map pins at the map's next redraw)
+            if o then o.gatherIconSize, o.gatherMinimapSize = px[1], px[2] end
         end,
     },
-
     {
         kind = "choice", label = "Which nodes show", rec = "Skill-ups only", since = 2,
         tip = "Mastercraft's node rule. With the MasterOptions_OpenMapTweaks_Mastercraft patch it also filters OpenMap_Tweaks' pins.",
@@ -246,9 +271,41 @@ local OPTIONS = {
     },
     {
         kind = "choice", label = "Town NPC icons", rec = "Questie", since = 21, scope = "character",
-        needs = "Questie", choices = { "Questie", "Game's tracking" },
-        tip = "Auctioneer, banker, battlemaster, innkeeper, mailbox, repair, stable master and flight master icons: the game's minimap tracking menu and Questie's townsfolk menu both draw them, so a kind ticked in both shows twice. Questie: on the world map and the minimap (pick the kinds in Questie's menu). Game's tracking: on the minimap only. Switching moves the kinds you have on to the one you pick; trainers and the rest stay as they are. OpenMap can draw some of the same kinds on the world map too (its Townsfolk menu): Questie turns those off (else they show twice there); with Game's tracking they can stay - the game's are on the minimap only.",
+        needs = "Questie", choices = { "Questie", "Game's tracking", "OpenMap + game's tracking" },
+        tip = "Auctioneer, banker, battlemaster, innkeeper, mailbox, repair and stable master icons (flight masters: their own row with OpenMap): the game's minimap tracking, Questie's townsfolk menu and OpenMap's Townsfolk menu can all draw them, so a kind ticked in two shows twice. Questie: on the world map and the minimap (pick the kinds in Questie's menu). Game's tracking: on the minimap only. OpenMap + game's tracking: OpenMap's on the world map, the game's on the minimap (battlemasters: the game's only). Switching moves the kinds you have on to the one you pick; trainers and the rest stay as they are.",
         get = TownGet, set = TownSet,
+    },
+    {
+        kind = "choice", label = "Flight masters", rec = "OpenMap", since = 32, scope = "character",
+        needs = { "OpenMap", "Questie" }, choices = { "OpenMap", "Questie" },
+        tip = "OpenMap (its flight masters, with the routes you know; OpenMap_MiniMap's on the minimap) and Questie (its townsfolk Flight Master) both draw flight masters, so each showed twice. OpenMap: Questie's off. Questie: OpenMap's off - but OpenMap_Tweaks turns OpenMap's back on whenever the map opens, so with OpenMap_Tweaks installed only OpenMap works. The game's minimap tracking of flight masters goes off either way.",
+        get = MO.FlightGet, set = MO.FlightSet,
+    },
+    {
+        kind = "choice", label = "World map coordinates", rec = "OpenMap", since = 32, reload = true,
+        needs = { "OpenMap", "Questie" }, choices = { "OpenMap", "Questie", "Off" }, off = "Off",
+        tip = "OpenMap's coordinates bar and Questie's (in the map's title) both show your and the cursor's coordinates. Questie's cursor figure is for the zone the map shows underneath, which on OpenMap's stitched map can differ from where the cursor is. OpenMap: its bar. Questie: Questie's. Takes a reload.",
+        get = MO.MapCoordsGet, set = MO.MapCoordsSet,
+    },
+
+    { header = "Routes and waypoints" },
+    {
+        kind = "choice", label = "Navigation arrow", rec = "Shortest Path's arrow", since = 32,
+        needs = "ShortestPathForever", choices = { "Shortest Path's arrow", "Game's marker only" },
+        tip = "While ShortestPathForever leads you somewhere, it shows its own arrow on screen and the game's waypoint marker. Shortest Path's arrow: both. Game's marker only: its arrow hidden, the game's marker leads (one pointer on screen).",
+        get = MO.ArrowGet, set = MO.ArrowSet,
+    },
+    {
+        kind = "choice", label = "Arrow text", rec = "Both", since = 32,
+        needs = "ShortestPathForever", choices = { "Distance", "Time", "Both" },
+        tip = "What ShortestPathForever's arrow says under it: the distance left, the time left, or both.",
+        get = MO.ArrowTextGet, set = MO.ArrowTextSet,
+    },
+    {
+        kind = "choice", label = "Quest and recipe waypoints", rec = "Shortest Path journey", since = 32, reload = true,
+        needs = "ShortestPathForever", choices = { "Shortest Path journey", "Game's waypoint" },
+        tip = "Questie (its tracker's Set TomTom target), Mastercraft (Waypoint) and WhatsTraining send their waypoints to TomTom. Without TomTom installed, ShortestPathForever stands in for it. Shortest Path journey: each becomes a journey with a route (one at a time: a new one replaces the last). Game's waypoint: the game's own map pin and marker, no route. Takes a reload.",
+        get = MO.TargetsGet, set = MO.TargetsSet,
     },
 
     { header = "Nameplates" },
@@ -617,13 +674,14 @@ local OPTIONS = {
         -- OpenMap_MiniMap, and after the reload this row is gone; turn it on again in the AddOns list)
         kind = "choice", label = "Minimap", rec = "OpenMap_MiniMap", since = 23, reload = true,
         needs = { "BetterBlizzFrames", "OpenMap_MiniMap" }, choices = { "OpenMap_MiniMap", "BetterBlizzFrames classic" },
-        tip = "OpenMap_MiniMap and BetterBlizzFrames' minimap options (Classic minimap, Minimap tweaks, Hide minimap buttons, Hide minimap) work on the same frames and fight. OpenMap_MiniMap: those BetterBlizzFrames options off. BetterBlizzFrames classic: its classic minimap on and the OpenMap_MiniMap addon disabled (turn it on again in the AddOns list). Takes a reload.",
+        tip = "OpenMap_MiniMap and BetterBlizzFrames' minimap options (Classic minimap, Minimap tweaks, Hide minimap buttons, Hide minimap, Hide minimap in arena) work on the same frames and fight. OpenMap_MiniMap: those BetterBlizzFrames options off. BetterBlizzFrames classic: its classic minimap on and the OpenMap_MiniMap addon disabled (turn it on again in the AddOns list). Takes a reload.",
         get = function()
             local b = type(_G.BetterBlizzFramesDB) == "table" and _G.BetterBlizzFramesDB or {}
             local AO = C_AddOns or {}
             local state = AO.GetAddOnEnableState and AO.GetAddOnEnableState("OpenMap_MiniMap", UnitName("player"))
             if state == 0 and b.classicMinimap == true then return "BetterBlizzFrames classic" end -- (after the reload)
             local bbfOn = b.classicMinimap == true or b.foreverMinimapTweaks == true or b.hideMinimapButtons == true or b.hideMinimap == true
+                or b.hideMinimapAuto == true
             return bbfOn and "Both (conflict)" or "OpenMap_MiniMap"
         end,
         set = function(v)
@@ -636,6 +694,8 @@ local OPTIONS = {
             else
                 if type(b) == "table" then
                     b.classicMinimap, b.foreverMinimapTweaks, b.hideMinimapButtons, b.hideMinimap = false, false, false, false
+                    -- (its arena hiding hides the whole MinimapCluster - OpenMap_MiniMap's map with it)
+                    b.hideMinimapAuto, b.hideMinimapAutoQueueEye = false, false
                     -- (BBF.TintForeverMinimap, at every login whatever the options: the minimap buttons' rings
                     -- tinted bronze - on OpenMap_MiniMap's map, its own look instead. A BetterBlizzFrames key with no
                     -- checkbox of its own.)
@@ -644,6 +704,12 @@ local OPTIONS = {
                 if enable then pcall(enable, "OpenMap_MiniMap") end
             end
         end,
+    },
+    {
+        kind = "choice", label = "Minimap buttons", rec = "On mouse-over", since = 32, reload = true,
+        needs = "OpenMap_MiniMap", choices = { "On mouse-over", "Round the edge", "In a tray" },
+        tip = "Other addons' minimap buttons (Questie, GearMatic, WhatsTraining...) on OpenMap_MiniMap's map: laid round its edge and shown only while the mouse is over the map, always round the edge, or gathered in a tray (one button that opens them). Takes a reload.",
+        get = MO.ButtonsGet, set = MO.ButtonsSet,
     },
     {
         kind = "choice", label = "Minimap border", rec = "Action bar", since = 19,
@@ -698,7 +764,6 @@ local OPTIONS = {
         end,
     },
 
-    { header = "Modules (on / off takes effect after a reload)" },
 }
 -- MasterOptions' own compatibility patches (each is a separate addon named MasterOptions_<Addon>_<Addon>)
 local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions_GearMatic_Baganator = 6,
@@ -714,8 +779,12 @@ local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions
                       MasterOptions_GearMatic_SpecKeep = 27, MasterOptions_CheapUpgrades_GearMatic = 27,
                       MasterOptions_DungeonJournal_Upgrades = 29,
                       MasterOptions_Mastercraft_FarmTour = 30,
-                      MasterOptions_Mastercraft_RecipeMap = 31 }
+                      MasterOptions_Mastercraft_RecipeMap = 31,
+                      MasterOptions_DungeonJournal_SpokenBosses = 32,
+                      MasterOptions_ShortestPathForever_OpenMapPins = 32 }
 local PATCH_TIP = {
+    MasterOptions_ShortestPathForever_OpenMapPins = "Clearing ShortestPathForever's journey to a followed OpenMap pin also clears the pin: OpenMap stops following it, and the pin goes from the map (one you wrote a note on stays, just no longer followed).",
+    MasterOptions_DungeonJournal_SpokenBosses = "Spoken_Bosses tells the dungeon's story beside the world map when Dungeon Journal's map of it is shown there (Map inside dungeons, Dungeon entrance click), and a boss's story when you click the boss on that map.",
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
     MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
     MasterOptions_OpenMapTweaks_Mastercraft = "Mastercraft's node rule also filters OpenMap_Tweaks' gathering pins.",
@@ -742,25 +811,81 @@ local PATCH_TIP = {
 -- the modules (Modules\*.lua, once separate addons): on / off for the next load, and what each is doing now
 local MODULE_STATE_TEXT = { on = "|cff66dd66running|r", off = "|cff9d9d9doff|r", error = "|cffff5555stopped by an error (Problems)|r",
     ["old folder"] = "|cffffd200standing aside: the old separate addon of the same name is still installed (Problems)|r" }
-local MODULE_ORDER = { "Mastercraft_FishingView", "CheapUpgrades_Baganator", "OpenMapTweaks_Mastercraft", "GearMatic_Baganator",
-    "GearMatic_Forever", "DialogKey_Pawn", "Mastercraft_Auctionator", "DeleteCheapestItem_Protect", "Mastercraft_Keep",
-    "DungeonJournal_OpenMap", "Mastercraft_Chattynator", "Mastercraft_VendorSell", "Mastercraft_BankMats", "OpenMapMiniMap_Border",
-    "ShortestPathForever_OpenMapMiniMap", "NeverSell", "GearMatic_SellGuard" }
-for _, short in ipairs(MODULE_ORDER) do
-    local name = "MasterOptions_" .. short
-    local function M() return _G.MasterOptions_Modules end
-    OPTIONS[#OPTIONS + 1] = {
-        kind = "toggle", label = short:gsub("_", " / "), reload = true, rec = true, since = PATCH_SINCE[name] or 1,
-        tip = function()
-            local m = M()
-            local state = m and m.State(short)
-            local now = state and (MODULE_STATE_TEXT[state] or ("|cff9d9d9dnot running: " .. state .. "|r")) or "?"
-            local needs = m and table.concat(m.Needs(short), ", ") or ""
-            return (PATCH_TIP[name] or "") .. "\n\nWorks with: " .. needs .. "\nNow: " .. now
-        end,
-        get = function() local m = M(); return m == nil or m.IsEnabled(short) end,
-        set = function(v) local m = M(); if m then m.SetEnabled(short, v) end end,
-    }
+-- Every module (Modules\*.lua): a title, the addons it needs (as its MasterOptions_Module line declares them - the
+-- registry is empty while this file loads; tests\test_modules.py checks the two agree, and that none is missing),
+-- under the section it belongs in. Its row: the title, what it does (PATCH_TIP's first sentence) and what it needs
+-- under it, the tick box greyed when a needed addon isn't loaded; the whole of PATCH_TIP and what it's doing now in
+-- the tooltip.
+local MODULES = {
+    { header = "Modules: maps (on / off after a reload)" },
+    { "DungeonJournal_OpenMap", "Dungeon Journal on OpenMap's map", { "ForeverDungeonJournal", "OpenMap" } },
+    { "DungeonJournal_SpokenBosses", "Spoken's stories on Dungeon Journal's map", { "ForeverDungeonJournal", "Spoken_Bosses" } },
+    { "ShortestPathForever_OpenMapPins", "Clearing a journey clears its OpenMap pin", { "ShortestPathForever", "OpenMap" } },
+    { "ShortestPathForever_OpenMapMiniMap", "Journey goal visible on OpenMap's minimap", { "ShortestPathForever", "OpenMap_MiniMap" } },
+    { "Mastercraft_FarmTour", "Farming tours", { "Mastercraft", "ShortestPathForever" } },
+    { "Mastercraft_RecipeMap", "Recipe map markers", { "Mastercraft", "Questie" } },
+    { "OpenMapTweaks_Mastercraft", "Mastercraft's node rule for OpenMap_Tweaks' pins", { "OpenMap_Tweaks", "Mastercraft" } },
+    { "OpenMapMiniMap_Border", "Action bar border round the minimap", { "OpenMap_MiniMap" } },
+    { header = "Modules: gear (on / off after a reload)" },
+    { "DungeonJournal_Upgrades", "Upgrade marks in Dungeon Journal's loot", { "ForeverDungeonJournal" } },
+    { "CheapUpgrades_GearMatic", "CheapUpgrades uses GearMatic's stat weights", { "CheapUpgrades", "GearMatic" } },
+    { "GearMatic_SpecKeep", "Keep your best gear for every spec", { "GearMatic" } },
+    { "GearMatic_Forever", "Separate GearMatic data per character", { "GearMatic" } },
+    { "DialogKey_Pawn", "Best quest reward pre-selected", { "DialogKey_Numy" } },
+    { header = "Modules: selling (on / off after a reload)" },
+    { "NeverSell", "One never-sell list for every addon", {} },
+    { "GearMatic_SellGuard", "GearMatic's selling keeps what's protected", { "GearMatic" } },
+    { "DeleteCheapestItem_Protect", "Keep gear and materials from being deleted", { "DeleteCheapestItem" } },
+    { "Mastercraft_Keep", "Materials your guides need are never sold", { "Mastercraft" } },
+    { "Mastercraft_VendorSell", "Sell what Mastercraft says to vendor", { "Mastercraft" } },
+    { "Mastercraft_BankMats", "Guide materials go into the bank", { "Mastercraft" } },
+    { "CheapUpgrades_Baganator", "Upgrade badges on bag slots", { "CheapUpgrades", "Baganator" } },
+    { "GearMatic_Baganator", "GearMatic's junk coins and loadouts in bags", { "GearMatic", "Baganator" } },
+    { header = "Modules: more (on / off after a reload)" },
+    { "Mastercraft_FishingView", "Fishing view keeps bags and pop-ups", { "Mastercraft" } },
+    { "Mastercraft_Auctionator", "Scan prices button on Auctionator's page", { "Mastercraft", "Auctionator" } },
+    { "Mastercraft_Chattynator", "Mastercraft's /played kept out of chat", { "Mastercraft", "Chattynator" } },
+}
+-- addon folder names as the AddOns list shows them
+local NICE = { ForeverDungeonJournal = "Dungeon Journal", DialogKey_Numy = "DialogKey", Spoken_Bosses = "Spoken Bosses",
+    ShortestPathForever = "Shortest Path Forever", OpenMap_MiniMap = "OpenMap MiniMap", OpenMap_Tweaks = "OpenMap Tweaks",
+    DeleteCheapestItem = "DeleteCheapestItem" }
+local function NeedsLine(needs)
+    if #needs == 0 then return "Needs: nothing else" end
+    local out = {}
+    for _, a in ipairs(needs) do
+        local n = NICE[a] or a
+        out[#out + 1] = Loaded(a) and n or ("|cffff5555" .. n .. " (not loaded)|r")
+    end
+    return "Needs: " .. table.concat(out, ", ")
+end
+local function FirstSentence(text)
+    local s = (text or ""):match("^(.-[%.!?])%s") or text or ""
+    if #s > 170 then s = s:sub(1, 167):gsub("%s+%S*$", "") .. "..." end
+    return s
+end
+MO.MODULES = MODULES
+for _, entry in ipairs(MODULES) do
+    if entry.header then
+        OPTIONS[#OPTIONS + 1] = { header = entry.header }
+    else
+        local short, title, needs = entry[1], entry[2], entry[3]
+        local name = "MasterOptions_" .. short
+        local function M() return _G.MasterOptions_Modules end
+        OPTIONS[#OPTIONS + 1] = {
+            kind = "toggle", label = title, reload = true, rec = true, since = PATCH_SINCE[name] or 1,
+            module = short, needs = #needs > 0 and needs or nil,
+            desc = function() return FirstSentence(PATCH_TIP[name]) .. "\n" .. NeedsLine(needs) end,
+            tip = function()
+                local m = M()
+                local state = m and m.State(short)
+                local now = state and (MODULE_STATE_TEXT[state] or ("|cff9d9d9dnot running: " .. state .. "|r")) or "?"
+                return (PATCH_TIP[name] or "") .. "\n\n" .. NeedsLine(needs) .. "\nModule: " .. short .. "\nNow: " .. now
+            end,
+            get = function() local m = M(); return m == nil or m.IsEnabled(short) end,
+            set = function(v) local m = M(); if m then m.SetEnabled(short, v) end end,
+        }
+    end
 end
 
 -- for the files after this one

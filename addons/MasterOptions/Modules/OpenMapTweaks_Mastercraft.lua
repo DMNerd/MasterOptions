@@ -140,8 +140,19 @@ local function RefreshStitched()
 end
 HookStitch()
 
+-- OpenMap's stitched map up: OpenMap_Tweaks draws its pins there (RefreshStitched), its Blizzard-map provider
+-- does nothing, so refreshing every provider (Questie's pins rebuilt with them) was work for nothing - on each
+-- fight's start and end while the map was open. Not in a fight either (OpenMap leaves Blizzard's map be then).
+local function Stitched()
+    local api = _G.OpenMapAPI
+    if not (type(api) == "table" and type(api.IsStitched) == "function") then return false end
+    local ok, on = pcall(api.IsStitched)
+    return ok and on == true
+end
+
 local function RefreshWorldMap()
-    if WorldMapFrame and WorldMapFrame:IsShown() and WorldMapFrame.RefreshAllDataProviders then
+    if WorldMapFrame and WorldMapFrame:IsShown() and WorldMapFrame.RefreshAllDataProviders
+        and not Stitched() and not InCombatLockdown() then
         pcall(WorldMapFrame.RefreshAllDataProviders, WorldMapFrame)
     end
     RefreshStitched()

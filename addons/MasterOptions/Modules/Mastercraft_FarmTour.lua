@@ -113,8 +113,25 @@ local function Order(nodes, mapID)
     return out
 end
 
-local touring = false -- (a tour of ours is running)
+local touring = false -- (a tour of ours was started: Live() says whether it still is)
 local pendingAfterCombat
+
+-- our tour still the journey under way: ShortestPathForever has one journey at a time, and a pin you follow,
+-- a Questie or Dungeon Journal target replaces ours (it ends "replaced")
+local function Live()
+    local api = API()
+    if not (touring and api and type(api.CurrentStop) == "function") then return false end
+    local ok, stop = pcall(api.CurrentStop, OWNER)
+    return ok and stop ~= nil
+end
+
+-- any journey under way (yours, another addon's)
+local function OtherJourney()
+    local api = API()
+    if not (api and type(api.Active) == "function") then return false end
+    local ok, on = pcall(api.Active)
+    return ok and on == true
+end
 
 local function Start(only, quiet)
     local api = API()
@@ -180,9 +197,16 @@ f:SetScript("OnEvent", function(_, event)
         local p = pendingAfterCombat
         pendingAfterCombat = nil
         if p then Start(p.only, p.quiet) end
-    elseif touring or Farming() then
-        Stop(true)
-        Start(nil, false) -- (a new zone while farming: its own tour)
+    else
+        -- a new zone while farming: its own tour - only in place of ours, or when no journey is under way. A pin
+        -- you followed or a quest target set since stays: until 2.9.0 the next zone line replaced it with a tour.
+        if touring and not Live() then touring = false end
+        if touring then
+            Stop(true)
+            Start(nil, false)
+        elseif Farming() and not OtherJourney() then
+            Start(nil, false)
+        end
     end
 end)
 

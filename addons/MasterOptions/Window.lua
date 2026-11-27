@@ -34,7 +34,7 @@ local function RecOf(opt)
     return opt.rec
 end
 
-local DEFAULTS_VERSION = 31
+local DEFAULTS_VERSION = 32
 local Remember -- set below
 local function ApplyRecommended(after, manual) -- after: only options added after this defaults version
     local n = 0
@@ -114,7 +114,8 @@ function Available(opt)
     elseif opt.needs and not Loaded(opt.needs) then
         return false
     end
-    if opt.kind == "choice" and opt.needs then return true end
+    -- (a choice row that names the addons it needs: those decide, not whether its choices are addons' names)
+    if opt.kind == "choice" and (opt.needs or opt.needs_any) then return true end
     if opt.kind == "choice" then
         for _, c in ipairs(opt.choices) do
             if c ~= "Off" and Loaded(c) then return true end
@@ -123,6 +124,18 @@ function Available(opt)
     end
     return true
 end
+
+-- a choice offered in the row's menu: "Off", or not an addon's name, or an addon that's loaded (a needs_any row's
+-- own addons: only those loaded; its other choices - "All", "Dungeon Journal" - always)
+local function ChoiceShown(opt, c)
+    if c == "Off" or c == opt.off or opt.needs or Loaded(c) then return true end
+    if type(opt.needs_any) == "table" then
+        for _, n in ipairs(opt.needs_any) do if n == c then return false end end
+        return true
+    end
+    return false
+end
+MO.ChoiceShown = ChoiceShown
 
 local function Tooltip(frame, opt)
     if not opt.tip then return end
@@ -158,6 +171,7 @@ local CTRL_W = 160
 local RED = { 1, 0.33, 0.33 }
 
 local function ShortDesc(opt)
+    if type(opt.desc) == "function" then local ok, d = pcall(opt.desc); return ok and d or nil end
     if opt.desc then return opt.desc end
     local t = opt.tip
     if type(t) ~= "string" then return nil end
@@ -254,7 +268,7 @@ local function OpenMenu(owner, opt)
     local cur = select(2, pcall(opt.get))
     local list = {}
     for _, c in ipairs(opt.choices) do
-        if c == "Off" or c == opt.off or opt.needs or Loaded(c) then list[#list + 1] = c end
+        if ChoiceShown(opt, c) then list[#list + 1] = c end
     end
     local width = CTRL_W
     for i, c in ipairs(list) do
@@ -654,6 +668,7 @@ local CREDITS = {
     { "OpenMap, OpenMap MiniMap", "the OpenMap contributors" },
     { "OpenMap Tweaks", "Austin" },
     { "Dungeon Journal", "Exehn" },
+    { "Spoken, Spoken Bosses", "Nucabe" },
     { "Shortest Path Forever", "cjber" },
     { "DeleteCheapestItem Reloaded", "Sander Vispoel (sandervspl)" },
     { "DialogKey - Numy Edition", "Numy (earlier versions: Foxthorn, N01ch, FuriousProgrammer)" },

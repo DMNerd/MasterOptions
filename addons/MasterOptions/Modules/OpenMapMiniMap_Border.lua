@@ -21,11 +21,25 @@ local ATLAS = "UI-HUD-ActionBar-IconFrame"
 local BUTTON = 45     -- the action button the atlas is drawn for (UI units)
 local CUT = 0.30      -- the share of the atlas each corner takes (the rim and its rounded corner fit in it)
 local RIM = 4         -- the rim's width on a 45-unit button (UI units)
+-- The atlas isn't symmetric: on its left (and top) the bright line is at the outer edge with its shading inside
+-- it, on its right (and bottom) the line is inside with the shading outside. Framed evenly, the left shading lay
+-- beside the map, see-through: a gap left of the map (a player's screenshots, measured: ~2/3 of the rim). So the
+-- left side reaches out only this share of the rim, and so does the top (its shading too was see-through,
+-- above the zone bar). What's under the rim's line on each side: LINE_IN (outer line: left, top) of the rim
+-- in from the frame's edge, LINE_OUT (inner line: right, bottom) out from the map.
+local LEFT_SHARE = 1 / 3
+local LINE_IN, LINE_OUT = 0.15, 0.25
+-- the zone bar and the coordinates tab: the header of the /mo window (the game's BasicFrameTemplate title bar,
+-- its TitleBg - which Details' title bar matches; a player's ask, for them to look alike). Without it: a grey
+-- gradient like it, darker at the top. OpenMap's own colour put back when the border is off
+local OPENMAP_BAR = { 0.07, 0.055, 0.04 } -- (OpenMap's zone bar colour: Frame.DARK_COLOUR)
 local DB
 
 local _, Check = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
 local function On() return not DB or DB.on ~= false end
+
+local HeadFill = MasterOptions_Shared.HeaderFill
 
 local OpenMapProfile = MasterOptions_Shared.OpenMapMiniMapProfile
 local function Square()
@@ -38,6 +52,15 @@ end
 ---------------------------------------------------------------------------
 local body, edge, bar
 local PlaceCoords -- (below)
+
+-- OpenMap_MiniMap's look on the minimap now: its map frame up (it hides it when off, or when it gives way to
+-- another minimap addon - its Restore). Off: the game's own minimap, with the game's own coordinates line.
+local function OpenMapLook()
+    if not (body and body:IsShown()) then return false end
+    local p = OpenMapProfile()
+    return not (p and p.enabled == false)
+end
+
 
 local function Find()
     if body and edge then return true end
@@ -101,16 +124,16 @@ local function Slice(parent, name)
 end
 
 -- the pieces in a holder, corners k across
+-- Square corners: the atlas's rounded corners are left out and its four edges run the whole length, crossing
+-- at the corners. Rounded, the corners let the zone bar's square ends show past them (a player's screenshot:
+-- "make the border square").
 local function SliceLayout(p, k)
     for _, tex in pairs(p) do tex:ClearAllPoints() end
-    p[11]:SetPoint("TOPLEFT") p[11]:SetSize(k, k)
-    p[13]:SetPoint("TOPRIGHT") p[13]:SetSize(k, k)
-    p[31]:SetPoint("BOTTOMLEFT") p[31]:SetSize(k, k)
-    p[33]:SetPoint("BOTTOMRIGHT") p[33]:SetSize(k, k)
-    p[12]:SetPoint("TOPLEFT", p[11], "TOPRIGHT") p[12]:SetPoint("BOTTOMRIGHT", p[13], "BOTTOMLEFT")
-    p[32]:SetPoint("TOPLEFT", p[31], "TOPRIGHT") p[32]:SetPoint("BOTTOMRIGHT", p[33], "BOTTOMLEFT")
-    p[21]:SetPoint("TOPLEFT", p[11], "BOTTOMLEFT") p[21]:SetPoint("BOTTOMRIGHT", p[31], "TOPRIGHT")
-    p[23]:SetPoint("TOPLEFT", p[13], "BOTTOMLEFT") p[23]:SetPoint("BOTTOMRIGHT", p[33], "TOPRIGHT")
+    for _, c in ipairs({ 11, 13, 31, 33 }) do p[c]:Hide() end
+    p[12]:SetPoint("TOPLEFT") p[12]:SetPoint("TOPRIGHT") p[12]:SetHeight(k)
+    p[32]:SetPoint("BOTTOMLEFT") p[32]:SetPoint("BOTTOMRIGHT") p[32]:SetHeight(k)
+    p[21]:SetPoint("TOPLEFT") p[21]:SetPoint("BOTTOMLEFT") p[21]:SetWidth(k)
+    p[23]:SetPoint("TOPRIGHT") p[23]:SetPoint("BOTTOMRIGHT") p[23]:SetWidth(k)
 end
 
 local function Build()
@@ -129,9 +152,14 @@ local function Layout(top, bottom)
     -- the rim outside the map and the zone bar, not over them: nothing on the map's edge (pins, the bar's buttons)
     -- goes under it, and the map's square corners stay inside the rim's rounded ones (a player's screenshot)
     local o = (DB and DB.outset) or RIM * s
+    -- sides: the map's own, both of them. OpenMap's zone bar reaches a few units past the map's sides (its
+    -- dark border's width): framing the bar's left and the map's right put a gap left of the map and the bar's
+    -- end (the calendar) under the rim on the right (a player's screenshot). Height: the bar's, above or under.
+    local up = top ~= body and (top:GetTop() or 0) - (body:GetTop() or 0) or 0
+    local down = bottom ~= body and (body:GetBottom() or 0) - (bottom:GetBottom() or 0) or 0
     frame:ClearAllPoints()
-    frame:SetPoint("TOPLEFT", top, "TOPLEFT", -o, o)
-    frame:SetPoint("BOTTOMRIGHT", bottom, "BOTTOMRIGHT", o, -o)
+    frame:SetPoint("TOPLEFT", body, "TOPLEFT", -o * LEFT_SHARE, o * LEFT_SHARE + math.max(0, up))
+    frame:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", o, -o - math.max(0, down))
     SliceLayout(pieces, k)
 end
 
@@ -144,12 +172,70 @@ local function OwnBorder(alpha)
     for _, line in ipairs(b and b.lines or {}) do line:SetAlpha(alpha) end -- (OpenMap's gold lines round the bar)
 end
 
+-- the zone bar's background: the title-bar gradient while ours is on, else OpenMap's colour again
+local barStyled
+local function BarLook(styled)
+    local b = FindBar()
+    local tex = b and b.texture
+    if not (tex and tex.SetColorTexture) or barStyled == styled then return end
+    if styled then HeadFill(tex)
+    elseif barStyled then
+        local c = OPENMAP_BAR
+        if tex.SetTexCoord then tex:SetTexCoord(0, 1, 0, 1) end
+        if tex.SetHorizTile then tex:SetHorizTile(false) end
+        if tex.SetVertexColor then tex:SetVertexColor(1, 1, 1, 1) end
+        tex:SetColorTexture(c[1], c[2], c[3], 1)
+    end
+    barStyled = styled
+end
+
+-- the zone bar's background stretched out under the rim on every side it touches: OpenMap draws the bar
+-- inside its own gold frame's band (narrower than the map) and the rim's shading is see-through - both showed
+-- the world between the rim and the bar (a player's screenshot). Back on the bar when ours is off.
+local function BarFill(on)
+    local b = FindBar()
+    local tex = b and b.texture
+    if not (tex and tex.ClearAllPoints) then return end
+    tex:ClearAllPoints()
+    local bl, bt, bb = body:GetLeft(), body:GetTop(), body:GetBottom()
+    local t, btm = b:GetTop(), b:GetBottom()
+    if not (on and bl and bt and bb and t and btm) then tex:SetAllPoints(b) return end
+    local o = (DB and DB.outset) or RIM * Scale()
+    local left, right = -o * LEFT_SHARE + o * LINE_IN, o * LINE_OUT
+    if t > bt then -- (above the map: up to the rim's top line)
+        tex:SetPoint("TOPLEFT", body, "TOPLEFT", left, t - bt + o * LEFT_SHARE - o * LINE_IN)
+        tex:SetPoint("BOTTOMRIGHT", body, "TOPRIGHT", right, btm - bt)
+    else           -- (under it: down to the rim's bottom line)
+        tex:SetPoint("TOPLEFT", body, "BOTTOMLEFT", left, t - bb)
+        tex:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", right, btm - bb - o * LINE_OUT)
+    end
+end
+
+-- the rim above the map's border and the zone bar (its background reaches under the rim now: drawn over it, it
+-- hid the rim - a player's screenshot) and the bar's buttons: the highest strata of those, one level up
+local STRATA = { BACKGROUND = 1, LOW = 2, MEDIUM = 3, HIGH = 4, DIALOG = 5, FULLSCREEN = 6, FULLSCREEN_DIALOG = 7, TOOLTIP = 8 }
+local function Above(b)
+    local strata, level = edge:GetFrameStrata(), edge:GetFrameLevel()
+    local header = MinimapCluster and MinimapCluster.ZoneTextButton
+    for _, f in ipairs({ b or false, header or false }) do
+        if f and f.GetFrameStrata then
+            local fs, fl = f:GetFrameStrata(), f:GetFrameLevel() or 0
+            if f == header then fl = fl + 2 end -- (OpenMap puts the bar's buttons two levels over it)
+            if (STRATA[fs] or 0) > (STRATA[strata] or 0) then strata, level = fs, fl
+            elseif fs == strata and fl > level then level = fl end
+        end
+    end
+    return strata, level + 1
+end
+
 local function Apply()
     if not Find() then return false end
-    local want = On() and Square()
+    local want = On() and Square() and OpenMapLook()
     if not want then
         if frame then frame:Hide() end
         OwnBorder(1)
+        BarLook(false)
+        BarFill(false)
         return true
     end
     if not Build() then return false end
@@ -160,11 +246,14 @@ local function Apply()
         local bt, mt = b:GetTop(), body:GetTop()
         if bt and mt and bt > mt then top = b else bottom = b end
     end
-    frame:SetFrameStrata(edge:GetFrameStrata())
-    frame:SetFrameLevel(edge:GetFrameLevel() + 1)
+    local strata, level = Above(b)
+    frame:SetFrameStrata(strata)
+    frame:SetFrameLevel(level)
     Layout(top, bottom)
     frame:Show()
     OwnBorder(0)
+    BarLook(true)
+    BarFill(b and b:IsShown())
     return true
 end
 
@@ -215,7 +304,7 @@ local function TabBuild()
     if tab then return tab end
     tab = Slice(body, "MasterOptionsMinimapCoords") or CreateFrame("Frame", "MasterOptionsMinimapCoords", body)
     tab.bg = tab:CreateTexture(nil, "BACKGROUND")
-    tab.bg:SetColorTexture(0.07, 0.055, 0.04, 1) -- (OpenMap's zone bar colour)
+    HeadFill(tab.bg) -- (as the zone bar)
     tab.text = tab:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     local wait, shown = 0, nil
     tab:SetScript("OnUpdate", function(self, elapsed)
@@ -228,10 +317,27 @@ local function TabBuild()
     return tab
 end
 
+-- the side the tab fits on: the one asked for, else the other when it would leave the screen (a map at the screen's
+-- top - OpenMap_MiniMap keeps the map on screen, but not what sticks out of it)
+local function OnScreenSide(side, top, bottom, h)
+    local ui = UIParent
+    local us = ui and ui.GetEffectiveScale and ui:GetEffectiveScale() or 1
+    local screenTop = ui and ui.GetTop and ui:GetTop()
+    if side == "bottom" then
+        local b, es = bottom:GetBottom(), bottom.GetEffectiveScale and bottom:GetEffectiveScale() or 1
+        if b and (b - h) * es < 0 then return "top" end
+    elseif screenTop then
+        local t, es = top:GetTop(), top.GetEffectiveScale and top:GetEffectiveScale() or 1
+        if t and (t + h) * es > screenTop * us then return "bottom" end
+    end
+    return side
+end
+
 PlaceCoords = function()
     local c = Coords()
     local mode = CoordsMode()
-    if mode == "game" or not body then
+    -- (OpenMap_MiniMap's look off: the game's line - until 2.9.0 it stayed see-through with no tab: no coordinates)
+    if mode == "game" or not OpenMapLook() then
         if tab then tab:Hide() end
         if c then c:SetAlpha(1) end
         return
@@ -264,6 +370,7 @@ PlaceCoords = function()
     tab.text:SetText(PlayerXY())
     local h = math.max(12, tab.text:GetStringHeight() or 12) + 2 * RIM * s * 0.5 + 4
     tab:SetSize(math.max(62, (tab.text:GetStringWidth() or 50) + 2 * k + 8), h + tuck)
+    side = OnScreenSide(side, top, bottom, h)
     tab:ClearAllPoints()
     tab.text:ClearAllPoints()
     if side == "bottom" then
@@ -275,10 +382,12 @@ PlaceCoords = function()
     end
     local inner = RIM * s * 0.5
     tab.bg:ClearAllPoints()
-    tab.bg:SetPoint("TOPLEFT", inner, -inner)
+    -- (to the rim's lines: theirs at the outer edge on the left and top, further in on the right and bottom -
+    -- inset evenly, the top and left showed the world under the line's shading)
+    tab.bg:SetPoint("TOPLEFT", inner * 0.3, -inner * 0.3)
     tab.bg:SetPoint("BOTTOMRIGHT", -inner, inner)
     if tab.pieces then SliceLayout(tab.pieces, k) end
-    tab:SetFrameStrata(edge:GetFrameStrata())
+    tab:SetFrameStrata(ring and frame:GetFrameStrata() or edge:GetFrameStrata())
     tab:SetFrameLevel(math.max(0, (ring and frame:GetFrameLevel() or edge:GetFrameLevel() + 1) - 1))
     tab:Show()
 end
@@ -309,11 +418,20 @@ local function Hook()
     if hooked or not (body and edge) then return end
     hooked = true
     body:HookScript("OnShow", function() ApplySoon() end)
+    body:HookScript("OnHide", function() ApplySoon(0) end) -- (OpenMap_MiniMap's look off: the game's coordinates back)
     body:HookScript("OnSizeChanged", function() ApplySoon() end)
-    -- OpenMap switches its border pieces on and off when its look changes: ours stays on top of that
+    -- OpenMap sets its border up again when its look changes (any of its settings): shown, and its colour set -
+    -- SetVertexColor(1, 1, 1, 1) puts its alpha back too. Hidden again at once, not after the 0.2 s wait
+    -- (its gold frame blinked through - a player's report); the rest a moment later.
+    local function Again()
+        if not (frame and frame:IsShown()) then return end
+        Check("hiding OpenMap's border", pcall(OwnBorder, 0))
+        ApplySoon()
+    end
     for _, t in ipairs({ edge.texture, unpack(edge.lines or {}) }) do
-        hooksecurefunc(t, "SetShown", function() if frame and frame:IsShown() then ApplySoon() end end)
-        hooksecurefunc(t, "Show", function() if frame and frame:IsShown() then ApplySoon() end end)
+        for _, method in ipairs({ "SetShown", "Show", "SetVertexColor", "SetTexture" }) do -- (not SetAlpha: ours)
+            if t[method] then hooksecurefunc(t, method, Again) end
+        end
     end
 end
 

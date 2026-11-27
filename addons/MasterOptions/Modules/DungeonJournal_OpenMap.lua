@@ -69,10 +69,9 @@ local function Cleared(spot)
     if not (p and DB.ours[p.id]) then return end
     -- kept: you wrote your own note on it
     if p.note ~= Note(spot) then DB.ours[p.id] = nil return end
-    if mod.WaypointPoint and mod.ClearPin then
-        local fm, fx, fy = mod.WaypointPoint()
-        if fm == p.map and fx and math.abs(fx - p.x) < 5e-4 and math.abs(fy - p.y) < 5e-4 then pcall(mod.ClearPin) end
-    end
+    -- still followed: no longer (by the spot OpenMap was told to follow - ShortestPathForever's journey moves the
+    -- game's waypoint along the way, so that alone missed it)
+    if mod.ClearPin and MasterOptions_Shared.OpenMapFollows(p.map, p.x, p.y) then pcall(mod.ClearPin) end
     local list = mod.db.pins.list
     for i = #list, 1, -1 do if list[i] == p then table.remove(list, i) end end
     DB.ours[p.id] = nil
@@ -242,7 +241,7 @@ local function DungeonMapPart()
 
     -- several at one entrance (Scarlet Monastery's wings, Blackrock Mountain): pick one
     local chooser
-    local HEADER = 26
+    local HEADER = 30 -- (the title bar)
     local function CloseOnClickElsewhere()
         if not (chooser and chooser:IsShown()) then return end
         if chooser:IsMouseOver() then return end
@@ -251,18 +250,26 @@ local function DungeonMapPart()
     end
     local function Choose(pin, keys)
         if not chooser then
-            chooser = CreateFrame("Frame", "MasterOptionsDungeonChooser", WorldMapFrame)
+            -- (the /mo window's frame: the game's BasicFrameTemplate - its title bar and close button - so what
+            -- Master Options puts on others' maps looks like Master Options; a plain dark box where it's missing)
+            local ok, f = pcall(CreateFrame, "Frame", "MasterOptionsDungeonChooser", WorldMapFrame, "BasicFrameTemplateWithInset")
+            chooser = ok and f or CreateFrame("Frame", "MasterOptionsDungeonChooser", WorldMapFrame)
             chooser:SetFrameStrata("TOOLTIP")
             chooser:EnableMouse(true)
-            local bg = chooser:CreateTexture(nil, "BACKGROUND")
-            bg:SetAllPoints()
-            bg:SetColorTexture(0.05, 0.04, 0.03, 0.92)
-            local title = chooser:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-            title:SetPoint("TOPLEFT", 8, -8)
+            if not ok then
+                local bg = chooser:CreateTexture(nil, "BACKGROUND")
+                bg:SetAllPoints()
+                bg:SetColorTexture(0.05, 0.04, 0.03, 0.92)
+            end
+            local title = chooser.TitleText or chooser:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            if not chooser.TitleText then title:SetPoint("TOP", 0, -5) end
             title:SetText("Pick a dungeon")
-            local close = CreateFrame("Button", nil, chooser, "UIPanelCloseButton")
-            close:SetSize(26, 26)
-            close:SetPoint("TOPRIGHT", 1, 1)
+            local close = chooser.CloseButton
+            if not close then
+                close = CreateFrame("Button", nil, chooser, "UIPanelCloseButton")
+                close:SetSize(26, 26)
+                close:SetPoint("TOPRIGHT", 1, 1)
+            end
             close:SetScript("OnClick", function() chooser:Hide() end)
             chooser.rows = {}
             chooser:SetScript("OnHide", function(self) self.pin = nil end)
@@ -280,7 +287,7 @@ local function DungeonMapPart()
             if not row then
                 row = CreateFrame("Button", nil, chooser, "UIPanelButtonTemplate")
                 row:SetHeight(22)
-                row:SetPoint("TOPLEFT", 6, -HEADER - (i - 1) * 24)
+                row:SetPoint("TOPLEFT", 8, -HEADER - (i - 1) * 24)
                 row:SetScript("OnClick", function(self) chooser:Hide() Open(self.key) end)
                 chooser.rows[i] = row
             end
@@ -291,7 +298,7 @@ local function DungeonMapPart()
         end
         for i = #keys + 1, #chooser.rows do chooser.rows[i]:Hide() end
         for i = 1, #keys do chooser.rows[i]:SetWidth(width) end
-        chooser:SetSize(width + 12, HEADER + #keys * 24 + 4)
+        chooser:SetSize(width + 16, HEADER + #keys * 24 + 10) -- (the template's inset border round the rows)
         chooser:ClearAllPoints()
         chooser:SetPoint("TOPLEFT", pin, "BOTTOMRIGHT", 2, 2)
         chooser:Show()
@@ -365,6 +372,7 @@ f:SetScript("OnEvent", function(_, event, name)
     elseif event == "PLAYER_LOGIN" then
         -- (Dungeon Journal sets its arrow functions up as it loads; again a moment later to be sure)
         if not Hook() then C_Timer.After(2, Hook) end
+        MasterOptions_Shared.WatchOpenMapFollow()
         local om = _G.OpenMap
         local wm = om and om.GetModule and om:GetModule("worldmap")
         if insideWanted ~= nil then

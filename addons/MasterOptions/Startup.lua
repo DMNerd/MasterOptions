@@ -107,7 +107,7 @@ local function RegisterSettingsPanel()
                     local c = Settings.CreateControlTextContainer()
                     for _, choice in ipairs(opt.choices) do
                         -- (as the window's button: choices whose addon isn't loaded are left out)
-                        if choice == "Off" or choice == opt.off or opt.needs or Loaded(choice) then
+                        if MO.ChoiceShown(opt, choice) then
                             c:Add(choice, choice == RecOf(opt) and (choice .. " *") or choice)
                         end
                     end

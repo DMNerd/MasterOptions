@@ -61,6 +61,7 @@ Master Options only makes these addons work together: everything it connects is 
 | OpenMap, OpenMap MiniMap | the OpenMap contributors |
 | OpenMap Tweaks | Austin |
 | Dungeon Journal (ForeverDungeonJournal) | Exehn |
+| Spoken, Spoken Bosses | Nucabe |
 | Shortest Path Forever | cjber |
 | DeleteCheapestItem Reloaded | Sander Vispoel (sandervspl) |
 | DialogKey - Numy Edition | Numy (earlier versions: Foxthorn, N01ch, FuriousProgrammer) |
@@ -117,6 +118,8 @@ purpose (no `.pkgmeta`).
 | Mastercraft / FarmTour | Mastercraft, ShortestPathForever | Start farming in Mastercraft and ShortestPathForever walks you through the zone's herbs and veins worth it to you (Mastercraft's nodes and rule), nearest first; `/mo farm` (`herbs`, `ores`, `stop`) without Mastercraft's session |
 | Mastercraft / BankMats | Mastercraft | At the bank, guide materials go in; VENDOR / AUCTION items stay in bags |
 | OpenMapMiniMap / Border | OpenMap_MiniMap | Square minimap framed with the action bar buttons' border |
+| ShortestPathForever / OpenMapPins | ShortestPathForever, OpenMap | Clearing the journey to a followed OpenMap pin clears the pin too |
+| DungeonJournal / SpokenBosses | ForeverDungeonJournal, Spoken_Bosses | Spoken_Bosses' dungeon and boss stories beside Dungeon Journal's map on the world map |
 | DungeonJournal / OpenMap | ForeverDungeonJournal, OpenMap | Show on Map puts an OpenMap pin; map inside dungeons (OpenMap's own switch); Dungeon entrance click: Dungeon Journal's map, its page, or OpenMap's map (written to OpenMap's option too) |
 | Mastercraft / FishingView | Mastercraft | Bags, popups and loot rolls stay visible in the fishing view |
 | Mastercraft / Chattynator | Mastercraft, Chattynator | Mastercraft's /played request stays out of Chattynator |
@@ -142,6 +145,7 @@ was found.
 | OpenMap_Tweaks | [CurseForge](https://www.curseforge.com/wow/addons/openmap-tweaks) · — | Gathering pins (filtered by Mastercraft's node rule) |
 | OpenMap_MiniMap | [CurseForge](https://www.curseforge.com/wow/addons/openmap-minimap-the-openmap-companion) · — | Square minimap and its border; Minimap (it or BetterBlizzFrames' classic minimap, not both) |
 | ForeverDungeonJournal (Exehn's "DungeonJournal") | [CurseForge](https://www.curseforge.com/wow/addons/dungeonjournal) · — | Dungeon maps opened from OpenMap |
+| Spoken_Bosses (Nucabe's "Spoken") | — · — | Its dungeon and boss stories beside Dungeon Journal's map on the world map |
 | Baganator | [CurseForge](https://www.curseforge.com/wow/addons/baganator) · [GitHub](https://github.com/TheMouseNest/Baganator) | Junk coin and upgrade arrows in bags |
 | Syndicator (Baganator's backend) | [CurseForge](https://www.curseforge.com/wow/addons/syndicator) · [GitHub](https://github.com/TheMouseNest/Syndicator) | Counts on your characters |
 | Auctionator | [CurseForge](https://www.curseforge.com/wow/addons/auctionator) · [GitHub](https://github.com/TheMouseNest/Auctionator) | Price tooltips, Mastercraft's scan button |

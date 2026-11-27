@@ -270,3 +270,108 @@ function S.OpenMapMiniMapProfile()
     if type(c) == "table" and c.own and type(c.profile) == "table" then return c.profile end
     return type(db.profile) == "table" and db.profile or nil
 end
+
+---------------------------------------------------------------------------
+-- OpenMap: the spot it was last told to follow (its TrackPoint: a pin followed, Dungeon Journal's Show on Map),
+-- until its ClearPin. OpenMap itself defines "followed" by where the game's waypoint is, but ShortestPathForever's
+-- journey moves that waypoint along the way - so a pin's clearing was missed when matched by the waypoint
+-- (Dungeon Journal's mark removed, the journey cleared). Watched from login (S.WatchOpenMapFollow).
+---------------------------------------------------------------------------
+local followed, followHooked
+local NEAR = 5e-4
+
+local function OpenMapWorldMap()
+    local om = _G.OpenMap
+    local mod = type(om) == "table" and type(om.GetModule) == "function" and om:GetModule("worldmap")
+    return type(mod) == "table" and mod or nil
+end
+S.OpenMapWorldMap = OpenMapWorldMap
+
+function S.WatchOpenMapFollow()
+    if followHooked then return true end
+    local mod = OpenMapWorldMap()
+    if not (mod and type(mod.TrackPoint) == "function") then return false end
+    followHooked = true
+    hooksecurefunc(mod, "TrackPoint", function(mapID, x, y) followed = { mapID, x, y } end)
+    if type(mod.ClearPin) == "function" then hooksecurefunc(mod, "ClearPin", function() followed = nil end) end
+    return true
+end
+
+local function Same(mapID, x, y, m2, x2, y2)
+    return mapID ~= nil and mapID == m2 and x and x2 and y and y2
+        and math.abs(x - x2) < NEAR and math.abs(y - y2) < NEAR or false
+end
+
+-- whether OpenMap follows the spot now: the one it was told to follow, and either the game's waypoint still on it
+-- or ShortestPathForever's journey for it (owner "OpenMap:Pin") still under way. Not followed any more (another
+-- journey took over, OpenMap stopped it itself): false, so clearing it can't clear someone else's waypoint
+function S.OpenMapFollows(mapID, x, y)
+    local mod = OpenMapWorldMap()
+    if not mod then return false end
+    local wm, wx, wy = nil, nil, nil
+    if type(mod.WaypointPoint) == "function" then wm, wx, wy = mod.WaypointPoint() end
+    if Same(mapID, x, y, wm, wx, wy) then return true end
+    if not (followed and Same(mapID, x, y, followed[1], followed[2], followed[3])) then return false end
+    local spf = _G.ShortestPathForever
+    local api = type(spf) == "table" and spf.API
+    if not (type(api) == "table" and type(api.CurrentStop) == "function") then return false end
+    local ok, stop = pcall(api.CurrentStop, "OpenMap:Pin")
+    return ok and stop ~= nil
+end
+
+-- the spot OpenMap was last told to follow (map, x, y), else where the game's waypoint is
+function S.OpenMapFollowed()
+    if followed then return followed[1], followed[2], followed[3] end
+    local mod = OpenMapWorldMap()
+    if mod and type(mod.WaypointPoint) == "function" then return mod.WaypointPoint() end
+end
+
+---------------------------------------------------------------------------
+-- Master Options' look for its own frames on others' maps (the minimap's zone bar and coordinates tab, the dungeon
+-- chooser): the /mo window's header (the game's BasicFrameTemplate title bar - Details' title bar matches it),
+-- else a grey gradient like it, darker at the top
+---------------------------------------------------------------------------
+local HEAD_TOP, HEAD_BOTTOM = { 0.06, 0.06, 0.06 }, { 0.18, 0.18, 0.175 }
+-- a texture filled as the /mo window's header: its texture copied (atlas, or file and coords), else a gradient
+local function TitleLike(tex)
+    local src = _G.MasterOptionsFrame and _G.MasterOptionsFrame.TitleBg
+    if not src then return false end
+    local atlas = src.GetAtlas and src:GetAtlas()
+    if atlas and tex.SetAtlas then
+        tex:SetAtlas(atlas, false)
+        if tex.SetHorizTile and src.GetHorizTile then tex:SetHorizTile(src:GetHorizTile() and true or false) end
+        return true
+    end
+    local file = src.GetTexture and src:GetTexture()
+    if not file then return false end
+    tex:SetTexture(file)
+    if src.GetTexCoord then tex:SetTexCoord(src:GetTexCoord()) end
+    if src.GetVertexColor then tex:SetVertexColor(src:GetVertexColor()) end
+    return true
+end
+
+function S.HeaderFill(tex)
+    if TitleLike(tex) then return end
+    tex:SetColorTexture(1, 1, 1, 1)
+    local t, b = HEAD_TOP, HEAD_BOTTOM
+    if _G.CreateColor and tex.SetGradient
+        and pcall(tex.SetGradient, tex, "VERTICAL", _G.CreateColor(b[1], b[2], b[3], 1), _G.CreateColor(t[1], t[2], t[3], 1)) then
+        return
+    end
+    if tex.SetGradientAlpha and pcall(tex.SetGradientAlpha, tex, "VERTICAL", b[1], b[2], b[3], 1, t[1], t[2], t[3], 1) then
+        return
+    end
+    tex:SetColorTexture((t[1] + b[1]) / 2, (t[2] + b[2]) / 2, (t[3] + b[3]) / 2, 1)
+end
+
+
+-- a map marker's tooltip, as OpenMap's and Questie's: the name in gold, its lines in white, a hint in grey, and
+-- whose marker it is last, small and grey
+function S.MarkerTooltip(owner, title, lines, hint, source)
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(title or "", 1, 0.82, 0)
+    for _, l in ipairs(lines or {}) do GameTooltip:AddLine(l, 1, 1, 1, true) end
+    if hint then GameTooltip:AddLine(hint, 0.6, 0.6, 0.6, true) end
+    GameTooltip:AddLine(source and ("Master Options - " .. source) or "Master Options", 0.5, 0.5, 0.5)
+    GameTooltip:Show()
+end

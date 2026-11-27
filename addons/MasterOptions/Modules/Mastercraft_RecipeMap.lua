@@ -36,16 +36,37 @@ local NEXT_RANK = { -- cap now -> next rank's name and the level it needs
     [75] = { "Journeyman", 10 }, [150] = { "Expert", 20 }, [225] = { "Artisan", 35 },
 }
 local NEAR_CAP = 25
-local VENDOR_ICON = "Interface\\Icons\\INV_Scroll_03"
-local TRAINER_ICON = "Interface\\Icons\\INV_Misc_Book_09"
-local DROP_ICON = "Interface\\Icons\\INV_Misc_Bag_10"
+-- The markers in Questie's icon family, at Questie's townsfolk size (its "Townsfolk icon scale" settings): a
+-- trainer as Questie draws a profession's trainers (the profession's icon), a vendor the same with a pattern on
+-- its corner, a drop as Questie's loot icon. A soft gold glow says "for you" (Master Options' markers).
+local PROF_ICON = { -- (as Questie's townsfolk menu has them)
+    ["First Aid"] = "Interface\\Icons\\spell_holy_sealofsacrifice", Blacksmithing = "Interface\\Icons\\trade_blacksmithing",
+    Leatherworking = "Interface\\Icons\\trade_leatherworking", Alchemy = "Interface\\Icons\\trade_alchemy",
+    Herbalism = "Interface\\Icons\\trade_herbalism", Cooking = "Interface\\Icons\\inv_misc_food_15",
+    Mining = "Interface\\Icons\\trade_mining", Tailoring = "Interface\\Icons\\trade_tailoring",
+    Engineering = "Interface\\Icons\\trade_engineering", Enchanting = "Interface\\Icons\\trade_engraving",
+    Fishing = "Interface\\Icons\\trade_fishing", Skinning = "Interface\\Icons\\inv_misc_pelt_wolf_01",
+    Jewelcrafting = "Interface\\Icons\\inv_misc_gem_01",
+}
+local ANY_PROF_ICON = "Interface\\Minimap\\tracking\\profession" -- (Questie's "Profession Trainers"; several at one place)
+local PATTERN_BADGE = "Interface\\Icons\\INV_Scroll_03"
+local DROP_ICON = "Interface\\AddOns\\Questie\\Icons\\loot.blp"
 local MAX_GM_SOURCES, MAX_QUESTIE_SOURCES = 5, 8 -- (more: a world drop, not marked)
 local GLOW = "Interface\\GLUES\\Models\\UI_Draenei\\GenericGlow64"
 
 local MCDB = Shared.MastercraftDB
 local function Lib() local l = _G.LibQuestieDB; return type(l) == "table" and l or nil end
 local Module = Shared.QuestieModule
-local function Pins() return LibStub and LibStub("HereBeDragons-Pins-2.0", true) or nil end
+-- HereBeDragons-Pins: Questie 12.8 and later keep their copy as one of Questie's own modules (QuestieLoader's
+-- HBDPins), not in LibStub - looked up as OpenMap does (read from the module list: ImportModule would make an empty
+-- one). Else a LibStub copy. (Until 2.9.0 only LibStub was asked, and nothing was ever drawn.)
+local function Pins()
+    local loader = _G.QuestieLoader
+    local modules = type(loader) == "table" and rawget(loader, "_modules")
+    local q = type(modules) == "table" and rawget(modules, "HBDPins")
+    if type(q) == "table" and type(q.AddWorldMapIconMap) == "function" then return q end
+    return LibStub and LibStub("HereBeDragons-Pins-2.0", true) or nil
+end
 local function MyFaction() return UnitFactionGroup("player") == "Alliance" and "A" or "H" end
 
 -- QuestieDB fields (nil when unknown)
@@ -98,18 +119,19 @@ local function Patterns()
 end
 
 -- one mark per place: marks[key] = { kind, entity = "Npc" | "Object", id, lines, seen, centre = bool }
-local function Mark(marks, kind, entity, id, line, centre)
+local function Mark(marks, kind, entity, id, line, centre, prof)
     local key = entity .. ":" .. id
-    local e = marks[key] or { kind = kind, entity = entity, id = id, lines = {}, seen = {}, centre = centre }
+    local e = marks[key] or { kind = kind, entity = entity, id = id, lines = {}, seen = {}, centre = centre, profs = {} }
     marks[key] = e
     if not e.seen[line] then e.seen[line] = true; e.lines[#e.lines + 1] = line end
+    if prof then e.profs[prof] = true end
 end
 
 local function Vendors(marks, patterns)
     for _, p in ipairs(patterns) do
         for _, itemID in ipairs(p.items) do
             for _, npc in ipairs(ItemField(itemID, "vendors") or {}) do
-                if Mine(npc) then Mark(marks, "vendor", "Npc", npc, ("%s (%s)"):format(p.recipe, p.prof)) end
+                if Mine(npc) then Mark(marks, "vendor", "Npc", npc, ("%s (%s)"):format(p.recipe, p.prof), nil, p.prof) end
             end
         end
     end
@@ -134,14 +156,14 @@ local function Drops(marks, patterns)
                     local entity = e.kind == "o" and "Object" or "Npc"
                     local line = ("%s (%s): %.1f%%%s"):format(p.recipe, p.prof, e.percent,
                         e.estimate and " - a Classic estimate" or "")
-                    for _, id in ipairs(IdsByName(entity, e.name) or {}) do Mark(marks, "drop", entity, id, line, true) end
+                    for _, id in ipairs(IdsByName(entity, e.name) or {}) do Mark(marks, "drop", entity, id, line, true, p.prof) end
                 end
             elseif #sources == 0 then
                 for _, list in ipairs({ { "Npc", ItemField(itemID, "npcDrops") }, { "Object", ItemField(itemID, "objectDrops") } }) do
                     local ids = type(list[2]) == "table" and list[2] or {}
                     if #ids > 0 and #ids <= MAX_QUESTIE_SOURCES then
                         for _, id in ipairs(ids) do
-                            Mark(marks, "drop", list[1], id, ("%s (%s): drops here"):format(p.recipe, p.prof), true)
+                            Mark(marks, "drop", list[1], id, ("%s (%s): drops here"):format(p.recipe, p.prof), true, p.prof)
                         end
                     end
                 end
@@ -164,7 +186,7 @@ local function Trainers(out)
             local line = ("Train %s %s (%d / %d)%s"):format(nextRank[1], p.name, p.skill, p.max,
                 nextRank[1] == "Artisan" and " - only some trainers teach Artisan" or "")
             for _, npc in ipairs(trainers[id] or {}) do
-                if Mine(npc) then Mark(out, "trainer", "Npc", npc, line) end
+                if Mine(npc) then Mark(out, "trainer", "Npc", npc, line, nil, p.name) end
             end
         end
     end
@@ -176,44 +198,62 @@ end
 local REF = "MasterOptions_RecipeMap"
 local pool, used = {}, 0
 
-local function Marker(kind, lines, name)
+-- Questie's townsfolk icon size, world map or minimap (16 x its scale setting)
+local function IconSize(mini)
+    local q = _G.Questie and _G.Questie.db and _G.Questie.db.profile
+    local scale = q and (mini and q.globalMiniMapTownsfolkScale or q.globalTownsfolkScale)
+    return math.max(8, math.floor(16 * (tonumber(scale) or (mini and 0.7 or 0.6)) * (mini and 1 or 1.25) + 0.5))
+end
+
+local function ProfIcon(profs)
+    local one
+    for prof in pairs(profs or {}) do
+        if one then return ANY_PROF_ICON end
+        one = prof
+    end
+    return one and PROF_ICON[one] or ANY_PROF_ICON
+end
+
+local HINT = {
+    vendor = "Sells patterns for recipes you haven't learned - each pattern's tooltip says the skill it needs.",
+    drop = "Drops patterns for recipes you haven't learned (the chance: GearMatic's WoW Forever rates).",
+}
+
+local function Marker(e, name, mini)
     used = used + 1
     local m = pool[used]
     if not m then
         m = CreateFrame("Frame", nil, UIParent)
-        m:SetSize(16, 16)
         m.glow = m:CreateTexture(nil, "BACKGROUND")
         m.glow:SetTexture(GLOW)
         m.glow:SetPoint("CENTER")
-        m.glow:SetSize(30, 30)
-        m.glow:SetVertexColor(1, 0.82, 0.2, 0.9)
+        m.glow:SetVertexColor(1, 0.82, 0.2, 0.6)
         m.icon = m:CreateTexture(nil, "ARTWORK")
         m.icon:SetAllPoints()
+        m.badge = m:CreateTexture(nil, "OVERLAY")
+        m.badge:SetPoint("BOTTOMRIGHT", 2, -2)
+        m.badge:SetTexture(PATTERN_BADGE)
         m:EnableMouse(true)
         m:SetScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:AddLine(self.title or "", 1, 0.82, 0)
-            for _, l in ipairs(self.lines or {}) do GameTooltip:AddLine(l, 1, 1, 1, true) end
-            if self.kind == "vendor" then
-                GameTooltip:AddLine("Sells patterns for recipes you haven't learned - each pattern's tooltip says the skill it needs.", 0.6, 0.6, 0.6, true)
-            elseif self.kind == "drop" then
-                GameTooltip:AddLine("Drops patterns for recipes you haven't learned (the chance: GearMatic's WoW Forever rates).", 0.6, 0.6, 0.6, true)
-            end
-            GameTooltip:AddLine("Master Options (Mastercraft + Questie)", 0.5, 0.5, 0.5)
-            GameTooltip:Show()
+            MasterOptions_Shared.MarkerTooltip(self, self.title, self.lines, HINT[self.kind], "Mastercraft + Questie")
         end)
         m:SetScript("OnLeave", function() GameTooltip:Hide() end)
         pool[used] = m
     end
-    m.kind, m.lines, m.title = kind, lines, name
-    m.icon:SetTexture((kind == "vendor" and VENDOR_ICON) or (kind == "drop" and DROP_ICON) or TRAINER_ICON)
+    local size = IconSize(mini)
+    m:SetSize(size, size)
+    m.glow:SetSize(size * 1.8, size * 1.8)
+    m.badge:SetSize(size * 0.55, size * 0.55)
+    m.kind, m.lines, m.title = e.kind, e.lines, name
+    m.icon:SetTexture(e.kind == "drop" and DROP_ICON or ProfIcon(e.profs))
+    m.badge:SetShown(e.kind == "vendor")
     return m
 end
 
 local function Place(pins, e, name, uiMapID, x, y)
-    local m = Marker(e.kind, e.lines, name)
+    local m = Marker(e, name, false)
     pins:AddWorldMapIconMap(REF, m, uiMapID, x / 100, y / 100, _G.HBD_PINS_WORLDMAP_SHOW_PARENT)
-    local mm = Marker(e.kind, e.lines, name)
+    local mm = Marker(e, name, true)
     pins:AddMinimapIconMap(REF, mm, uiMapID, x / 100, y / 100, false, false)
 end
 

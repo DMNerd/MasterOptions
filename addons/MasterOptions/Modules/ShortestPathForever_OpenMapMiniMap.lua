@@ -10,9 +10,11 @@ MasterOptions_Module("ShortestPathForever_OpenMapMiniMap", { "ShortestPathForeve
 -- Minimap:CreateTexture), not a child frame, so it fades with the terrain and is gone at far zoom. Its route
 -- line and transport pins are child frames and stay visible already.
 --
--- Fix: the goal texture ignores its parent's alpha too, as OpenMap_MiniMap does for child frames. Nothing in
--- either addon is changed. ShortestPathForever makes the frame when its route first draws, so this looks for it
--- once a second until it's there, then stops.
+-- Fix: the goal texture ignores its parent's alpha too, as OpenMap_MiniMap does for child frames - and follows the
+-- route frame when OpenMap_MiniMap hides it again (while you drag the map to look round it sets the route frame
+-- back to the terrain's alpha; the goal stayed, collapsed onto your arrow). Nothing in either addon is changed.
+-- ShortestPathForever makes the frame when its route first draws, so this looks for it once a second until it's
+-- there, then stops.
 
 local done = false
 local function Apply()
@@ -21,6 +23,13 @@ local function Apply()
     if type(goal) ~= "table" or type(goal.SetIgnoreParentAlpha) ~= "function" then return false end
     local ok, err = pcall(goal.SetIgnoreParentAlpha, goal, true)
     if not ok and _G.MasterOptions_ReportError then MasterOptions_ReportError(ADDON, "keeping the goal visible", err) end
+    -- (the route frame's own setting, as OpenMap_MiniMap sets it: visible over the faded terrain, or hidden while
+    -- the map is dragged)
+    if type(route.SetIgnoreParentAlpha) == "function" and hooksecurefunc then
+        hooksecurefunc(route, "SetIgnoreParentAlpha", function(_, on)
+            pcall(goal.SetIgnoreParentAlpha, goal, on and true or false)
+        end)
+    end
     return true
 end
 

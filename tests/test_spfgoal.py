@@ -9,10 +9,11 @@ lua.execute(r'''
   FRAMES = {}
   function CreateFrame() local f = { SetScript = function(self, k, fn) self[k] = fn end }; FRAMES[#FRAMES + 1] = f; return f end
   function Tick(dt) for _, f in ipairs(FRAMES) do if f.OnUpdate then f.OnUpdate(f, dt) end end end
+  function hooksecurefunc(t, k, fn) local o = t[k]; t[k] = function(...) local r = o(...); fn(...); return r end end
   function MakeGoal()
     local goal = { ignore = false }
     function goal:SetIgnoreParentAlpha(v) self.ignore = v; CALLS = (CALLS or 0) + 1 end
-    ShortestPathForeverMinimapRoute = { Goal = goal }
+    ShortestPathForeverMinimapRoute = { Goal = goal, SetIgnoreParentAlpha = function(self, v) self.ignore = v end }
     return goal
   end
 ''')
@@ -27,6 +28,11 @@ L('Tick(0.6)')
 res["goal made later: ignores the minimap's alpha"] = E("GOAL.ignore == true")
 L('Tick(1); Tick(1)')
 res["then stops looking"] = E("CALLS == 1")
+
+L('ShortestPathForeverMinimapRoute:SetIgnoreParentAlpha(false)')
+res["OpenMap_MiniMap hides the route while you drag the map: the goal hides with it"] = E("GOAL.ignore == false")
+L('ShortestPathForeverMinimapRoute:SetIgnoreParentAlpha(true)')
+res["...and shows again with it"] = E("GOAL.ignore == true")
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)
 print("ERRORS:", sum(1 for v in res.values() if not v))

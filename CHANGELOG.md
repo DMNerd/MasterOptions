@@ -7,6 +7,58 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+### Added
+
+- **Spoken_Bosses' stories on Dungeon Journal's map.** When Dungeon Journal's map of a dungeon is on the world
+  map (Map inside dungeons, Dungeon entrance click), Spoken_Bosses tells that dungeon's story beside it, and a
+  boss's story when you click the boss. It used to know only OpenMap's and Leatrix Maps' dungeon views.
+
+- **Pick who does it, for maps and routes** (where two addons both did it, each showed twice):
+  - **Flight masters:** OpenMap or Questie.
+  - **World map coordinates:** OpenMap, Questie or off.
+  - **Town NPC icons:** a third choice, OpenMap on the world map with the game's tracking on the minimap.
+  - **Minimap pins from:** OpenMap_MiniMap's gathered spots counted as a third source (one herb had three pins).
+  - **Routes and waypoints** (ShortestPathForever): Navigation arrow (its arrow or the game's marker only),
+    Arrow text (distance, time or both), Quest and recipe waypoints (a Shortest Path journey or the game's
+    waypoint, for Questie, Mastercraft and WhatsTraining).
+  - **Minimap buttons** (OpenMap_MiniMap): on mouse-over, round the edge, or in a tray.
+
+- **Gathering pin size:** one size (Small / Medium / Large) for herb and ore pins on the world map and the
+  minimap, whether Mastercraft or OpenMap_Tweaks draws them (Mastercraft's were bigger).
+
+### Changed
+
+- **One look:** the recipe map's markers are drawn in Questie's style and at Questie's town icon size (a
+  trainer with its profession's icon, a vendor with a pattern on it, a drop with Questie's loot icon), with a
+  soft gold glow for "for you". The dungeon chooser on OpenMap's map is a small /mo-style window.
+- **Modules are plain options.** Each has a name that says what it does, its explanation and the addons it
+  needs right under it (a missing one in red), and is greyed out while one of them isn't loaded. They're in
+  four sections: maps, gear, selling and more. Seven newer modules had no on / off switch at all: they have
+  one now (Farming tours, Recipe map markers, Upgrade marks in Dungeon Journal's loot, Keep your best gear for
+  every spec, CheapUpgrades uses GearMatic's stat weights, Spoken's stories, Clearing a journey clears its pin).
+- The minimap's zone bar and coordinates tab have the same header as the /mo window (and Details' title bar)
+  while the action bar border is on.
+
+### Fixed
+
+- "Where an item drops (tooltip)" offers Dungeon Journal and All again (only addon names were listed).
+- **Recipe map markers show.** They never did: Questie keeps its own copy of the map-pin library, which Master
+  Options didn't look for.
+- A farming tour no longer takes your route back at the next zone line after you followed a pin or a quest target
+  (it starts in a new zone only in place of its own tour, or when no journey is under way).
+- Minimap coordinates come back (the game's own line) when OpenMap_MiniMap's look is off or gives way to another
+  minimap addon; they were hidden with no tab.
+- The minimap's coordinates tab goes under the map when it would leave the top of the screen.
+- ShortestPathForever's goal on the minimap hides with its route while you drag OpenMap_MiniMap's map.
+- Dungeon Journal's and ShortestPathForever's clearing finds the OpenMap pin you followed even after the journey
+  moved the game's waypoint along the way.
+- Less work in fights with the world map open: OpenMap's stitched map isn't refreshed whole for gathering pins.
+- The Minimap row also turns BetterBlizzFrames' "Hide minimap in arena" off for OpenMap_MiniMap.
+- Clearing ShortestPathForever's journey to an OpenMap pin you followed clears the pin too: OpenMap no longer
+  keeps following it, and the pin goes from the map (one you wrote a note on stays, no longer followed).
+- The minimap's action bar border fits the map on both sides: no gap left of the map, and the zone bar's
+  calendar no longer runs under the border on the right.
+
 ## [2.8.1] - 2026-11-27
 
 ### Added

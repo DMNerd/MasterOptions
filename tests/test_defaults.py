@@ -10,7 +10,7 @@ for f in sorted(os.listdir(os.path.join(scratch, "fixtures", "sv"))):
     lua.execute(open(os.path.join(scratch, "fixtures", "sv", f), encoding="utf-8").read())
 
 addons = open(os.path.join(scratch, "fixtures", "addons.txt"), encoding="utf-8").read().strip().split(",")
-lua.globals().ADDON_LIST = lua.table_from(addons + ["FakeOutdated", "CheapUpgrades_Baganator"])
+lua.globals().ADDON_LIST = lua.table_from(addons + ["FakeOutdated", "CheapUpgrades_Baganator", "ShortestPathForever"])
 
 lua.execute(r'''
 -- ---------- fake WoW ----------
@@ -157,6 +157,10 @@ res["Minimap row: BetterBlizzFrames classic -> its classic on, OpenMap_MiniMap d
 lua.execute('if MINIMAP then MINIMAP.set("OpenMap_MiniMap") end')
 res["Minimap row: back to OpenMap_MiniMap -> enabled again, BetterBlizzFrames' classic off"] = lua.eval(
     'C_AddOns.GetAddOnEnableState("OpenMap_MiniMap") == 2 and BetterBlizzFramesDB.classicMinimap == false and MINIMAP.get() == "OpenMap_MiniMap"') is True
+lua.execute('BetterBlizzFramesDB.hideMinimapAuto = true')
+res["Minimap row: BetterBlizzFrames' hide-in-arena on (it hides the whole minimap area) -> a conflict"] = lua.eval('MINIMAP.get() == "Both (conflict)"') is True
+lua.execute('MINIMAP.set("OpenMap_MiniMap")')
+res["...OpenMap_MiniMap picked: its arena hiding off too"] = lua.eval('BetterBlizzFramesDB.hideMinimapAuto == false and MINIMAP.get() == "OpenMap_MiniMap"') is True
 # Baganator: picking "Greys only" junk coins must survive a plugin registering later (its AutoSet) - so
 # the other plugins go on its junk_plugin_ignored list, as its own settings window does
 lua.execute(r'''
@@ -184,6 +188,52 @@ res["Town NPC icons -> Questie: OpenMap's banker off, Questie keeps it; OpenMap'
     'OMTOWN.banker == false and QTOWN.Banker == true and OMTOWN.vendor == true and OM_REFRESHED > 0 and TOWN.get() == "Questie"')
 lua.execute('OMTOWN.mailbox = true')
 res["Town NPC icons: a kind on only in OpenMap (not doubled) is no conflict, left as it is"] = lua.eval('TOWN.get() == "Questie" and OMTOWN.mailbox == true')
+# 2.9.0's rows for things two addons both do (maps, routes, minimap)
+lua.execute(r'''
+  function Row(name) for _, s in ipairs(SETTINGS) do if s.name == name or s.name == name .. " (per char)" then return s end end end
+  local wm = OpenMap.GetModule()
+  wm.db.flight, wm.db.coords = true, true
+  FLIGHTSET = { on = true }
+  OpenMap.MapStitch = { GetPinSet = function(n) if n == "flight" then return FLIGHTSET end end, SetPinSetOn = function(set, on) set.on = on end }
+  QTOWN["Flight Master"] = true
+  Questie.db.profile.mapCoordinatesEnabled = true
+  ShortestPathForeverDB = { arrow = true, arrowLabel = "distance" }
+  OpenMapMiniMapDB = { profile = { gatherPins = true, pinFlights = true } }
+  OMMP = OpenMapMiniMapDB.profile
+  TRACK = { { name = "Flight Master", active = true }, { name = "Banker", active = false }, { name = "Mailbox", active = false } }
+  C_Minimap = C_Minimap or {}
+  C_Minimap.GetNumTrackingTypes = function() return #TRACK end
+  C_Minimap.GetTrackingInfo = function(i) return TRACK[i] end
+  C_Minimap.SetTracking = function(i, on) TRACK[i].active = on end
+''')
+E = lua.eval
+res["Flight masters: OpenMap's and Questie's both on = conflict"] = E('Row("Flight masters").get() == "Both (conflict)"')
+lua.execute('Row("Flight masters").set("OpenMap")')
+res["Flight masters -> OpenMap: Questie's off, OpenMap's (and OpenMap_MiniMap's) on, the game's tracking off"] = E(
+    'QTOWN["Flight Master"] == false and OpenMap.GetModule().db.flight == true and FLIGHTSET.on and OMMP.pinFlights == true and TRACK[1].active == false and Row("Flight masters").get() == "OpenMap"')
+lua.execute('Row("Flight masters").set("Questie")')
+res["Flight masters -> Questie: OpenMap's set hidden, OpenMap_MiniMap's off"] = E(
+    'QTOWN["Flight Master"] == true and OpenMap.GetModule().db.flight == false and not FLIGHTSET.on and OMMP.pinFlights == false and Row("Flight masters").get() == "Questie"')
+lua.execute('QTOWN.Banker = false; QTOWN.Mailbox = true; Row("Town NPC icons").set("OpenMap + game\'s tracking")')
+res["Town NPC icons -> OpenMap + game's tracking: OpenMap's mailbox on the world map, the game's on the minimap, Questie's off"] = E(
+    'OMTOWN.mailbox == true and TRACK[3].active == true and QTOWN.Mailbox == false and Row("Town NPC icons").get() == "OpenMap + game\'s tracking"')
+res["Town NPC icons: flight masters left to their own row"] = E('QTOWN["Flight Master"] == true')
+res["World map coordinates: both on = conflict"] = E('Row("World map coordinates").get() == "Both (conflict)"')
+lua.execute('Row("World map coordinates").set("OpenMap")')
+res["World map coordinates -> OpenMap: Questie's off"] = E('Questie.db.profile.mapCoordinatesEnabled == false and Row("World map coordinates").get() == "OpenMap"')
+lua.execute('Row("Navigation arrow").set("Game\'s marker only"); Row("Arrow text").set("Both")')
+res["Navigation arrow / Arrow text: ShortestPathForever's settings"] = E(
+    'ShortestPathForeverDB.arrow == false and ShortestPathForeverDB.arrowLabel == "both" and Row("Arrow text").get() == "Both" and Row("Navigation arrow").get() == "Game\'s marker only"')
+lua.execute('Row("Quest and recipe waypoints").set("Game\'s waypoint")')
+res["Quest and recipe waypoints -> game's: ShortestPathForever's TomTom stand-in off"] = E('ShortestPathForeverDB.tomtom == false')
+lua.execute('Row("Minimap buttons").set("In a tray")')
+res["Minimap buttons -> in a tray"] = E('OMMP.buttonTray == true and Row("Minimap buttons").get() == "In a tray"')
+res["Minimap pins from: OpenMap_MiniMap's gathered spots count (a third pin)"] = E('Row("Minimap pins from").get() ~= "Off"')
+lua.execute('Row("Minimap pins from").set("OpenMap_Tweaks")')
+lua.execute('MastercraftDB.settings.nodesMapSize = 1; Row("Gathering pin size").set("Small")')
+res["Gathering pin size -> Small: Mastercraft's pins 12 / 10 pixels"] = E(
+    'math.abs(MastercraftDB.settings.nodesMapSize * 16 - 12) < 0.01 and math.abs(MastercraftDB.settings.nodesMiniSize * 14 - 10) < 0.01 and Row("Gathering pin size").get() == "Small"')
+res["Minimap pins from -> OpenMap_Tweaks: OpenMap_MiniMap's gathered spots off"] = E('OMMP.gatherPins == false and Row("Minimap pins from").get() ~= "Both (conflict)"')
 L('RunTimers()')
 lua.execute(r'''
   SparklesDB.sparkleBobber = true; MastercraftDB.settings.fishMarker = true -- you pick Both afterwards

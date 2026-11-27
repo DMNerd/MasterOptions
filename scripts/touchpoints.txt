@@ -348,3 +348,48 @@ GearMatic|function|function DR.ForItem(itemID)|Mastercraft_RecipeMap.lua (GearMa
 GearMatic|literal|ns.DropRates = DR|Mastercraft_RecipeMap.lua
 QuestieDB|literal|['npcDrops'] =|Mastercraft_RecipeMap.lua (drops without a GearMatic rate)
 QuestieDB|literal|['objectDrops'] =|Mastercraft_RecipeMap.lua
+
+# --- added in 2.9.0 (DungeonJournal_SpokenBosses: Spoken_Bosses' stories on Dungeon Journal's world-map view; Spoken 3.13.1, ForeverDungeonJournal 2.1.7)
+ForeverDungeonJournal|function|function FDJ.RefreshWorldMapOverlay()|DungeonJournal_SpokenBosses.lua
+ForeverDungeonJournal|function|function FDJ.IsWorldMapOverlayAttached()|DungeonJournal_SpokenBosses.lua
+ForeverDungeonJournal|function|function FDJ.OpenBossFromWorldMap(dungeonName, bossIndex)|DungeonJournal_SpokenBosses.lua
+ForeverDungeonJournal|literal|FDJ.SetMapDungeon = function(name)|DungeonJournal_SpokenBosses.lua (the dungeon the map drew)
+ForeverDungeonJournal|literal|if FDJ.SetMapDungeon then FDJ.SetMapDungeon(dungeonName) end|DungeonJournal_SpokenBosses.lua (called by the world-map overlay)
+Spoken_Bosses|global|_G.SpokenBossesAddon = Bosses|DungeonJournal_SpokenBosses.lua
+Spoken_Bosses|literal|Bosses.MapLore = M|DungeonJournal_SpokenBosses.lua (not Spoken's public API)
+Spoken_Bosses|function|function M.ShowDungeon(mapID, instanceID)|DungeonJournal_SpokenBosses.lua
+Spoken_Bosses|function|function M.ShowBoss(mapID, found)|DungeonJournal_SpokenBosses.lua
+Spoken_Bosses|function|function M.ClearStory()|DungeonJournal_SpokenBosses.lua
+Spoken_Bosses|function|function M.BossByName(wanted, prefer)|DungeonJournal_SpokenBosses.lua
+Spoken_Bosses|function|function M.CurrentMapID()|DungeonJournal_SpokenBosses.lua
+Spoken|literal|SpokenDungeons = {|DungeonJournal_SpokenBosses.lua (English dungeon names, [1])
+ShortestPathForever|literal|OpenMap.PinOwner = "OpenMap:Pin"|ShortestPathForever_OpenMapPins.lua (the journey owner of OpenMap's handoff)
+ShortestPathForever|function|function API.Ended(owner)|ShortestPathForever_OpenMapPins.lua
+ShortestPathForever|literal|API.Subscribe = hub.Subscribe|ShortestPathForever_OpenMapPins.lua
+ShortestPathForever|literal|EndJourney("cleared")|ShortestPathForever_OpenMapPins.lua (clearing the journey: the reason acted on)
+OpenMap|function|function mod.ClearPin()|ShortestPathForever_OpenMapPins.lua
+OpenMap|function|function mod.WaypointPoint()|ShortestPathForever_OpenMapPins.lua
+OpenMap|function|function mod.PinAt(mapID, x, y)|ShortestPathForever_OpenMapPins.lua
+# --- 2.9.0 compatibility review fixes
+Questie|literal|local pins = QuestieLoader:CreateModule("HBDPins")|Mastercraft_RecipeMap.lua (Questie's own copy of HereBeDragons-Pins)
+Questie|function|function pins:AddWorldMapIconMap(ref, icon, uiMapID, x, y, showFlag, frameLevel)|Mastercraft_RecipeMap.lua
+Questie|function|function pins:AddMinimapIconMap(ref, icon, uiMapID, x, y, showInParentZone, floatOnEdge)|Mastercraft_RecipeMap.lua
+OpenMap|function|function mod.TrackPoint(mapID, x, y, title)|Shared.lua (the spot OpenMap follows)
+ShortestPathForever|function|function API.CurrentStop(owner)|Shared.lua, Mastercraft_FarmTour.lua
+ShortestPathForever|function|function API.Active()|Mastercraft_FarmTour.lua
+OpenMap_MiniMap|literal|pcall(f.SetIgnoreParentAlpha, f, false)|ShortestPathForever_OpenMapMiniMap.lua (the route frame hidden while dragged: the goal follows)
+OpenMap|function|IsStitched|OpenMapTweaks_Mastercraft.lua (OpenMapAPI.IsStitched)
+BetterBlizzFrames|config-key|hideMinimapAuto|Options.lua (Minimap row)
+# --- 2.9.0 rows: who does it (maps, routes, minimap)
+OpenMap|config-key|flight = true|AddonSettings.lua (Flight masters: worldmap.flight)
+OpenMap|literal|d.coords = true|AddonSettings.lua (World map coordinates: worldmap.coords)
+OpenMap|function|function S.SetPinSetOn|AddonSettings.lua (OpenMap's flight set shown / hidden)
+OpenMap_MiniMap|config-key|pinFlights|AddonSettings.lua (Flight masters on the minimap)
+OpenMap_MiniMap|config-key|gatherPins|Options.lua (Minimap pins from)
+OpenMap_MiniMap|config-key|hoverButtons|AddonSettings.lua (Minimap buttons)
+OpenMap_MiniMap|config-key|buttonTray|AddonSettings.lua (Minimap buttons)
+Questie|config-key|mapCoordinatesEnabled|AddonSettings.lua (World map coordinates)
+ShortestPathForever|literal|arrow = true,|AddonSettings.lua (Navigation arrow)
+ShortestPathForever|literal|arrowLabel = "distance",|AddonSettings.lua (Arrow text)
+ShortestPathForever|literal|local mode = ns.db.arrowLabel|AddonSettings.lua (Arrow text: "time" / "both" read here)
+ShortestPathForever|literal|tomtom = true,|AddonSettings.lua (Quest and recipe waypoints)

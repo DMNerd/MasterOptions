@@ -90,6 +90,13 @@ L('MastercraftDB.farm = nil; MastercraftDB.settings.nodesWhen = nil; TRACKING = 
 res["50 pins shown: no tracking scan per pin"] = E("SCANS") == 0
 L('TRACKING = false; Tick()')
 res["tracking turned off: the next look sees it (pins hidden)"] = E("SCANS") > 0 and E("not AddOMT(250).shown")
+L('WorldMapFrame = { IsShown = function() return true end, RefreshAllDataProviders = function() FULL = (FULL or 0) + 1 end }')
+L('OpenMapAPI = { IsStitched = function() return true end }; FULL = 0; TRACKING = not TRACKING; Fire("MINIMAP_UPDATE_TRACKING")')
+res["OpenMap's stitched map: a change doesn't refresh every map provider (only OpenMap's pins)"] = E("FULL") == 0
+L('OpenMapAPI = nil; FULL = 0; TRACKING = not TRACKING; Fire("MINIMAP_UPDATE_TRACKING")')
+res["Blizzard's own map: still refreshed (on a change)"] = E("FULL") >= 1
+L('function InCombatLockdown() return true end; FULL = 0; TRACKING = not TRACKING; Fire("MINIMAP_UPDATE_TRACKING"); function InCombatLockdown() return false end')
+res["...but not in a fight"] = E("FULL") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)
 print("ERRORS:", sum(1 for v in res.values() if not v))

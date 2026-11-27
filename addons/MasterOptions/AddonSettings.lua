@@ -294,38 +294,57 @@ local function OpenMapTown()
     local mod = type(om) == "table" and om.GetModule and om:GetModule("worldmap")
     if mod and type(mod.db) == "table" and type(mod.db.townsfolk) == "table" then return mod.db.townsfolk, mod end
 end
+-- flight masters: their own row ("Flight masters") while OpenMap is loaded - OpenMap draws them too (worldmap.flight)
+local function FlightOwnRow() return Loaded("OpenMap") end
+local function TownKinds()
+    local out = {}
+    for _, k in ipairs(TOWN) do if not (k == "Flight Master" and FlightOwnRow()) then out[#out + 1] = k end end
+    return out
+end
+-- Questie (world map and minimap), the game's tracking (minimap only), or OpenMap on the world map with the game's
+-- tracking on the minimap (a kind OpenMap doesn't draw: the game's tracking alone)
 local function TownGet()
     local t, q = TownTracking(), QuestieTown()
     if not q then return "Questie" end
     local o = OpenMapTown() or {}
-    local game, questie = false, false
-    for _, k in ipairs(TOWN) do
+    local game, questie, openmap = false, false, false
+    for _, k in ipairs(TownKinds()) do
         local g, qq = t[k] and t[k].active, q[k] == true
+        local om = TOWN_OPENMAP[k] and o[TOWN_OPENMAP[k]] == true
         if g and qq then return "Both (conflict)" end
-        if qq and TOWN_OPENMAP[k] and o[TOWN_OPENMAP[k]] == true then return "Both (conflict)" end
-        game, questie = game or g, questie or qq
+        if qq and om then return "Both (conflict)" end
+        game, questie, openmap = game or g, questie or qq, openmap or om
     end
-    return (game and not questie) and "Game's tracking" or "Questie"
+    if questie then return "Questie" end
+    if openmap then return "OpenMap + game's tracking" end
+    return game and "Game's tracking" or "Questie"
 end
--- the kinds you have on (in either) move to the one picked; the other turns them off
+-- the kinds you have on (in any) move to the one picked; the others turn them off
 local function TownSet(v)
     local t, q = TownTracking(), QuestieTown()
     if not q then return end
     local o, omMod = OpenMapTown()
     local setTracking = C_Minimap and C_Minimap.SetTracking
     local omChanged = false
-    for _, k in ipairs(TOWN) do
+    local function Track(g, on)
+        if g and g.active ~= on and setTracking then pcall(setTracking, g.index, on) end
+    end
+    for _, k in ipairs(TownKinds()) do
         local g = t[k]
         local ok = o and TOWN_OPENMAP[k]
         local on = (g and g.active) or q[k] == true or (ok and o[ok] == true)
         if v == "Questie" then
             if on then q[k] = true end
-            if g and g.active and setTracking then pcall(setTracking, g.index, false) end
+            Track(g, false)
             -- (Questie's own world map icons: OpenMap's of the same kind off, else each shows twice there)
             if ok and o[ok] == true then o[ok] = false; omChanged = true end
-        elseif g then -- (a kind the game's list doesn't have stays with Questie)
-            if on and not g.active and setTracking then pcall(setTracking, g.index, true) end
+        elseif g or ok then -- (a kind neither the game's list nor OpenMap has stays with Questie)
+            if on then Track(g, true) end
             if q[k] then q[k] = false end
+            if ok then
+                local want = on and v == "OpenMap + game's tracking"
+                if (o[ok] == true) ~= want then o[ok] = want; omChanged = true end
+            end
         end
     end
     if omChanged and omMod and omMod.RefreshTownsfolk then pcall(omMod.RefreshTownsfolk, omMod) end
@@ -335,6 +354,87 @@ end
 -- OpenMap_MiniMap: the profile in use - this character's own (OpenMap keys it on the first name), or the shared one
 local function OMM()
     return Loaded("OpenMap_MiniMap") and MasterOptions_Shared.OpenMapMiniMapProfile() or nil
+end
+
+---------------------------------------------------------------------------
+-- Maps and routes: who draws or does what, when several addons do the same (2.9.0's compatibility review)
+---------------------------------------------------------------------------
+local function OpenMapWM()
+    local mod = Loaded("OpenMap") and MasterOptions_Shared.OpenMapWorldMap()
+    return mod and type(mod.db) == "table" and mod or nil
+end
+
+-- Flight masters: OpenMap's flight set (worldmap.flight; OpenMap_MiniMap's pinFlights on the minimap) or Questie's
+-- townsfolk "Flight Master" (world map and minimap); the game's minimap tracking of them off either way.
+-- (OpenMap_Tweaks turns OpenMap's back on whenever the map opens: with it, Questie's alone isn't possible.)
+local function FlightGet()
+    local q, mod = QuestieTown(), OpenMapWM()
+    local om = mod and mod.db.flight ~= false
+    local qq = q and q["Flight Master"] == true
+    if om and qq then return "Both (conflict)" end
+    return (qq and not om) and "Questie" or "OpenMap"
+end
+local function FlightSet(v)
+    local q, mod, mm = QuestieTown(), OpenMapWM(), OMM()
+    local openmap = v == "OpenMap"
+    if q then q["Flight Master"] = not openmap end
+    if mod then
+        mod.db.flight = openmap
+        local S = _G.OpenMap and _G.OpenMap.MapStitch
+        local set = S and type(S.GetPinSet) == "function" and S.GetPinSet("flight")
+        if type(set) == "table" and type(S.SetPinSetOn) == "function" then pcall(S.SetPinSetOn, set, openmap) end
+    end
+    if mm then mm.pinFlights = openmap end
+    local g = TownTracking()["Flight Master"]
+    if g and g.active and C_Minimap and C_Minimap.SetTracking then pcall(C_Minimap.SetTracking, g.index, false) end
+    QuestieTownRefresh()
+end
+
+-- World map coordinates: OpenMap's bar (worldmap.coords) or Questie's (in the map's title: mapCoordinatesEnabled)
+local function MapCoordsGet()
+    local mod, q = OpenMapWM(), QuestieProfile()
+    local om = mod and mod.db.coords ~= false
+    local qq = q and q.mapCoordinatesEnabled == true
+    if om and qq then return "Both (conflict)" end
+    return om and "OpenMap" or qq and "Questie" or "Off"
+end
+local function MapCoordsSet(v)
+    local mod, q = OpenMapWM(), QuestieProfile()
+    if mod then mod.db.coords = v == "OpenMap" end
+    if q then q.mapCoordinatesEnabled = v == "Questie" end
+end
+
+-- ShortestPathForever's settings (ShortestPathForeverDB: its arrow reads them as it draws)
+local function SPF()
+    return Loaded("ShortestPathForever") and type(_G.ShortestPathForeverDB) == "table" and _G.ShortestPathForeverDB or nil
+end
+local LABELS = { Distance = "distance", Time = "time", Both = "both" }
+local function ArrowGet()
+    local d = SPF() or {}
+    return d.arrow == false and "Game's marker only" or "Shortest Path's arrow"
+end
+local function ArrowSet(v) local d = SPF(); if d then d.arrow = v ~= "Game's marker only" end end
+local function ArrowTextGet()
+    local m = (SPF() or {}).arrowLabel or "distance"
+    for label, key in pairs(LABELS) do if key == m then return label end end
+    return "Distance"
+end
+local function ArrowTextSet(v) local d = SPF(); if d then d.arrowLabel = LABELS[v] or "distance" end end
+-- Questie's, Mastercraft's and WhatsTraining's waypoints go to TomTom; without TomTom, ShortestPathForever stands
+-- in for it (its "Let guides set TomTom waypoints": tomtom) and they become journeys. Off: the game's waypoint.
+local function TargetsGet() return (SPF() or {}).tomtom == false and "Game's waypoint" or "Shortest Path journey" end
+local function TargetsSet(v) local d = SPF(); if d then d.tomtom = v ~= "Game's waypoint" end end
+
+-- OpenMap_MiniMap's other addons' minimap buttons: round the edge, only on mouse-over, or gathered in a tray
+local function ButtonsGet()
+    local p = OMM() or {}
+    if p.buttonTray == true then return "In a tray" end
+    return p.hoverButtons == false and "Round the edge" or "On mouse-over"
+end
+local function ButtonsSet(v)
+    local p = OMM(); if not p then return end
+    p.buttonTray = v == "In a tray"
+    p.hoverButtons = v ~= "Round the edge"
 end
 
 local STYLES = {
@@ -530,6 +630,12 @@ MO.SetBagPlugin = SetBagPlugin
 MO.SetOMT = SetOMT
 MO.SyncIcons = SyncIcons
 MO.TownGet = TownGet
+MO.FlightGet, MO.FlightSet = FlightGet, FlightSet
+MO.MapCoordsGet, MO.MapCoordsSet = MapCoordsGet, MapCoordsSet
+MO.ArrowGet, MO.ArrowSet, MO.ArrowTextGet, MO.ArrowTextSet = ArrowGet, ArrowSet, ArrowTextGet, ArrowTextSet
+MO.TargetsGet, MO.TargetsSet = TargetsGet, TargetsSet
+MO.ButtonsGet, MO.ButtonsSet = ButtonsGet, ButtonsSet
+MO.OMM = OMM
 MO.TownSet = TownSet
 MO.UIStyleGet = UIStyleGet
 MO.UIStyleSet = UIStyleSet

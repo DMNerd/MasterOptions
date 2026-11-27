@@ -42,8 +42,10 @@ lua.execute(r'''
   } }, gmNodes = { [1411] = { [401] = { 5000005000 } } } }
   ROUTES, CANCELS = {}, 0
   ShortestPathForever = { API = {
-    NavigateRoute = function(owner, stops, opt) ROUTES[#ROUTES + 1] = { owner = owner, stops = stops, policy = opt.policy }; return true end,
-    Cancel = function() CANCELS = CANCELS + 1; return true end } }
+    NavigateRoute = function(owner, stops, opt) ROUTES[#ROUTES + 1] = { owner = owner, stops = stops, policy = opt.policy }; CURRENT = owner; return true end,
+    Cancel = function(owner) CANCELS = CANCELS + 1; if CURRENT == owner then CURRENT = nil end; return true end,
+    CurrentStop = function(owner) if CURRENT == owner then return 1 end end,
+    Active = function() return CURRENT ~= nil end } }
   function Titles(r) local t = {} for _, s in ipairs(r.stops) do t[#t + 1] = s.title end return table.concat(t, ", ") end
 ''')
 lua.eval("function(s) return load(s, '=p') end")(src)("MasterOptions_Mastercraft_FarmTour")
@@ -71,6 +73,14 @@ L('MastercraftDB.nodes[1411] = {}; MastercraftDB.gmNodes = nil; n = #PRINTS; Mas
 res["nothing worth it: says so, no tour"] = E("#ROUTES") == 5 and "knows no nodes" in str(E("PRINTS[#PRINTS]"))
 L('for i = 1, 70 do MastercraftDB.nodes[1411][i] = { n = "Copper Vein", p = "Mining", i = 2770, x = 0.5 + i / 1000, y = 0.5 } end; MasterOptions_FarmTour.Command("")')
 res["more than 64: the nearest 64 (ShortestPathForever's limit)"] = E("#ROUTES[6].stops") == 64 and "nearest 64 of 70" in str(E("PRINTS[#PRINTS]"))
+L('Fire("ZONE_CHANGED_NEW_AREA")')
+res["a new zone during our tour: its own tour"] = E("#ROUTES") == 7 and E("CURRENT") == "Master Options"
+L('CURRENT = "OpenMap:Pin"; Fire("ZONE_CHANGED_NEW_AREA")')
+res["our tour replaced (a pin you follow): the next zone leaves your journey alone"] = E("#ROUTES") == 7 and E("CURRENT") == "OpenMap:Pin"
+L('CURRENT = nil; MastercraftDB.farm["Player-1"] = { start = 2 }; Fire("ZONE_CHANGED_NEW_AREA")')
+res["farming, no journey under way: a new zone gets a tour"] = E("#ROUTES") == 8
+L('CURRENT = "TomTom"; Stop = nil; MasterOptions_FarmTour.Stop(true); n = #ROUTES; Fire("ZONE_CHANGED_NEW_AREA")')
+res["farming, another journey under way: not replaced"] = E("#ROUTES") == E("n") and E("CURRENT") == "TomTom"
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

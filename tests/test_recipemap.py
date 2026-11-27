@@ -9,8 +9,11 @@ from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
 lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
 lua.execute(r'''
   FRAMES, TIMERS, ERRS = {}, {}, 0
-  local function Region() local r = {} for _, k in ipairs({ "SetSize", "SetPoint", "SetTexture", "SetVertexColor",
-    "SetAllPoints", "EnableMouse", "SetScript", "Hide", "Show" }) do r[k] = function() end end return r end
+  local function Region() local r = {} for _, k in ipairs({ "SetSize", "SetPoint", "SetVertexColor",
+    "SetAllPoints", "EnableMouse", "SetScript", "Hide", "Show" }) do r[k] = function() end end
+    function r:SetTexture(t) self.texture = t end
+    function r:SetShown(v) self.shown = v and true or false end
+    return r end
   function CreateFrame() local f = Region(); f.ev = {}
     function f:RegisterEvent(e) self.ev[e] = true end
     function f:SetScript(k, fn) self[k] = fn end
@@ -56,7 +59,9 @@ lua.execute(r'''
     AddWorldMapIconMap = function(_, ref, icon, map, x, y) WORLD[#WORLD + 1] = { icon = icon, map = map, x = x, y = y } end,
     AddMinimapIconMap = function(_, ref, icon, map, x, y) MINI[#MINI + 1] = { icon = icon } end,
     RemoveAllWorldMapIcons = function() WORLD = {}; REDRAWS = (REDRAWS or 0) + 1 end, RemoveAllMinimapIcons = function() MINI = {} end }
-  function LibStub(name) if name == "HereBeDragons-Pins-2.0" then return pins end end
+  -- (as Questie 12.8 has it: one of its own modules, not in LibStub)
+  QuestieLoader._modules = { HBDPins = pins }
+  LibStub = nil
   function Marks() local o = {} for _, w in ipairs(WORLD) do o[#o + 1] = w.icon.title .. "@" .. w.map .. ":" .. w.x .. "," .. w.y end table.sort(o) return table.concat(o, " | ") end
   function Lines(title) for _, w in ipairs(WORLD) do if w.icon.title == title then return table.concat(w.icon.lines, "; ") end end end
 ''')
@@ -134,6 +139,8 @@ L(r"""
   Fire("NEW_RECIPE_LEARNED"); RunTimers()
 """)
 res["a camp blueprint's vendor marked"] = E('Lines("Alliance Vendor")') == "Anvil (Leatherworking)"
+res["looks like Questie's: a trainer with its profession's icon, a vendor with a pattern on it"] = E(
+    "(function() local n = 0; for _, w in ipairs(WORLD) do if w.icon.kind == 'vendor' then n = n + 1; if not (w.icon.badge.shown and w.icon.icon.texture:find('trade_')) then return false end end end return n > 0 end)()")
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

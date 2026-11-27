@@ -42,3 +42,5 @@ Modules\GearMatic_SpecKeep.lua
 Modules\GearMatic_SellGuard.lua
 Modules\DungeonJournal_OpenMap.lua
 Modules\DungeonJournal_Upgrades.lua
+Modules\DungeonJournal_SpokenBosses.lua
+Modules\ShortestPathForever_OpenMapPins.lua
