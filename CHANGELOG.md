@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.12.4] - 2026-11-27
+
+### Fixed
+
+- Opening a dungeon's map from Dungeon Journal didn't always bring up that dungeon's story in Spoken's map panel.
+  The zone's story (or none) showed instead. Spoken Places drops a story put up from outside when the world map
+  changes, which happens while Dungeon Journal opens a dungeon, and Master Options still counted that story as
+  showing. After a map change it's now put back while Dungeon Journal's map is up.
+
 ## [2.12.3] - 2026-11-27
 
 ### Fixed

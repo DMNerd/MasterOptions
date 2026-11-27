@@ -20,6 +20,7 @@ lua.execute(r'''
   function hooksecurefunc(t, k, fn) local orig = t[k]; t[k] = function(...) local r = orig(...); fn(...); return r end end
   WorldMapFrame = { scripts = {} }
   function WorldMapFrame:HookScript(k, fn) self.scripts[k] = fn end
+  function WorldMapFrame:OnMapChanged() end
   -- Spoken
   SpokenDungeons = { dungeons = {
     [33] = { "Shadowfang Keep" }, [34] = { "Stormwind Stockade" }, [36] = { "Deadmines" },
@@ -67,6 +68,8 @@ L('Draw("Shadowfang Keep")')
 res["map up: the dungeon's story beside the world map"] = E("Log()") == "dungeon 33@1421"
 L('FDJ_ = ForeverDungeonJournal_NS; FDJ_.RefreshWorldMapOverlay()')
 res["refreshed, same dungeon: not shown again"] = E("Log()") == ""
+L('WorldMapFrame:OnMapChanged()')
+res["the map changed under Dungeon Journal's map (Spoken dropped ours): the dungeon's story back"] = E("Log()") == "dungeon 33@1421"
 L('ForeverDungeonJournal_NS.OpenBossFromWorldMap("Shadowfang Keep", 2); ForeverDungeonJournal_NS.RefreshWorldMapOverlay()')
 res["a boss clicked: its story, in that dungeon (a same-named boss elsewhere isn't picked)"] = E("Log()") == "boss 33:baron silverlaine"
 L('Draw("Stratholme: Undead")')
@@ -75,6 +78,8 @@ L('Draw(nil)')
 res["map detached: story cleared"] = E("Log()") == "clear"
 L('Draw(nil)')
 res["...and only once"] = E("Log()") == ""
+L('WorldMapFrame:OnMapChanged()')
+res["a map change with Dungeon Journal's map not up: nothing"] = E("Log()") == ""
 L('Draw("The Deadmines")')
 res["a dungeon Spoken has no story for: nothing to clear later"] = E("Log()") == "dungeon 36@1421"
 L('WorldMapFrame.scripts.OnHide()')

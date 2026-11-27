@@ -109,6 +109,16 @@ local function Hook()
     if WorldMapFrame and WorldMapFrame.HookScript then
         WorldMapFrame:HookScript("OnHide", function() Check("clearing the story", pcall(Clear)) end)
     end
+    -- Spoken Places drops a story put up from outside on every change to another map (its panel then shows that
+    -- map's own). Dungeon Journal moves the map about while it opens a dungeon, so the story we showed was gone
+    -- while we still counted it as up - and "same dungeon" never put it back. After a map change: forgotten, and
+    -- shown again (a moment later, after Spoken's own refresh) while Dungeon Journal's map is still up.
+    if WorldMapFrame and type(WorldMapFrame.OnMapChanged) == "function" then
+        hooksecurefunc(WorldMapFrame, "OnMapChanged", function()
+            shownID = nil
+            C_Timer.After(0, function() Check("showing the dungeon's story", pcall(Refreshed)) end)
+        end)
+    end
     return true
 end
 
