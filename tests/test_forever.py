@@ -1,6 +1,8 @@
 import sys
 from lupa import LuaRuntime
 lua = LuaRuntime(unpack_returned_tuples=True)
+import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
+from shared_lua import load_shared; load_shared(lua, _sys.argv[2])
 lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")  # (module files: run at once, as their old addon did)
 sv, patch = sys.argv[1], sys.argv[2]
 lua.execute(open(sv, encoding="utf-8").read())

@@ -37,3 +37,9 @@ L('RIGHT = { nil, nil, "VENDOR" }; Hover(6256)')
 print("later it says VENDOR:    never-sell =", lua.eval("GearMaticDB.sellIgnore[6256] == true"))
 L('LEFT = { "Some item" }; RIGHT = {}; Hover(1234)')
 print("no Mastercraft advice:   never-sell =", lua.eval("GearMaticDB.sellIgnore[1234] == true"))
+# IsNeeded: an item in Mastercraft's tracker (read in place), and one that isn't
+L('MastercraftDB.goals = { [UnitGUID("player")] = { { id = 2592 }, { id = "4306" } } }')
+tracked = lua.eval("MasterOptions_MastercraftKeep.IsNeeded(2592) and MasterOptions_MastercraftKeep.IsNeeded(4306) and not MasterOptions_MastercraftKeep.IsNeeded(9999)")
+print("tracked items needed:", tracked)
+if not tracked:
+    print("ERRORS: 1")

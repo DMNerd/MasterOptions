@@ -27,7 +27,7 @@ lua.execute(r'''
   function GetProfessionInfo(i) return "Mining", nil, 150, 300, nil, nil, 186 end
   TRACKING = false
   C_Minimap = { GetNumTrackingTypes = function() return 1 end,
-                GetTrackingInfo = function() return { active = TRACKING, spellID = 2580 } end }
+                GetTrackingInfo = function() SCANS = (SCANS or 0) + 1; return { active = TRACKING, spellID = 2580 } end }
   MastercraftDB = { settings = { nodesFilter = "skillups", nodesWhen = "tracking" } }
   OpenMap = nil -- built late, as in game: the module hooks it on a later tick
   -- the normal world map (stitched map off): OpenMap_Tweaks' pin mixin, whose OnAcquired the module wraps
@@ -85,6 +85,11 @@ L('MastercraftDB.settings.nodes = nil; MastercraftDB.settings.nodesWhen = "farmi
 res["while farming, not farming: hidden (tracking doesn't count)"] = E("not MID.shown")
 L('function UnitGUID() return "Player-1" end; MastercraftDB.farm = { ["Player-1"] = { start = 1, gained = {} } }; Tick()')
 res["while farming, farm session on: shown"] = E("MID.shown == true")
+# (OpenMap_Tweaks shows every minimap pin every frame: the tracking scan is done twice a second, not per pin)
+L('MastercraftDB.farm = nil; MastercraftDB.settings.nodesWhen = nil; TRACKING = true; Tick(); SCANS = 0; for i = 1, 50 do AddOMT(250) end')
+res["50 pins shown: no tracking scan per pin"] = E("SCANS") == 0
+L('TRACKING = false; Tick()')
+res["tracking turned off: the next look sees it (pins hidden)"] = E("SCANS") > 0 and E("not AddOMT(250).shown")
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)
 print("ERRORS:", sum(1 for v in res.values() if not v))

@@ -238,16 +238,10 @@ local function FillSoon(delay)
     C_Timer.After(delay or 0.5, Fill)
 end
 
-local refreshPending = false
-Changed = function()
-    if refreshPending then return end
-    refreshPending = true
-    C_Timer.After(0.3, function()
-        refreshPending = false
-        local api = _G.Baganator and _G.Baganator.API
-        if api and api.RequestItemButtonsRefresh then pcall(api.RequestItemButtonsRefresh) end
-    end)
-end
+Changed = MasterOptions_Shared.Debounce(function()
+    local api = _G.Baganator and _G.Baganator.API
+    if api and api.RequestItemButtonsRefresh then pcall(api.RequestItemButtonsRefresh) end
+end, 0.3)
 
 ---------------------------------------------------------------------------
 -- Selling
@@ -392,8 +386,5 @@ f:SetScript("OnEvent", function(_, event, name)
     end
 end)
 
--- (Master Options runs this after the saved variables are in: the setup this did on its own ADDON_LOADED as a
--- separate addon, now)
-local h = f.GetScript and f:GetScript("OnEvent") or f.OnEvent -- (f.OnEvent: the sandbox tests' frames)
-if h then h(f, "ADDON_LOADED", ADDON) end
+MasterOptions_Shared.ReplayAddonLoaded(f, ADDON) -- (its ADDON_LOADED setup, now: the saved variables are in)
 end)

@@ -22,10 +22,7 @@ MasterOptions_Module("NeverSell", {}, function(ADDON)
 
 local Report = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
-local function Loaded(name)
-    local f = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
-    return f and f(name) and true or false
-end
+local Loaded = MasterOptions_Shared.AddOnLoaded
 
 local function DB()
     MasterOptionsDB = MasterOptionsDB or {}

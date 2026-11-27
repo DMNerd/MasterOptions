@@ -98,12 +98,23 @@ local function Paint(row, itemID)
     return false
 end
 
--- The shown rows marked again, a moment later (several events in a row: once). An item the game hasn't sent
--- comes back through GET_ITEM_INFO_RECEIVED; only CheapUpgrades still starting up is asked again by a timer,
--- and only a few times.
-local waiting, retries = false, 0
+-- The rows on screen marked again, a moment later (several events in a row: once). Only what's on screen: a row
+-- of a closed journal stays IsShown (its window is hidden, not the row), so IsVisible. GET_ITEM_INFO_RECEIVED
+-- comes for every item the game sends anywhere (bags, auction scans, tooltips): it marks again only the rows
+-- still waiting for their item (row.moWaiting), and nothing while the journal is closed. Your gear, talents or
+-- level changing: every row on screen. CheapUpgrades still starting up is asked again by a timer, a few times.
+local waiting, retries, everyRow = false, 0, false
 local MAX_RETRIES = 5
-local function MarkLater(retry)
+local function Visible(row) return type(row.IsVisible) == "function" and row:IsVisible() end
+
+local function PaintRow(row, itemID)
+    local ok, again = Check("marking Dungeon Journal's loot", pcall(Paint, row, itemID))
+    row.moWaiting = ok and again or nil
+    return row.moWaiting
+end
+
+local function MarkLater(retry, all)
+    if all then everyRow = true end
     if waiting then return end
     if retry then
         if retries >= MAX_RETRIES then return end
@@ -112,27 +123,37 @@ local function MarkLater(retry)
     waiting = true
     C_Timer.After(retry and 2 or 0.3, function()
         waiting = false
+        local whole = everyRow
+        everyRow = false
         local pending = false
         for row in pairs(rows) do
-            if row.IsShown and row:IsShown() then
-                local ok, again = Check("marking Dungeon Journal's loot", pcall(Paint, row, row.fdjFavouriteItemID))
-                if ok and again then pending = true end
-            end
+            if Visible(row) and (whole or row.moWaiting) and PaintRow(row, row.fdjFavouriteItemID) then pending = true end
         end
         if pending then MarkLater(true) else retries = 0 end
     end)
 end
 
+local function AnyWaitingOnScreen()
+    for row in pairs(rows) do if row.moWaiting and Visible(row) then return true end end
+    return false
+end
+
 hooksecurefunc(FDJ, "UpdateFavouriteIndicator", function(row, itemID)
     if type(row) ~= "table" or type(row.CreateTexture) ~= "function" then return end
     rows[row] = true
-    local ok, again = Check("marking Dungeon Journal's loot", pcall(Paint, row, tonumber(itemID)))
-    if ok and again then MarkLater(true) end
+    if PaintRow(row, tonumber(itemID)) then MarkLater(true) end
 end)
 
 local f = CreateFrame("Frame")
 for _, e in ipairs({ "GET_ITEM_INFO_RECEIVED", "PLAYER_EQUIPMENT_CHANGED", "PLAYER_TALENT_UPDATE", "PLAYER_LEVEL_UP" }) do
     pcall(f.RegisterEvent, f, e)
 end
-f:SetScript("OnEvent", function() if next(rows) then retries = 0; MarkLater() end end)
+f:SetScript("OnEvent", function(_, event)
+    if not next(rows) then return end
+    if event == "GET_ITEM_INFO_RECEIVED" then
+        if AnyWaitingOnScreen() then retries = 0; MarkLater() end
+    else
+        retries = 0; MarkLater(false, true)
+    end
+end)
 end)

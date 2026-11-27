@@ -22,6 +22,57 @@ function S.ErrorReporters(addon)
 end
 
 ---------------------------------------------------------------------------
+-- Small helpers every part uses
+---------------------------------------------------------------------------
+-- An addon of someone else's, loaded (true / false)
+local function AddOnLoaded(name)
+    local f = (C_AddOns and C_AddOns.IsAddOnLoaded) or _G.IsAddOnLoaded
+    return f and f(name) and true or false
+end
+S.AddOnLoaded = AddOnLoaded
+
+-- fn once, a moment after the first of any number of calls: soon = Debounce(fn, 1); soon() / soon(0.2)
+function S.Debounce(fn, defaultDelay)
+    local pending = false
+    return function(delay)
+        if pending then return end
+        pending = true
+        C_Timer.After(delay or defaultDelay or 0, function()
+            pending = false
+            fn()
+        end)
+    end
+end
+
+-- A module's own ADDON_LOADED, run now: Master Options starts a module after the saved variables are in, so the
+-- setup it did on that event as a separate addon happens here. (frame.OnEvent: the sandbox tests' frames)
+function S.ReplayAddonLoaded(frame, addon)
+    local h = frame.GetScript and frame:GetScript("OnEvent") or frame.OnEvent
+    if h then h(frame, "ADDON_LOADED", addon) end
+end
+
+-- This character, as Master Options keys it in its saves: "First Last-Realm" (WoW Forever: first and last name,
+-- and an empty realm name)
+function S.CharacterKey()
+    local first, last = UnitName("player")
+    return (first or "?") .. ((last and last ~= "") and (" " .. last) or "") .. "-" .. (GetRealmName() or "")
+end
+
+-- Mastercraft's saved data (MastercraftDB), or nil
+function S.MastercraftDB()
+    local db = _G.MastercraftDB
+    return type(db) == "table" and db or nil
+end
+
+-- One of Questie's modules (QuestieLoader:ImportModule), or nil
+function S.QuestieModule(name)
+    local ql = _G.QuestieLoader
+    if not (type(ql) == "table" and type(ql.ImportModule) == "function") then return nil end
+    local ok, m = pcall(ql.ImportModule, ql, name)
+    return ok and type(m) == "table" and m or nil
+end
+
+---------------------------------------------------------------------------
 -- Gear to keep (selling, deleting)
 ---------------------------------------------------------------------------
 local function NonEmpty(t) return type(t) == "table" and next(t) ~= nil end
@@ -82,11 +133,6 @@ end
 ---------------------------------------------------------------------------
 -- Upgrades
 ---------------------------------------------------------------------------
-local function AddOnLoaded(name)
-    local f = (C_AddOns and C_AddOns.IsAddOnLoaded) or _G.IsAddOnLoaded
-    return f and f(name) and true or false
-end
-
 -- Who judges upgrades, for every choice that involves Pawn (one judge, so the stat weights, bag arrows,
 -- CheapUpgrades, quest rewards and Dungeon Journal's loot marks agree): "Pawn" with Pawn Forever installed
 -- (weights made for WoW Forever), otherwise "GearMatic", whose own weights are simulated for WoW Forever - Pawn

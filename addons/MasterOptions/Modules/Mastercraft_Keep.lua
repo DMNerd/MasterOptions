@@ -19,19 +19,27 @@ local DB -- MasterOptions_MastercraftKeepDB: { needed = { [itemID] = time last c
 
 local _, Check = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
+-- every item tracked in Mastercraft's item tracker, as a set (for the sync to GearMatic below)
 local function TrackerIDs()
     local out = {}
     local mc = _G.MastercraftDB
-    local goals = type(mc) == "table" and type(mc.goals) == "table" and mc.goals
-    if not goals then return out end
-    local mine = goals[UnitGUID("player") or ""]
-    for _, list in pairs({ mine }) do
-        for _, g in ipairs(list or {}) do
-            local id = type(g) == "table" and tonumber(g.id)
-            if id then out[id] = true end
-        end
+    local goals = type(mc) == "table" and type(mc.goals) == "table" and mc.goals[UnitGUID("player") or ""]
+    for _, g in ipairs(type(goals) == "table" and goals or {}) do
+        local id = type(g) == "table" and tonumber(g.id)
+        if id then out[id] = true end
     end
     return out
+end
+
+-- tracked in Mastercraft's item tracker (MastercraftDB.goals[your GUID] = { { id = itemID, ... }, ... }): read in
+-- place, nothing built - IsNeeded is asked for every bag slot on every bag update, and every Dungeon Journal row
+local function Tracked(itemID)
+    local mc = _G.MastercraftDB
+    local goals = type(mc) == "table" and type(mc.goals) == "table" and mc.goals[UnitGUID("player") or ""]
+    for _, g in ipairs(type(goals) == "table" and goals or {}) do
+        if type(g) == "table" and tonumber(g.id) == itemID then return true end
+    end
+    return false
 end
 
 local function IsNeeded(itemID)
@@ -39,7 +47,7 @@ local function IsNeeded(itemID)
     if not itemID then return false end
     if DB and DB.needed and DB.needed[itemID] then return true end
     if DB and DB.keep and DB.keep[itemID] then return true end
-    return TrackerIDs()[itemID] == true
+    return Tracked(itemID)
 end
 MasterOptions_MastercraftKeep = { IsNeeded = IsNeeded }
 
@@ -120,7 +128,7 @@ end
 -- says nothing about the item, and reading it would forget what's needed: learn nothing until it's back on.
 local function TooltipLinesOn() return MasterOptions_Shared.MastercraftModuleOn("tip") end
 
-local pending = false
+local SyncSoon = MasterOptions_Shared.Debounce(function() SyncGearMatic() end, 1)
 local function Learn(tooltip, data)
     if tooltip ~= GameTooltip or not DB or not TooltipLinesOn() then return end
     local itemID = data and type(data.id) == "number" and data.id
@@ -147,10 +155,7 @@ local function Learn(tooltip, data)
             changed = changed or (before ~= needed)
         end
     end
-    if changed and not pending then
-        pending = true
-        C_Timer.After(1, function() pending = false; SyncGearMatic() end)
-    end
+    if changed then SyncSoon() end
 end
 
 if TooltipDataProcessor and Enum and Enum.TooltipDataType then
@@ -173,8 +178,5 @@ f:SetScript("OnEvent", function(_, event, name)
     end
 end)
 
--- (Master Options runs this after the saved variables are in: the setup this did on its own ADDON_LOADED as a
--- separate addon, now)
-local h = f.GetScript and f:GetScript("OnEvent") or f.OnEvent -- (f.OnEvent: the sandbox tests' frames)
-if h then h(f, "ADDON_LOADED", ADDON) end
+MasterOptions_Shared.ReplayAddonLoaded(f, ADDON) -- (its ADDON_LOADED setup, now: the saved variables are in)
 end)

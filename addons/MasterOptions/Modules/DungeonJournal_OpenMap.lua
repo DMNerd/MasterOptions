@@ -374,8 +374,5 @@ f:SetScript("OnEvent", function(_, event, name)
     end
 end)
 
--- (Master Options runs this after the saved variables are in: the setup this did on its own ADDON_LOADED as a
--- separate addon, now)
-local h = f.GetScript and f:GetScript("OnEvent") or f.OnEvent -- (f.OnEvent: the sandbox tests' frames)
-if h then h(f, "ADDON_LOADED", ADDON) end
+MasterOptions_Shared.ReplayAddonLoaded(f, ADDON) -- (its ADDON_LOADED setup, now: the saved variables are in)
 end)

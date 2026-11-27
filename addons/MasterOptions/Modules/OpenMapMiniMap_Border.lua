@@ -168,16 +168,10 @@ local function Apply()
     return true
 end
 
-local pending = false
-local function ApplySoon(delay)
-    if pending then return end
-    pending = true
-    C_Timer.After(delay or 0.2, function()
-        pending = false
-        Check("drawing the minimap border", pcall(Apply))
-        Check("placing the coordinates", pcall(PlaceCoords)) -- (the tab sits on the frame)
-    end)
-end
+local ApplySoon = MasterOptions_Shared.Debounce(function()
+    Check("drawing the minimap border", pcall(Apply))
+    Check("placing the coordinates", pcall(PlaceCoords)) -- (the tab sits on the frame)
+end, 0.2)
 MasterOptions_MinimapBorder = {
     Apply = function() ApplySoon(0) end,
     PlaceCoords = function() Check("placing the coordinates", pcall(PlaceCoords)) end,
@@ -357,8 +351,5 @@ f:SetScript("OnEvent", function(_, event, name)
     end
 end)
 
--- (Master Options runs this after the saved variables are in: the setup this did on its own ADDON_LOADED as a
--- separate addon, now)
-local h = f.GetScript and f:GetScript("OnEvent") or f.OnEvent -- (f.OnEvent: the sandbox tests' frames)
-if h then h(f, "ADDON_LOADED", ADDON) end
+MasterOptions_Shared.ReplayAddonLoaded(f, ADDON) -- (its ADDON_LOADED setup, now: the saved variables are in)
 end)

@@ -22,7 +22,8 @@ lua.execute(r'''
   function Fire(e) for _, f in ipairs(FRAMES) do if f.ev[e] and f.OnEvent then f.OnEvent(f, e) end end end
   function MasterOptions_ReportError(_, _, e) ERRS = ERRS + 1; print("ERR", e) end
   function UnitGUID() return "Player-1" end
-  FACTION, LEVEL = "Alliance", 25
+  FACTION, LEVEL, COMBAT = "Alliance", 25, false
+  function InCombatLockdown() return COMBAT end
   function UnitFactionGroup() return FACTION end
   function UnitLevel() return LEVEL end
   -- Mastercraft's save
@@ -54,7 +55,7 @@ lua.execute(r'''
   local pins = {
     AddWorldMapIconMap = function(_, ref, icon, map, x, y) WORLD[#WORLD + 1] = { icon = icon, map = map, x = x, y = y } end,
     AddMinimapIconMap = function(_, ref, icon, map, x, y) MINI[#MINI + 1] = { icon = icon } end,
-    RemoveAllWorldMapIcons = function() WORLD = {} end, RemoveAllMinimapIcons = function() MINI = {} end }
+    RemoveAllWorldMapIcons = function() WORLD = {}; REDRAWS = (REDRAWS or 0) + 1 end, RemoveAllMinimapIcons = function() MINI = {} end }
   function LibStub(name) if name == "HereBeDragons-Pins-2.0" then return pins end end
   function Marks() local o = {} for _, w in ipairs(WORLD) do o[#o + 1] = w.icon.title .. "@" .. w.map .. ":" .. w.x .. "," .. w.y end table.sort(o) return table.concat(o, " | ") end
   function Lines(title) for _, w in ipairs(WORLD) do if w.icon.title == title then return table.concat(w.icon.lines, "; ") end end end
@@ -112,6 +113,16 @@ res["the drop's tooltip: the pattern and GearMatic's chance (estimate said)"] = 
     and E('Lines("Old Chest")') == "Dropped Cloak (Leatherworking): 10.0% - a Classic estimate")
 res["no GearMatic rate: QuestieDB's creature"] = "Questie Mob@84:0.6,0.4" in m and E('Lines("Questie Mob")') == "Questie Drop (Leatherworking): drops here"
 res["world drops (7 GearMatic sources, 20 QuestieDB creatures) not marked"] = "Mob 1" not in m and "NPC 901" not in m and E("#WORLD") == 4
+# redrawn only when something it depends on changed; not in a fight; patterns looked up once a session
+L('REDRAWS = 0; LOOKUPS = 0; local f = LibQuestieDB.Item.IdsByName; LibQuestieDB.Item.IdsByName = function(n) LOOKUPS = LOOKUPS + 1; return f(n) end')
+L('Fire("SKILL_LINES_CHANGED"); RunTimers()')
+res["a skill point elsewhere (same state): nothing worked out or drawn again"] = E("REDRAWS") == 0 and E("LOOKUPS") == 0
+L('MastercraftDB.chars["Player-1"].professions[1].skill = 145; Fire("SKILL_LINES_CHANGED"); RunTimers()')
+res["a profession's skill changed: drawn again, patterns from the session's cache"] = E("REDRAWS") == 1 and E("LOOKUPS") == 0
+L('COMBAT = true; LEVEL = 26; Fire("PLAYER_LEVEL_UP"); RunTimers()')
+res["in a fight: waits"] = E("REDRAWS") == 1
+L('COMBAT = false; Fire("PLAYER_REGEN_ENABLED"); RunTimers()')
+res["...drawn after it"] = E("REDRAWS") == 2
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

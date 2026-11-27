@@ -36,7 +36,7 @@ local SKILL_BY_ITEM = {
 local RICH_THORIUM = 275 -- (its vein gives Thorium Ore too: known by its name)
 
 local function Print(text) print("|cffffd200Master Options:|r " .. text) end
-local function MC() local db = _G.MastercraftDB; return type(db) == "table" and db or nil end
+local MC = Shared.MastercraftDB
 local function API()
     local spf = _G.ShortestPathForever
     local api = type(spf) == "table" and spf.API

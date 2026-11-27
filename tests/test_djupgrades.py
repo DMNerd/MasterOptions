@@ -25,7 +25,8 @@ lua.execute(r'''
   C_Item = { GetItemInfo = function(id) if CACHED[id] then return "x", "|Hitem:" .. id .. "|h" end end }
   local function ID(link) return tonumber(link:match("item:(%d+)")) end
   -- GearMatic: 100 upgrade, 101 an alt's upgrade, 102 best in slot (not an upgrade), 103 nothing
-  GearMatic = { BagOverlay = { MarkerVerdict = function(link) local id = ID(link)
+  VERDICTS = 0
+  GearMatic = { BagOverlay = { MarkerVerdict = function(link) VERDICTS = VERDICTS + 1; local id = ID(link)
       return { upgrade = id == 100 or id == 101 or id == 104, alt = id == 101, skull = id == 102 } end },
     ApplyUpgradeArrow = function(tex, kind) tex.kind = "gm-" .. kind end,
     ApplyBiSSkull = function(tex) tex.kind = "skull" end }
@@ -44,6 +45,7 @@ lua.execute(r'''
     function row:CreateTexture() return Region() end
     function row:CreateFontString() return Region() end
     function row:IsShown() return true end
+    function row:IsVisible() return not JOURNAL_CLOSED end
     return row end
   ForeverDungeonJournal_NS = { UpdateFavouriteIndicator = function(row, id) row.fdjFavouriteItemID = id end }
   function Show(row, id) ForeverDungeonJournal_NS.UpdateFavouriteIndicator(row, id); return row.moUpgrade end
@@ -73,6 +75,15 @@ res["Pawn judge (Pawn Forever installed): Pawn's arrow and its percent"] = p.sta
 res["Pawn judge: GearMatic's upgrade isn't shown as Pawn's"] = E("Desc(Show(R2, 100))") == "-|-|-"
 L('LOADED.Pawn_Forever = nil')
 res["Pawn without Pawn Forever: GearMatic judges again"] = E("Desc(Show(R2, 100))") == "gm-up|+23%|-"
+# only what's on screen, and on an item arriving only the rows waiting for one
+L('TIMERS = {}; VERDICTS = 0; Fire("GET_ITEM_INFO_RECEIVED"); RunTimers()')
+res["an item arriving, no row waiting: nothing marked again"] = E("VERDICTS") == 0
+L('CACHED[106] = nil; R6 = NewRow(); Show(R6, 106); JOURNAL_CLOSED = true; VERDICTS = 0; CACHED[106] = true; Fire("GET_ITEM_INFO_RECEIVED"); RunTimers()')
+res["journal closed: an item arriving does nothing"] = E("VERDICTS") == 0
+L('JOURNAL_CLOSED = false; VERDICTS = 0; Fire("GET_ITEM_INFO_RECEIVED"); RunTimers()')
+res["journal open: only the row that was waiting marked again"] = E("VERDICTS") == 1
+L('VERDICTS = 0; Fire("PLAYER_EQUIPMENT_CHANGED"); RunTimers()')
+res["your gear changing: every row on screen again"] = E("VERDICTS") >= 5
 L('CheapUpgrades.ctx = nil; TIMERS = {}; Show(R4, 100)')
 res["CheapUpgrades not ready: asked again a few times, not forever"] = E("#TIMERS") == 1
 L('for i = 1, 10 do RunTimers() end')

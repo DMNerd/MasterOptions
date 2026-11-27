@@ -14,7 +14,7 @@ MasterOptions_Module("DialogKey_Pawn", { "DialogKey_Numy" }, function(ADDON)
 --   "off"       nothing is pre-selected
 -- When no choice is an upgrade, the one that sells to a vendor for the most is selected (as both mark it).
 
-local Loaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+local Loaded = MasterOptions_Shared.AddOnLoaded
 local GetInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
 
 local function Mode()
@@ -139,8 +139,5 @@ f:SetScript("OnEvent", function(_, event, name)
     end
 end)
 
--- (Master Options runs this after the saved variables are in: the setup this did on its own ADDON_LOADED as a
--- separate addon, now)
-local h = f.GetScript and f:GetScript("OnEvent") or f.OnEvent -- (f.OnEvent: the sandbox tests' frames)
-if h then h(f, "ADDON_LOADED", ADDON) end
+MasterOptions_Shared.ReplayAddonLoaded(f, ADDON) -- (its ADDON_LOADED setup, now: the saved variables are in)
 end)

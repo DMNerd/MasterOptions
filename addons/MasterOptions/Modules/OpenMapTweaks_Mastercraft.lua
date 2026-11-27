@@ -16,7 +16,7 @@ local Shared = MasterOptions_Shared
 local HERB, MINE = Shared.HERB, Shared.MINE
 local TRACK_SPELL = { [MINE] = 2580, [HERB] = 2383 }             -- Find Minerals, Find Herbs
 local TRACK_ICON  = { [MINE] = 136025, [HERB] = 133939 }
-local function MC() local db = _G.MastercraftDB; return type(db) == "table" and db.settings or {} end
+local function MC() local db = Shared.MastercraftDB(); return db and type(db.settings) == "table" and db.settings or {} end
 
 ---------------------------------------------------------------------------
 -- Player state
@@ -73,9 +73,19 @@ local function Active(sl)
     return Tracking(sl) or Farming()
 end
 
+-- Active per profession, worked out twice a second and on the events below (RefreshAll), not per pin:
+-- OpenMap_Tweaks calls Show on every minimap pin every frame, and each Show asks Wanted - Active's tracking scan
+-- (GetTrackingInfo makes a table per type) for each pin each frame was a steady cost while moving.
+local activeNow = {}
+local function ActiveNow(sl)
+    local a = activeNow[sl]
+    if a == nil then a = Active(sl); activeNow[sl] = a end
+    return a
+end
+
 local function Wanted(e)
     if type(e) ~= "table" or (e.sl ~= HERB and e.sl ~= MINE) then return true end
-    if not Active(e.sl) then return false end
+    if not ActiveNow(e.sl) then return false end
     return Shared.GatherWanted(MC().nodesFilter or "skillups", ranks[e.sl], tonumber(e.l))
 end
 
@@ -209,8 +219,9 @@ local function RefreshAll()
     if not Same(1, s.nodesFilter) then same = false end
     if not Same(2, s.nodesWhen) then same = false end
     if not Same(3, Farming()) then same = false end
-    if not Same(4, Active(MINE)) then same = false end
-    if not Same(5, Active(HERB)) then same = false end
+    activeNow[MINE], activeNow[HERB] = Active(MINE), Active(HERB)
+    if not Same(4, activeNow[MINE]) then same = false end
+    if not Same(5, activeNow[HERB]) then same = false end
     if not Same(6, ranks[MINE]) then same = false end
     if not Same(7, ranks[HERB]) then same = false end
     if same then return end

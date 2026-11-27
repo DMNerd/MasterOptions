@@ -41,12 +41,9 @@ local DROP_ICON = "Interface\\Icons\\INV_Misc_Bag_10"
 local MAX_GM_SOURCES, MAX_QUESTIE_SOURCES = 5, 8 -- (more: a world drop, not marked)
 local GLOW = "Interface\\GLUES\\Models\\UI_Draenei\\GenericGlow64"
 
-local function MCDB() local db = _G.MastercraftDB; return type(db) == "table" and db or nil end
+local MCDB = Shared.MastercraftDB
 local function Lib() local l = _G.LibQuestieDB; return type(l) == "table" and l or nil end
-local function Module(name)
-    local ql = _G.QuestieLoader
-    return type(ql) == "table" and type(ql.ImportModule) == "function" and ql:ImportModule(name) or nil
-end
+local Module = Shared.QuestieModule
 local function Pins() return LibStub and LibStub("HereBeDragons-Pins-2.0", true) or nil end
 local function MyFaction() return UnitFactionGroup("player") == "Alliance" and "A" or "H" end
 
@@ -69,6 +66,20 @@ end
 ---------------------------------------------------------------------------
 -- What to mark: { [npcID] = { kind = "vendor" | "trainer", lines = { ... } } }
 ---------------------------------------------------------------------------
+-- a recipe's pattern items, looked up once a session (QuestieDB doesn't change while you play): 7 name lookups each,
+-- for about a thousand recipes you haven't learned
+local patternCache = {}
+local function PatternItems(recipeName)
+    local items = patternCache[recipeName]
+    if items then return items end
+    items = {}
+    for _, prefix in ipairs(PATTERN_PREFIXES) do
+        for _, itemID in ipairs(ItemIdsByName(prefix .. recipeName) or {}) do items[#items + 1] = itemID end
+    end
+    patternCache[recipeName] = items
+    return items
+end
+
 -- the recipes you haven't learned, each with its pattern items: { { recipe, profession, items = { itemID, ... } } }
 local function Patterns()
     local db = MCDB()
@@ -77,10 +88,7 @@ local function Patterns()
     for prof, data in pairs(type(mine) == "table" and mine or {}) do
         for _, r in ipairs(type(data) == "table" and type(data.list) == "table" and data.list or {}) do
             if type(r) == "table" and r.learned == false and type(r.name) == "string" then
-                local items = {}
-                for _, prefix in ipairs(PATTERN_PREFIXES) do
-                    for _, itemID in ipairs(ItemIdsByName(prefix .. r.name) or {}) do items[#items + 1] = itemID end
-                end
+                local items = PatternItems(r.name)
                 if #items > 0 then out[#out + 1] = { recipe = r.name, prof = prof, items = items } end
             end
         end
@@ -260,31 +268,59 @@ local function BuildIndex(done)
     step()
 end
 
-local function Refresh()
+-- What the markers depend on, as one string: your faction and level, and each profession's skill, cap and recipes
+-- learned. SKILL_LINES_CHANGED comes with every skill point - a weapon skill-up in a fight too: when this is the
+-- same, nothing is worked out or drawn again.
+local function State()
+    local db = MCDB()
+    local guid = UnitGUID("player") or ""
+    local parts = { UnitFactionGroup("player") or "?", tostring(UnitLevel("player") or 0) }
+    local me = db and type(db.chars) == "table" and db.chars[guid]
+    for _, p in ipairs(type(me) == "table" and type(me.professions) == "table" and me.professions or {}) do
+        if type(p) == "table" then parts[#parts + 1] = ("%s=%s/%s"):format(tostring(p.name), tostring(p.skill), tostring(p.max)) end
+    end
+    local mine = db and type(db.recipes) == "table" and db.recipes[guid]
+    local profs = {}
+    for prof in pairs(type(mine) == "table" and mine or {}) do profs[#profs + 1] = prof end
+    table.sort(profs)
+    for _, prof in ipairs(profs) do
+        local list, learned = type(mine[prof]) == "table" and mine[prof].list, 0
+        for _, r in ipairs(type(list) == "table" and list or {}) do
+            if type(r) == "table" and r.learned ~= false then learned = learned + 1 end
+        end
+        parts[#parts + 1] = ("%s:%d/%d"):format(prof, learned, type(list) == "table" and #list or 0)
+    end
+    return table.concat(parts, ";")
+end
+
+local drawnState
+local function Refresh(force)
+    local state = State()
+    if not force and state == drawnState then return nil end
     local marks, patterns = {}, Patterns()
     Vendors(marks, patterns)
     Drops(marks, patterns)
     Trainers(marks)
+    drawnState = state
     return Draw(marks)
 end
 
-local pending = false
-local function RefreshSoon(delay)
-    if pending or not indexReady then return end
-    pending = true
-    C_Timer.After(delay or 1, function()
-        pending = false
-        Check("marking vendors and trainers", pcall(Refresh))
-    end)
-end
+local afterCombat = false
+local refreshSoon = Shared.Debounce(function()
+    if InCombatLockdown and InCombatLockdown() then afterCombat = true return end -- (drawn after the fight)
+    Check("marking vendors and trainers", pcall(Refresh))
+end, 1)
+local function RefreshSoon(delay) if indexReady then refreshSoon(delay) end end
 
 local f = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_LOGIN", "SKILL_LINES_CHANGED", "NEW_RECIPE_LEARNED", "LEARNED_SPELL_IN_TAB",
-                     "PLAYER_LEVEL_UP", "TRADE_SKILL_CLOSE", "CRAFT_CLOSE" }) do
+                     "PLAYER_LEVEL_UP", "TRADE_SKILL_CLOSE", "CRAFT_CLOSE", "PLAYER_REGEN_ENABLED" }) do
     pcall(f.RegisterEvent, f, e)
 end
 f:SetScript("OnEvent", function(_, event)
-    if event == "PLAYER_LOGIN" then
+    if event == "PLAYER_REGEN_ENABLED" then
+        if afterCombat then afterCombat = false; RefreshSoon(0.5) end
+    elseif event == "PLAYER_LOGIN" then
         -- (after Questie has built its townsfolk lists, and Mastercraft has its save)
         C_Timer.After(6, function() BuildIndex(function() RefreshSoon(0) end) end)
     else

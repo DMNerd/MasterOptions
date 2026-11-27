@@ -75,8 +75,7 @@ local CHAT_LINES = {
 -- (LEAVE for dj:chat: nil is Dungeon Journal's "shown", so remembering nil and putting it back is all it needs)
 
 local function SavedFor(store)
-    local first, last = UnitName("player")
-    local char = (first or "?") .. ((last and last ~= "") and (" " .. last) or "") .. "-" .. (GetRealmName() or "")
+    local char = MasterOptions_Shared.CharacterKey()
     MasterOptionsDB[store] = type(MasterOptionsDB[store]) == "table" and MasterOptionsDB[store] or {}
     MasterOptionsDB[store][char] = MasterOptionsDB[store][char] or {}
     return MasterOptionsDB[store][char]
@@ -282,10 +281,8 @@ local function QuestieTown()
 end
 -- Questie draws its townsfolk again from its settings (its own login pass: off first, then what's ticked)
 local function QuestieTownRefresh()
-    local ql = _G.QuestieLoader
-    if not (type(ql) == "table" and ql.ImportModule) then return end
-    local ok, menu = pcall(ql.ImportModule, ql, "QuestieMenu")
-    if ok and type(menu) == "table" and menu.OnLogin then pcall(menu.OnLogin, menu, true) end
+    local menu = MasterOptions_Shared.QuestieModule("QuestieMenu")
+    if menu and menu.OnLogin then pcall(menu.OnLogin, menu, true) end
 end
 -- OpenMap draws some of the same kinds on the world map (Map\Townsfolk.lua, from Questie's database; all off
 -- by default): with Questie's on too, each shows twice there. (Not on the minimap, so the game's tracking and

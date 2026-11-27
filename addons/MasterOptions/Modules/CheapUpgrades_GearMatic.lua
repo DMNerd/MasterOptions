@@ -162,16 +162,10 @@ local function Sync()
     return changed
 end
 
-local pending = false
-local function SyncSoon(delay)
-    if pending then return end
-    pending = true
-    C_Timer.After(delay or 1, function()
-        pending = false
-        local ok, err = pcall(Sync)
-        if not ok then Report("giving CheapUpgrades GearMatic's weights", err) end
-    end)
-end
+local SyncSoon = MasterOptions_Shared.Debounce(function()
+    local ok, err = pcall(Sync)
+    if not ok then Report("giving CheapUpgrades GearMatic's weights", err) end
+end, 1)
 
 local f = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_LOGIN", "PLAYER_LEVEL_UP", "PLAYER_TALENT_UPDATE", "CHARACTER_POINTS_CHANGED" }) do

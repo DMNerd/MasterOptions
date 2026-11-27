@@ -102,12 +102,7 @@ local function Sync()
     end
 end
 
-local pending = false
-local function Queue(delay)
-    if pending then return end
-    pending = true
-    C_Timer.After(delay or 1, function() pending = false; Sync() end)
-end
+local Queue = MasterOptions_Shared.Debounce(function() Sync() end, 1)
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")

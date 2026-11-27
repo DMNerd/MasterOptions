@@ -139,10 +139,9 @@ ev:SetScript("OnEvent", function()
     -- WoW Forever: UnitName gives first and last name and the realm name is empty, so "Name-Realm"
     -- was the same key ("Testchar-") for every character sharing a first name. Key on the full name;
     -- a character with no record yet takes over the old shared key's version.
-    local first, last = UnitName("player")
-    local realm = GetRealmName() or ""
-    local legacy = (first or "?") .. "-" .. realm
-    local char = (first or "?") .. ((last and last ~= "") and (" " .. last) or "") .. "-" .. realm
+    local first = UnitName("player")
+    local legacy = (first or "?") .. "-" .. (GetRealmName() or "")
+    local char = MasterOptions_Shared.CharacterKey()
     MasterOptionsDB.applied = MasterOptionsDB.applied or {}
     C_Timer.After(2, function()
         local prev = MasterOptionsDB.applied[char] or MasterOptionsDB.applied[legacy] or 0
