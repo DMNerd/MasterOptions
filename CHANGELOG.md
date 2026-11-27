@@ -7,6 +7,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-11-27
+
+### Changed
+
+- **One trip, one pin** (ShortestPathForever with OpenMap). However a trip starts - Shift-click on the map, a pin
+  you follow in OpenMap, Dungeon Journal's Show on Map, a quest or recipe waypoint - it now looks and ends the
+  same way:
+  - **Placing:** an OpenMap pin marks the destination - OpenMap's own pin when there is one, else a gold one named
+    after the journey - on the world map, the minimap and in OpenMap's pin list. ShortestPathForever's own goal
+    marker is hidden meanwhile, so one pin marks the spot (at the minimap's rim its marker stays, pointing the
+    way; a route's numbered stops stay too).
+  - **Clearing:** any end - arriving, clearing it in ShortestPathForever, stopping it in OpenMap, a new journey
+    replacing it - takes the pin away and OpenMap stops following it. A pin you wrote a note on stays.
+  - Before, quest waypoints and Shift-click trips had no OpenMap pin, and a pin stayed (still followed) after you
+    arrived or started another trip.
+
 ## [2.9.3] - 2026-11-27
 
 ### Changed

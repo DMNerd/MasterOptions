@@ -393,3 +393,15 @@ ShortestPathForever|literal|arrow = true,|AddonSettings.lua (Navigation arrow)
 ShortestPathForever|literal|arrowLabel = "distance",|AddonSettings.lua (Arrow text)
 ShortestPathForever|literal|local mode = ns.db.arrowLabel|AddonSettings.lua (Arrow text: "time" / "both" read here)
 ShortestPathForever|literal|tomtom = true,|AddonSettings.lua (Quest and recipe waypoints)
+
+# --- added in 2.10.0 (ShortestPathForever_OpenMapPins: one trip, one pin)
+ShortestPathForever|function|function API.Journey(|ShortestPathForever_OpenMapPins.lua
+ShortestPathForever|function|function API.Ended(|ShortestPathForever_OpenMapPins.lua
+ShortestPathForever|function|API.Subscribe = hub.Subscribe|ShortestPathForever_OpenMapPins.lua
+ShortestPathForever|config-key|title = point.label or ns.JourneyTitle(point)|ShortestPathForever_OpenMapPins.lua (the goal's title)
+ShortestPathForever|function|return nil, answer --[[@as "loading"]]|ShortestPathForever_OpenMapPins.lua (Journey's "loading")
+ShortestPathForever|config-key|goalEdge|ShortestPathForever_OpenMapPins.lua (minimap goal at the rim stays)
+ShortestPathForever|method|self.pressRegions =|ShortestPathForever_OpenMapPins.lua (world map goal pins recognised)
+ShortestPathForever|method|function GoalPin:SetStopAlpha|ShortestPathForever_OpenMapPins.lua
+ShortestPathForever|config-key|self.stopNumbers = numbers|ShortestPathForever_OpenMapPins.lua (a route's numbered stops stay)
+ShortestPathForever|config-value|"OpenMap:Pin"|ShortestPathForever_OpenMapPins.lua

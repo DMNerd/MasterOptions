@@ -796,7 +796,7 @@ local PATCH_SINCE = { MasterOptions_OpenMapTweaks_Mastercraft = 2, MasterOptions
                       MasterOptions_Chat_AddonWhispers = 33 }
 local PATCH_TIP = {
     MasterOptions_Chat_AddonWhispers = "Hides \"No player named ... is currently playing\" when an addon's hidden whisper (OpenMap's map sharing, Questie's sync, Mastercraft's crafter search ...) went to someone who just logged off - you sent nothing. Your own whispers' answers always show. /mo whispers lists which addon whispered whom.",
-    MasterOptions_ShortestPathForever_OpenMapPins = "Clearing ShortestPathForever's journey to a followed OpenMap pin also clears the pin: OpenMap stops following it, and the pin goes from the map (one you wrote a note on stays, just no longer followed).",
+    MasterOptions_ShortestPathForever_OpenMapPins = "One trip, one pin: every ShortestPathForever journey (Shift-click, a pin you follow in OpenMap, Dungeon Journal's Show on Map, a quest or recipe waypoint) has an OpenMap pin at its destination, and ShortestPathForever's own goal marker is hidden meanwhile (at the minimap's rim it stays, pointing the way). Any end - arriving, clearing, stopping, a new journey - clears the pin and OpenMap's following. A pin you wrote a note on stays.",
     MasterOptions_DungeonJournal_SpokenBosses = "Spoken_Bosses tells the dungeon's story beside the world map when Dungeon Journal's map of it is shown there (Map inside dungeons, Dungeon entrance click), and a boss's story when you click the boss on that map.",
     MasterOptions_Mastercraft_FishingView = "While Mastercraft's fishing view hides the interface: Baganator's bags, DeleteCheapestItem's window, confirmation pop-ups and loot rolls stay visible, and Chattynator's chat follows Mastercraft's chat setting. Replaces MasterOptions_Mastercraft_Baganator.",
     MasterOptions_CheapUpgrades_Baganator = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots.",
@@ -833,7 +833,7 @@ local MODULES = {
     { header = "Modules: maps (on / off after a reload)" },
     { "DungeonJournal_OpenMap", "Dungeon Journal on OpenMap's map", { "ForeverDungeonJournal", "OpenMap" } },
     { "DungeonJournal_SpokenBosses", "Spoken's stories on Dungeon Journal's map", { "ForeverDungeonJournal", "Spoken_Bosses" } },
-    { "ShortestPathForever_OpenMapPins", "Clearing a journey clears its OpenMap pin", { "ShortestPathForever", "OpenMap" } },
+    { "ShortestPathForever_OpenMapPins", "One trip, one OpenMap pin", { "ShortestPathForever", "OpenMap" } },
     { "ShortestPathForever_OpenMapMiniMap", "Journey goal visible on OpenMap's minimap", { "ShortestPathForever", "OpenMap_MiniMap" } },
     { "Mastercraft_FarmTour", "Farming tours", { "Mastercraft", "ShortestPathForever" } },
     { "Mastercraft_RecipeMap", "Recipe map markers", { "Mastercraft", "Questie" } },

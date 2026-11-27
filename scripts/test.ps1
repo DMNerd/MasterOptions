@@ -37,7 +37,7 @@ $tests = @(
     @("DungeonJournal_OpenMap map",  "test_dmap.py",   @((F "MasterOptions_DungeonJournal_OpenMap"))),
     @("DungeonJournal_Upgrades (loot marks)", "test_djupgrades.py", @((F "MasterOptions_DungeonJournal_Upgrades"))),
     @("DungeonJournal_SpokenBosses (stories)", "test_djspoken.py", @((F "MasterOptions_DungeonJournal_SpokenBosses"))),
-    @("ShortestPathForever_OpenMapPins (cleared journey)", "test_spfpins.py", @((F "MasterOptions_ShortestPathForever_OpenMapPins"))),
+    @("ShortestPathForever_OpenMapPins (one trip, one pin)", "test_spfpins.py", @((F "MasterOptions_ShortestPathForever_OpenMapPins"))),
     @("OpenMapTweaks_Mastercraft stitched map", "test_omtstitch.py", @((F "MasterOptions_OpenMapTweaks_Mastercraft"))),
     @("ShortestPathForever_OpenMapMiniMap", "test_spfgoal.py", @((F "MasterOptions_ShortestPathForever_OpenMapMiniMap"))),
     @("NeverSell (shared never-sell list)", "test_neversell.py", @((F "MasterOptions_NeverSell"))),
