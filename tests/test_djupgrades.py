@@ -48,7 +48,9 @@ lua.execute(r'''
   ForeverDungeonJournal_NS = { UpdateFavouriteIndicator = function(row, id) row.fdjFavouriteItemID = id end }
   function Show(row, id) ForeverDungeonJournal_NS.UpdateFavouriteIndicator(row, id); return row.moUpgrade end
   function Desc(p) return tostring(p.arrow.shown and p.arrow.kind or "-") .. "|" .. tostring(p.text.shown and p.text.text or "-")
-    .. "|" .. tostring(p.skull.shown and p.skull.kind or "-") end
+    .. "|" .. tostring(p.skull.shown and p.skull.kind or "-") .. (p.needed.shown and "|needed" or "") end
+  -- Mastercraft_Keep: 103 needed by a crafting guide
+  MasterOptions_MastercraftKeep = { IsNeeded = function(id) return id == 103 end }
 ''')
 lua.eval("function(s) return load(s, '=p') end")(src)("MasterOptions_DungeonJournal_Upgrades")
 E, L = lua.eval, lua.execute
@@ -57,13 +59,13 @@ res = {
     "GearMatic judge, an upgrade: chevron + CheapUpgrades' size": E("Desc(Show(R1, 100))") == "gm-up|+23%|-",
     "an upgrade for an alt only: the alt chevron": E("Desc(Show(R2, 101))") == "gm-alt|-|-",
     "best in slot: GearMatic's skull": E("Desc(Show(R3, 102))") == "-|-|skull",
-    "nothing to say: nothing shown": E("Desc(Show(R4, 103))") == "-|-|-",
+    "needed by a crafting guide: the cog (nothing else)": E("Desc(Show(R4, 103))") == "-|-|-|needed",
 }
 L('Show(R5, 104)')
 res["item not sent yet: unmarked"] = E("Desc(R5.moUpgrade)") == "-|-|-"
 L('CACHED[104] = true; Fire("GET_ITEM_INFO_RECEIVED"); RunTimers()')
 res["...marked when it arrives"] = E("Desc(R5.moUpgrade)") == "gm-up|+23%|-"
-L('Show(R1, 103)')
+L('CACHED[105] = true; Show(R1, 105)')
 res["a row reused for another item: cleared"] = E("Desc(R1.moUpgrade)") == "-|-|-"
 L('LOADED.Pawn, LOADED.Pawn_Forever = true, true')
 p = E("Desc(Show(R1, 200))")

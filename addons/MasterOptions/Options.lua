@@ -3,12 +3,12 @@
 local _, MO = ...
 -- from the files before this one
 local AUC, AnnoyingOn, ApplyBagIconSize, ApplyJunk, ApplyUpgradeArrow, ArrowState, BAG, BagIconSize = MO.AUC, MO.AnnoyingOn, MO.ApplyBagIconSize, MO.ApplyJunk, MO.ApplyUpgradeArrow, MO.ArrowState, MO.BAG, MO.BagIconSize
-local CORNERS, CU, CornerAdd, CornerHas, CornerRemove, FollowSpec, FollowSpecOn, GM = MO.CORNERS, MO.CU, MO.CornerAdd, MO.CornerHas, MO.CornerRemove, MO.FollowSpec, MO.FollowSpecOn, MO.GM
-local GMBuiltinChosen, GMRefreshBagIcons, ICON_SCALE, IconsMatch, Judge, JunkState, Loaded, MATCH_ARROW = MO.GMBuiltinChosen, MO.GMRefreshBagIcons, MO.ICON_SCALE, MO.IconsMatch, MO.Judge, MO.JunkState, MO.Loaded, MO.MATCH_ARROW
-local MATCH_JUNK, MC, MatchedArrow, MatchedJunk, OMT, PAWN, PawnElseGearMatic, PawnShows = MO.MATCH_JUNK, MO.MC, MO.MatchedArrow, MO.MatchedJunk, MO.OMT, MO.PAWN, MO.PawnElseGearMatic, MO.PawnShows
-local QuestieProfile, RefreshGearMatic, SPK, SYN, SetAnnoying, SetOMT, SetPawnScales, SyncPawnHidden = MO.QuestieProfile, MO.RefreshGearMatic, MO.SPK, MO.SYN, MO.SetAnnoying, MO.SetOMT, MO.SetPawnScales, MO.SyncPawnHidden
-local TownGet, TownSet, UIStyleGet, UIStyleSet, UIStyleTip, gmOn, mcNotOff, mcOn = MO.TownGet, MO.TownSet, MO.UIStyleGet, MO.UIStyleSet, MO.UIStyleTip, MO.gmOn, MO.mcNotOff, MO.mcOn
-local mcSetTip, mcTip = MO.mcSetTip, MO.mcTip
+local CORNERS, CU, ChatLinesOn, CornerAdd, CornerHas, CornerRemove, FollowSpec, FollowSpecOn = MO.CORNERS, MO.CU, MO.ChatLinesOn, MO.CornerAdd, MO.CornerHas, MO.CornerRemove, MO.FollowSpec, MO.FollowSpecOn
+local GM, GMBuiltinChosen, GMRefreshBagIcons, ICON_SCALE, IconsMatch, Judge, JunkState, Loaded = MO.GM, MO.GMBuiltinChosen, MO.GMRefreshBagIcons, MO.ICON_SCALE, MO.IconsMatch, MO.Judge, MO.JunkState, MO.Loaded
+local MATCH_ARROW, MATCH_JUNK, MC, MatchedArrow, MatchedJunk, OMT, PAWN, PawnElseGearMatic = MO.MATCH_ARROW, MO.MATCH_JUNK, MO.MC, MO.MatchedArrow, MO.MatchedJunk, MO.OMT, MO.PAWN, MO.PawnElseGearMatic
+local PawnShows, QuestieProfile, RefreshGearMatic, SPK, SYN, SetAnnoying, SetChatLines, SetOMT = MO.PawnShows, MO.QuestieProfile, MO.RefreshGearMatic, MO.SPK, MO.SYN, MO.SetAnnoying, MO.SetChatLines, MO.SetOMT
+local SetPawnScales, SyncPawnHidden, TownGet, TownSet, UIStyleGet, UIStyleSet, UIStyleTip, gmOn = MO.SetPawnScales, MO.SyncPawnHidden, MO.TownGet, MO.TownSet, MO.UIStyleGet, MO.UIStyleSet, MO.UIStyleTip, MO.gmOn
+local mcNotOff, mcOn, mcSetTip, mcTip = MO.mcNotOff, MO.mcOn, MO.mcSetTip, MO.mcTip
 
 ---------------------------------------------------------------------------
 -- The options. "choice" rows: who handles it. "toggle" rows: on/off.
@@ -513,6 +513,13 @@ local OPTIONS = {
         get = function() return AnnoyingOn() end,
         set = function(v) SetAnnoying(v) end,
     },
+    {
+        kind = "toggle", label = "Chat lines only you see", since = 29, scope = "character",
+        needs_any = { "GearMatic", "CheapUpgrades", "Mastercraft", "Questie", "Auctionator", "ForeverDungeonJournal" },
+        tip = "Notices addons print in your own chat window - nobody else sees them. Off turns all of these off (and remembers how each was, so On puts it back): GearMatic's line for each item you equip, its auto-equip reminder at login and its reminder to share recorded drops; CheapUpgrades' line when new gear in your bags is an upgrade; Mastercraft's lines after selling junk and repairing; Questie's lines for items that start a quest and for your own quest updates; Auctionator's line for each new auction; Dungeon Journal's notices.",
+        get = function() return ChatLinesOn() end,
+        set = function(v) SetChatLines(v) end,
+    },
 
     { header = "Quests" },
     {
@@ -698,7 +705,7 @@ local PATCH_TIP = {
     MasterOptions_Mastercraft_VendorSell = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank.",
     MasterOptions_Mastercraft_BankMats = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank.",
     MasterOptions_OpenMapMiniMap_Border = "OpenMap's square minimap framed with the action bar buttons' border (Look > Minimap border).",
-    MasterOptions_DungeonJournal_Upgrades = "Dungeon Journal's loot marked: an upgrade arrow and how big (+23%) by whoever judges upgrades - Pawn with Pawn Forever, else GearMatic with CheapUpgrades' size - and GearMatic's skull on what's best in slot for you. No more hovering every item.",
+    MasterOptions_DungeonJournal_Upgrades = "Dungeon Journal's loot marked: an upgrade arrow and how big (+23%) by whoever judges upgrades - Pawn with Pawn Forever, else GearMatic with CheapUpgrades' size - GearMatic's skull on what's best in slot for you, and a cog on what your Mastercraft guides need. No more hovering every item.",
     MasterOptions_CheapUpgrades_GearMatic = "CheapUpgrades values items with GearMatic's stat weights: a \"GearMatic\" weights profile for every spec, kept up to date (level, talents) and used unless you picked a profile of your own in CheapUpgrades. Off: CheapUpgrades' own weights again.",
     MasterOptions_GearMatic_SpecKeep = "Gear that is your best or 2nd best for any of your specs in GearMatic is kept from selling (Master Options' and GearMatic's own) and from DeleteCheapestItem - off-spec pieces too. GearMatic itself only looks at the spec you play now. Works with or without Pawn.",
     MasterOptions_GearMatic_SellGuard = "GearMatic's gear and low-value selling keeps what Master Options protects: the never-sell list, materials your Mastercraft guides need, and gear Pawn calls an upgrade or your best for a spec, or GearMatic rates your best or 2nd best for any spec (with GearMatic_SpecKeep) - through GearMatic's own sell guard.",

@@ -3,14 +3,17 @@
 
 local _, MO = ...
 -- from the files before this one
-local GM, GMRefreshBagIcons, Loaded, MC, OMT = MO.GM, MO.GMRefreshBagIcons, MO.Loaded, MO.MC, MO.OMT
+local AUC, CU, GM, GMRefreshBagIcons, Loaded, MC, OMT = MO.AUC, MO.CU, MO.GM, MO.GMRefreshBagIcons, MO.Loaded, MO.MC, MO.OMT
 
 ---------------------------------------------------------------------------
--- Annoying mode: every setting with which an addon posts in chat AS YOU, for other players to see - upgrades
--- shouted to the group or guild, public emotes, automatic whispers. Off turns them all off and remembers what
--- each was (per character: GearMatic's and Questie's settings can be per profile); on puts that back. Lines
--- only you see in your chat are not part of it. Found by what each addon sends (SendChatMessage / DoEmote),
--- not by its labels; what is sent only when you ask (Details' reports, typed commands) isn't here.
+-- Chat switches: groups of settings with which addons write in chat, turned off and back on together.
+--   Annoying mode       what addons post AS YOU, for other players to see - upgrades shouted to the group or guild,
+--                       public emotes, automatic whispers. Found by what each addon sends (SendChatMessage /
+--                       DoEmote), not by its labels; what is sent only when you ask (Details' reports, typed
+--                       commands) isn't here.
+--   Chat lines only you see   notices addons print in your own chat window.
+-- Off remembers each setting (per character: GearMatic's and Questie's can be per profile), an already-off one
+-- too, then turns them all off; on puts back what it remembered (with nothing remembered: each addon's default).
 ---------------------------------------------------------------------------
 local function GMSocial()
     local s = GM()
@@ -22,62 +25,94 @@ local function QuestieProfile()
     local q = Loaded("Questie") and type(_G.Questie) == "table" and _G.Questie.db and _G.Questie.db.profile
     return type(q) == "table" and q or nil
 end
+local function DJDB()
+    local db = Loaded("ForeverDungeonJournal") and _G.ForeverDungeonJournalDB
+    return type(db) == "table" and db or nil
+end
 
--- { id, addon, what it sends, table, key, value that is "off" }; "on" = anything else (nil = the addon's default, on)
-local CHATTY = {}
+local LEAVE = {} -- (a default meaning: nothing remembered, so leave it as it is)
+local function OnUnlessFalse(v) return v ~= false end
+
+-- A setting in a table: tbl() -> the table or nil; on(v) -> is it on; off: the value that turns it off;
+-- default: what "on" sets when nothing was remembered (LEAVE: nothing)
+local function Field(id, addon, what, tbl, key, on, off, default)
+    if off == nil then off = false end         -- (not "off == nil and false or off": that gives nil)
+    if default == nil then default = true end
+    return { id = id, addon = addon, what = what, on = on or OnUnlessFalse, off = off, default = default,
+             ready = function() return tbl() ~= nil end,
+             get = function() local t = tbl(); return t and t[key] end,
+             set = function(v) local t = tbl(); if t then t[key] = v end end }
+end
+
+local ANNOYING = {}
 for _, k in ipairs({ { "emote", "an emote with each upgrade you equip" },
                      { "vendorEmote", "a public emote with what auto-sell sold and repairs cost" },
                      { "sendToParty", "your upgrades in /party" }, { "sendToRaid", "your upgrades in /raid" },
                      { "sendToGuild", "your upgrades in /guild" }, { "sendToBattleGrounds", "your upgrades in battleground chat" } }) do
-    CHATTY[#CHATTY + 1] = { id = "gm:" .. k[1], addon = "GearMatic", what = k[2], tbl = GMSocial, key = k[1], off = false }
+    ANNOYING[#ANNOYING + 1] = Field("gm:" .. k[1], "GearMatic", k[2], GMSocial, k[1])
 end
-CHATTY[#CHATTY + 1] = { id = "questie:announce", addon = "Questie", what = "quest progress in /party or /raid",
-                        tbl = QuestieProfile, key = "questAnnounceChannel", off = "disabled" }
-CHATTY[#CHATTY + 1] = { id = "mc:whoReply", addon = "Mastercraft", what = "whispers answering !who in guild and group chat",
-                        tbl = MC, key = "whoReply", off = false }
+ANNOYING[#ANNOYING + 1] = Field("questie:announce", "Questie", "quest progress in /party or /raid", QuestieProfile,
+    "questAnnounceChannel", function(v) return v ~= nil and v ~= "disabled" end, "disabled", LEAVE) -- (Questie's default: "disabled")
+ANNOYING[#ANNOYING + 1] = Field("mc:whoReply", "Mastercraft", "whispers answering !who in guild and group chat", MC, "whoReply")
 
-local function ChattyOn(c, t)
-    local v = t[c.key]
-    if c.off == "disabled" then return v ~= nil and v ~= "disabled" end -- (Questie's default is "disabled")
-    return v ~= false
-end
+local CHAT_LINES = {
+    Field("gm:chatNotificationsEnabled", "GearMatic", "a line for each new item you equip", GM, "chatNotificationsEnabled"),
+    Field("gm:autoEquipLoginHint", "GearMatic", "the auto-equip reminder at login", GM, "autoEquipLoginHint"),
+    Field("gm:dropReminder", "GearMatic", "the reminder to share recorded drops", GM, "dropReminder"),
+    Field("cu:bagAlerts", "CheapUpgrades", "a line when new gear in your bags is an upgrade", CU, "bagAlerts"),
+    Field("mc:junkSummary", "Mastercraft", "what selling junk brought in", MC, "junkSummary"),
+    Field("mc:repairSummary", "Mastercraft", "what the repair cost", MC, "repairSummary"),
+    Field("questie:items", "Questie", "items you pick up that start a quest", QuestieProfile, "questAnnounceItems"),
+    Field("questie:local", "Questie", "your quest updates", QuestieProfile, "questAnnounceLocally",
+        function(v) return v == true end, false, LEAVE), -- (off by default in Questie)
+    Field("dj:chat", "ForeverDungeonJournal", "Dungeon Journal's notices", DJDB, "hideChatLines",
+        function(v) return v ~= true end, true, LEAVE), -- (inverted: "hide" on = lines off)
+    { id = "auc:chatLog", addon = "Auctionator", what = "your new auctions", on = OnUnlessFalse, off = false, default = true,
+      ready = function() return AUC("auction_chat_log") ~= nil end,
+      get = function() return AUC("auction_chat_log") end,
+      set = function(v) AUC("auction_chat_log", v) end },
+}
+-- (LEAVE for dj:chat: nil is Dungeon Journal's "shown", so remembering nil and putting it back is all it needs)
 
-local function AnnoyingSaved()
+local function SavedFor(store)
     local first, last = UnitName("player")
     local char = (first or "?") .. ((last and last ~= "") and (" " .. last) or "") .. "-" .. (GetRealmName() or "")
-    MasterOptionsDB.annoyingSaved = type(MasterOptionsDB.annoyingSaved) == "table" and MasterOptionsDB.annoyingSaved or {}
-    MasterOptionsDB.annoyingSaved[char] = MasterOptionsDB.annoyingSaved[char] or {}
-    return MasterOptionsDB.annoyingSaved[char]
+    MasterOptionsDB[store] = type(MasterOptionsDB[store]) == "table" and MasterOptionsDB[store] or {}
+    MasterOptionsDB[store][char] = MasterOptionsDB[store][char] or {}
+    return MasterOptionsDB[store][char]
 end
 
--- on while any of them posts
-local function AnnoyingOn()
-    for _, c in ipairs(CHATTY) do
-        local t = Loaded(c.addon) and c.tbl()
-        if t and ChattyOn(c, t) then return true end
+-- on while any of them writes
+local function GroupOn(list)
+    for _, c in ipairs(list) do
+        if Loaded(c.addon) and c.ready() and c.on(c.get()) then return true end
     end
     return false
 end
 
-local function SetAnnoying(on)
-    local saved = AnnoyingSaved()
-    for _, c in ipairs(CHATTY) do
-        local t = Loaded(c.addon) and c.tbl()
-        if t then
+local function SetGroup(list, store, on)
+    local saved = SavedFor(store)
+    for _, c in ipairs(list) do
+        if Loaded(c.addon) and c.ready() then
             if not on then
                 -- every one remembered, an already-off one too (on must not turn on what you had off); a second
                 -- "off" keeps what the first remembered. (Wrapped: nil, the addon's default, is remembered too.)
-                if saved[c.id] == nil then saved[c.id] = { v = t[c.key] } end
-                t[c.key] = c.off
+                if saved[c.id] == nil then saved[c.id] = { v = c.get() } end
+                c.set(c.off)
             elseif saved[c.id] then
-                t[c.key] = saved[c.id].v
+                c.set(saved[c.id].v)
                 saved[c.id] = nil
-            elseif c.off == false then
-                t[c.key] = true -- (nothing remembered: the addon's default, on)
+            elseif c.default ~= LEAVE then
+                c.set(c.default) -- (nothing remembered: the addon's default)
             end
         end
     end
 end
+
+local function AnnoyingOn() return GroupOn(ANNOYING) end
+local function SetAnnoying(on) SetGroup(ANNOYING, "annoyingSaved", on) end
+local function ChatLinesOn() return GroupOn(CHAT_LINES) end
+local function SetChatLines(on) SetGroup(CHAT_LINES, "chatLinesSaved", on) end
 
 ---------------------------------------------------------------------------
 -- Bag icon size: every icon any addon puts in a corner of Baganator's bag slots, one size
@@ -507,3 +542,5 @@ MO.mcNotOff = mcNotOff
 MO.mcOn = mcOn
 MO.mcSetTip = mcSetTip
 MO.mcTip = mcTip
+MO.ChatLinesOn = ChatLinesOn
+MO.SetChatLines = SetChatLines

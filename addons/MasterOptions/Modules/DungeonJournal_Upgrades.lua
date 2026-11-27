@@ -11,6 +11,8 @@ MasterOptions_Module("DungeonJournal_Upgrades", { "ForeverDungeonJournal" }, fun
 --   "+23%", left of the star      how big: Pawn's percent, or CheapUpgrades' badge (which follows GearMatic's
 --                                 weights with CheapUpgrades_GearMatic)
 --   skull, top right of the icon  GearMatic: best in slot for you
+--   cog, bottom left of the icon  Mastercraft: your crafting guides need it, you track it, or its advice is KEEP
+--                                 (Mastercraft_Keep's MasterOptions_MastercraftKeep.IsNeeded)
 -- Every row Dungeon Journal draws for an item goes through its FDJ.UpdateFavouriteIndicator(row, itemID) (the
 -- favourite star at the row's right): hooked there. An item the game hasn't sent yet is marked when it arrives;
 -- your gear or talents changing marks the rows again. Dungeon Journal itself is only read.
@@ -22,15 +24,18 @@ local _, Check = MasterOptions_Shared.ErrorReporters(ADDON)
 local Shared = MasterOptions_Shared
 local GetInfo = (C_Item and C_Item.GetItemInfo) or _G.GetItemInfo
 local PAWN_ARROW = "Interface\\AddOns\\Pawn\\Textures\\UpgradeArrow"
+local NEEDED_ICON = "Interface\\Icons\\INV_Misc_Gear_01" -- (the crafting mark)
 
 local rows = setmetatable({}, { __mode = "k" }) -- rows marked (weak: they go with Dungeon Journal's frames)
 
--- what to show for an item: { arrow = "pawn" | "up" | "alt" | nil, text = "+23%" | nil, skull = bool }, or nil
--- while the item (or CheapUpgrades) isn't ready
+-- what to show for an item: { arrow = "pawn" | "up" | "alt" | nil, text = "+23%" | nil, skull = bool,
+-- needed = bool }, or nil while the item (or CheapUpgrades) isn't ready
 local function Marks(itemID)
     local _, link = GetInfo(itemID)
     if not link then return nil end
-    local out = { skull = false }
+    local keep = _G.MasterOptions_MastercraftKeep
+    local out = { skull = false, needed = type(keep) == "table" and type(keep.IsNeeded) == "function"
+        and keep.IsNeeded(itemID) == true or false }
     local gm = _G.GearMatic
     local bo = type(gm) == "table" and gm.BagOverlay
     local verdict = bo and type(bo.MarkerVerdict) == "function" and bo.MarkerVerdict(link) or nil
@@ -60,6 +65,10 @@ local function Parts(row)
     p.arrow:SetPoint("TOPLEFT", anchor, "TOPLEFT", -2, 2)
     p.skull = row:CreateTexture(nil, "OVERLAY", nil, 7)
     p.skull:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", 3, 3)
+    p.needed = row:CreateTexture(nil, "OVERLAY", nil, 7)
+    p.needed:SetPoint("BOTTOMLEFT", anchor, "BOTTOMLEFT", -2, -2)
+    p.needed:SetTexture(NEEDED_ICON)
+    p.needed:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     p.text = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     p.text:SetPoint("RIGHT", row, "RIGHT", -27, 0) -- (left of Dungeon Journal's star, 15 wide at -8)
     row.moUpgrade = p
@@ -69,7 +78,7 @@ end
 local function Paint(row, itemID)
     local p = Parts(row)
     local m = itemID and Marks(itemID)
-    p.arrow:Hide(); p.skull:Hide(); p.text:Hide()
+    p.arrow:Hide(); p.skull:Hide(); p.text:Hide(); p.needed:Hide()
     if not m then return m == nil and itemID ~= nil end -- (true: ask again when the item arrives)
     local size = math.max(10, math.floor((p.anchor:GetHeight() or 38) * 0.42 + 0.5))
     local gm = _G.GearMatic
@@ -85,6 +94,7 @@ local function Paint(row, itemID)
         p.skull:SetSize(size * 1.3, size * 1.3); p.skull:Show()
     end
     if m.text then p.text:SetText(m.text); p.text:Show() end
+    if m.needed then p.needed:SetSize(size, size); p.needed:Show() end
     return false
 end
 

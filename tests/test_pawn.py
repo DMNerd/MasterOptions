@@ -393,6 +393,36 @@ annoy = {
 print("annoying mode:", annoy)
 if not all(annoy.values()):
     lua.execute('ERRORS[#ERRORS+1] = "Annoying mode wrong"')
+# Chat lines only you see (2.7.0): every addon's own-chat notices, off together and back as they were
+lua.execute(r"""
+  for _, s in ipairs(SETTINGS) do if s.name:find("Chat lines only you see", 1, true) == 1 then LINES = s end end
+  LOADED.Auctionator, LOADED.Questie, LOADED.ForeverDungeonJournal = true, true, true
+  AUC_CFG = { auction_chat_log = true }
+  Auctionator = { Config = { Get = function(k) return AUC_CFG[k] end, Set = function(k, v) AUC_CFG[k] = v end } }
+  Questie = { db = { profile = { questAnnounceLocally = true } } }
+  ForeverDungeonJournalDB = {}
+  local gp, cu, mc = GearMatic.db.profile, CheapUpgradesDB, MastercraftDB.settings
+  gp.chatNotificationsEnabled, gp.autoEquipLoginHint, gp.dropReminder = nil, true, false
+  cu.bagAlerts = nil; mc.junkSummary, mc.repairSummary = true, nil
+  MasterOptionsDB.chatLinesSaved = nil
+  function LinesState() return table.concat({ tostring(gp.chatNotificationsEnabled), tostring(gp.autoEquipLoginHint),
+    tostring(gp.dropReminder), tostring(cu.bagAlerts), tostring(mc.junkSummary), tostring(mc.repairSummary),
+    tostring(Questie.db.profile.questAnnounceItems), tostring(Questie.db.profile.questAnnounceLocally),
+    tostring(ForeverDungeonJournalDB.hideChatLines), tostring(AUC_CFG.auction_chat_log) }, " ") end
+  L_ON = LINES and LINES.get()
+  LINES.set(false); L_OFF, OFF_STATE = LINES.get(), LinesState()
+  LINES.set(true); L_BACK, BACK_STATE = LINES.get(), LinesState()
+  Questie, Auctionator = nil, nil
+""")
+lines = {
+    "row there, on while any writes": lua.eval("L_ON") is True,
+    "off: every one off (Dungeon Journal's hide on)": lua.eval("L_OFF") is False and lua.eval("OFF_STATE") == "false false false false false false false false true false",
+    "on: each back as it was (dropReminder stays off)": lua.eval("L_BACK") is True and lua.eval("BACK_STATE") == "nil true false nil true nil nil true nil true",
+}
+print("chat lines:", lines)
+if not all(lines.values()):
+    print("  off:", lua.eval("OFF_STATE")); print("  back:", lua.eval("BACK_STATE"))
+    lua.execute('ERRORS[#ERRORS+1] = "Chat lines only you see wrong"')
 # Where an item drops (tooltip): GearMatic's drop chance line and Dungeon Journal's source line
 lua.execute(r"""
   for _, s in ipairs(SETTINGS) do if s.name:find("Where an item drops", 1, true) == 1 then DROPS = s end end
