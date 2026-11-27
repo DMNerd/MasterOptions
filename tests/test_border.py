@@ -24,6 +24,9 @@ local function Region(kind)
   function r:GetTop() return self.top end
   function r:GetEffectiveScale() return 1 end
   function r:GetLeft() return self.left or 100 end
+  function r:GetRight() return (self.left or 100) + (self.w or 0) end
+  function r:GetDrawLayer() return "BACKGROUND", 0 end
+  function r:IsObjectType(t) return self.kind == "button" and t == "Button" end
   function r:SetAllPoints(rel) self.points = { { 'ALL', rel } } end
   function r:GetBottom() return self.bottom or (self.top - self.h) end
   function r:SetTexture(f) self.file = f end
@@ -103,12 +106,12 @@ check("eight pieces (no middle)", E("#MasterOptionsMinimapBorder.textures"), 8)
 check("pieces cut from the action button atlas", E("MasterOptionsMinimapBorder.textures[1].file"), 4612)
 check("left edge: thick by default (1.6 x a button's)", round(E("MasterOptionsMinimapBorder.pieces[21].w"), 3), round(45 * 0.30 * 1.6, 3))
 check("rim: sides on the map's own (not the wider zone bar's), the left drawn in (its shading), up over the bar", E("(function() local p = MasterOptionsMinimapBorder.points; return p[1][2] == Body and p[2][2] == Body and p[1][4] < 0 and p[2][4] > 0 and -p[1][4] < p[2][4] and p[1][5] > -p[2][5] + 20 end)()"), True)
-check("by the zone bar (on top): square corners, the top edge the whole length", E("(function() local p = MasterOptionsMinimapBorder.pieces; return not p[11].shown and not p[13].shown and #p[12].points == 2 and p[12].points[2][1] == 'TOPRIGHT' end)()"), True)
-check("away from it (the bottom): the atlas's rounded corners, the bottom edge between them (no notch where crossed)", E("(function() local p = MasterOptionsMinimapBorder.pieces; return p[31].shown ~= false and p[33].shown ~= false and p[32].points[1][2] == p[31] and p[32].points[2][2] == p[33] end)()"), True)
+check("rounded corners all round (the atlas's own: no notch where edges cross), the edges between them", E("(function() local p = MasterOptionsMinimapBorder.pieces; return p[11].shown and p[13].shown and p[31].shown and p[33].shown and p[12].points[1][2] == p[11] and p[32].points[2][2] == p[33] end)()"), True)
 L("Edge.texture:SetVertexColor(1, 1, 1, 1)")
 check("OpenMap setting its border up again (a setting changed): hidden again at once", E("Edge.texture.alpha"), 0)
 check("rim drawn over the zone bar and its buttons (a higher strata than the map's border)", E("MasterOptionsMinimapBorder.strata == 'MEDIUM' and MasterOptionsMinimapBorder.level == 7"), True)
-check("zone bar's background: out under the rim on both sides (past OpenMap's narrower bar) and up to its top line", E("(function() local p = Bar.texture.points; return #p == 2 and p[1][2] == Body and p[1][4] < 0 and p[2][4] > 0 and p[1][5] > 25 end)()"), True)
+check("zone bar's background: the middle between the rounded corners, up to the rim's top line", E("(function() local p = Bar.texture.points; return #p == 2 and p[1][2] == Body and p[1][4] > 0 and p[2][4] < 0 and p[1][5] > 25 end)()"), True)
+check("...and a piece each side, out under the rim below the corner's curve", E("(function() local t = Bar.textures; if not (t and #t == 2 and t[1].shown and t[2].shown) then return false end; local l, r = t[1].points, t[2].points; return l[1][4] < 0 and r[2][4] > 0 and l[1][5] < Bar.texture.points[1][5] end)()"), True)
 check("OpenMap's own lines see-through", E("Edge.lines[1].alpha + Edge.texture.alpha"), 0)
 check("shown", E("MasterOptionsMinimapBorder.shown"), True)
 check("coordinates: a tab on the frame's top edge, centred", E("MasterOptionsMinimapCoords.shown and MasterOptionsMinimapCoords.points[1][1] == 'BOTTOM' and MasterOptionsMinimapCoords.points[1][2] == MasterOptionsMinimapBorder and MasterOptionsMinimapCoords.points[1][3] == 'TOP'"), True)
@@ -129,7 +132,7 @@ check("OpenMap told to lay the minimap buttons out again, twice", E("#FIRED == 2
 L('Bar.top = 280; MasterOptions_MinimapBorder.Apply(); Run()')
 check("zone bar under the map: rim from map down over the bar, sides still the map's", E("(function() local p = MasterOptionsMinimapBorder.points; return p[1][2] == Body and p[2][2] == Body and p[2][5] < -20 and p[1][5] < 20 end)()"), True)
 
-check("zone bar under the map: its background out under the rim on both sides and down to its bottom line", E("(function() local p = Bar.texture.points; return #p == 2 and p[1][3] == 'BOTTOMLEFT' and p[1][4] < 0 and p[2][4] > 0 and p[2][5] < -45 end)()"), True)
+check("zone bar under the map: its background's middle down to the rim's bottom line", E("(function() local p = Bar.texture.points; return #p == 2 and p[1][3] == 'BOTTOMLEFT' and p[1][4] > 0 and p[2][4] < 0 and p[2][5] < -45 end)()"), True)
 check("zone bar: the /mo window's header texture (tiled)", E("Bar.texture.atlas == '_UI-Frame-TitleTileBg' and Bar.texture.htile == true"), True)
 check("coordinates tab: the same header texture", E("MasterOptionsMinimapCoords.bg.atlas == '_UI-Frame-TitleTileBg'"), True)
 L('MasterOptions_MinimapBorderDB.on = false; MasterOptions_MinimapBorder.Apply(); Run()')
@@ -144,6 +147,25 @@ L('Body.shown = true; OpenMapMiniMapDB.profile.enabled = false; MasterOptions_Mi
 check("OpenMap_MiniMap switched off in its options: the game's coordinates", E("Coords.alpha == 1 and not MasterOptionsMinimapCoords.shown"), True)
 L('OpenMapMiniMapDB.profile.enabled = nil; MasterOptions_MinimapBorder.Apply(); Run()')
 check("...on again: border and tab back", E("MasterOptionsMinimapBorder.shown and MasterOptionsMinimapCoords.shown and Coords.alpha == 0"), True)
+# the coordinates tab moves along its edge clear of a minimap button where it would sit (OpenMap_MiniMap's slots are
+# its own); with no button there it stays where asked
+L(r'''
+  MasterOptions_MinimapBorderDB.on = true; MasterOptions_MinimapBorderDB.coords = "bottom-center"
+  OpenMapMiniMapDB.profile.shape = "square"; Bar.top = 525
+  MasterOptionsMinimapBorder.left, MasterOptionsMinimapBorder.w = 0, 400
+  MasterOptions_MinimapBorder.Apply(); Run()
+  TAB = MasterOptionsMinimapCoords; X0 = TAB.points[1] and TAB.points[1][4]
+  Btn = NewRegion("button"); Btn.left, Btn.w, Btn.top, Btn.h = TAB:GetLeft() + 5, 30, TAB:GetTop(), 30
+  Minimap.children = { Btn }
+  MasterOptions_MinimapBorder.Apply(); Run()
+  X1 = TAB.points[1][4]
+  Minimap.children = {}
+  MasterOptions_MinimapBorder.Apply(); Run()
+  X2 = TAB.points[1][4]
+''')
+check("coordinates tab: a minimap button where it sits - moved along the edge clear of it", E("X1 ~= X0 and (X1 > X0 + 30 or X1 < X0 - 30)"), True)
+check("...the button gone: back where asked", E("X2 == X0"), True)
+
 L('MasterOptions_MinimapBorderDB.on = true; OpenMapMiniMapDB.profile.shape = "round"; MasterOptions_MinimapBorder.Apply(); Run()')
 check("round minimap: left alone", E("MasterOptionsMinimapBorder.shown == false and Edge.texture.alpha == 1"), True)
 

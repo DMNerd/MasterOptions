@@ -124,11 +124,9 @@ local function Slice(parent, name)
 end
 
 -- the pieces in a holder, corners k across
--- By the zone bar, square corners: the atlas's rounded corners left out and its edges running the whole length,
--- crossing there - rounded, the corners let the bar's square ends show past them (a player's screenshot: "make the
--- border square"). Away from it, the atlas's own rounded corners: crossed there, the edges' lines don't meet (the
--- atlas's line is at the outer edge on the left and further in at the bottom) - a notch at each corner (a player's
--- screenshot of the bottom corners).
+-- Rounded corners: the atlas's own (square ones - its edges running the whole length, crossing - left a notch at each
+-- corner: the atlas's line is at the outer edge on the left and further in at the bottom; a player's screenshot). The
+-- zone bar's background follows them (BarFill). Square where asked: the coordinates tab's side tucked under the rim.
 local function SliceLayout(p, k, roundTop, roundBottom)
     for _, tex in pairs(p) do tex:ClearAllPoints() end
     p[11]:SetShown(roundTop) p[13]:SetShown(roundTop) p[31]:SetShown(roundBottom) p[33]:SetShown(roundBottom)
@@ -177,8 +175,8 @@ local function Layout(top, bottom)
     frame:ClearAllPoints()
     frame:SetPoint("TOPLEFT", body, "TOPLEFT", -o * LEFT_SHARE, o * LEFT_SHARE + math.max(0, up))
     frame:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", o, -o - math.max(0, down))
-    -- (square by the zone bar - above the map, or under it - rounded at the other end)
-    SliceLayout(pieces, k, top == body, bottom == body)
+    -- (rounded corners all round: the zone bar's background follows them - BarFill)
+    SliceLayout(pieces, k, true, true)
 end
 
 -- OpenMap's own border: see-through while ours is on
@@ -210,22 +208,66 @@ end
 -- the zone bar's background stretched out under the rim on every side it touches: OpenMap draws the bar
 -- inside its own gold frame's band (narrower than the map) and the rim's shading is see-through - both showed
 -- the world between the rim and the bar (a player's screenshot). Back on the bar when ours is off.
+-- The rim's corners are rounded (2.15: by the bar too - a player's ask): a background reaching the rim's lines there
+-- showed its square corners past the curve. So it's three pieces: the middle, between the rounded corners, the whole
+-- height; and a piece on each side under the corner, below its curve (styled as the bar: HeadFill).
+local barSides = {}
+local function BarSide(b, tex, i)
+    if not barSides[i] then
+        local layer, sub = tex:GetDrawLayer()
+        barSides[i] = b:CreateTexture(nil, layer or "BACKGROUND", nil, sub)
+        HeadFill(barSides[i])
+    end
+    return barSides[i]
+end
+
 local function BarFill(on)
     local b = FindBar()
     local tex = b and b.texture
     if not (tex and tex.ClearAllPoints) then return end
     tex:ClearAllPoints()
+    for _, side in pairs(barSides) do side:Hide() end
     local bl, bt, bb = body:GetLeft(), body:GetTop(), body:GetBottom()
     local t, btm = b:GetTop(), b:GetBottom()
     if not (on and bl and bt and bb and t and btm) then tex:SetAllPoints(b) return end
     local o = (DB and DB.outset) or RIM * Scale()
     local left, right = -o * LEFT_SHARE + o * LINE_IN, o * LINE_OUT
-    if t > bt then -- (above the map: up to the rim's top line)
-        tex:SetPoint("TOPLEFT", body, "TOPLEFT", left, t - bt + o * LEFT_SHARE - o * LINE_IN)
-        tex:SetPoint("BOTTOMRIGHT", body, "TOPRIGHT", right, btm - bt)
-    else           -- (under it: down to the rim's bottom line)
-        tex:SetPoint("TOPLEFT", body, "BOTTOMLEFT", left, t - bb)
-        tex:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", right, btm - bb - o * LINE_OUT)
+    local k = BUTTON * CUT * Scale()                 -- (the rim's corner)
+    local inL, inR = -o * LEFT_SHARE + k, o - k      -- (the middle: from the left corner's end to the right one's)
+    local above = t > bt
+    local outer, inner -- (the background's edge at the rim's line, and at the map; offsets from the map's edge)
+    if above then outer, inner = t - bt + o * LEFT_SHARE - o * LINE_IN, btm - bt
+    else outer, inner = btm - bb - o * LINE_OUT, t - bb end
+    local edgeY = above and "TOP" or "BOTTOM"
+    if above then
+        tex:SetPoint("TOPLEFT", body, "TOPLEFT", inL, outer)
+        tex:SetPoint("BOTTOMRIGHT", body, "TOPRIGHT", inR, inner)
+    else
+        tex:SetPoint("TOPLEFT", body, "BOTTOMLEFT", inL, inner)
+        tex:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", inR, outer)
+    end
+    -- under the corners, past their curve: the part of the bar further from the rim's line than the corner reaches
+    local cornerEnd = above and (outer - k) or (outer + k)
+    local room = above and (cornerEnd - inner) or (inner - cornerEnd)
+    if room > 0.5 then
+        for i, x in ipairs({ { left, inL }, { inR, right } }) do
+            local s = BarSide(b, tex, i)
+            s:ClearAllPoints()
+            if above then
+                s:SetPoint("TOPLEFT", body, edgeY .. "LEFT", x[1], cornerEnd)
+                s:SetPoint("BOTTOMRIGHT", body, edgeY .. "LEFT", x[2], inner)
+            else
+                s:SetPoint("TOPLEFT", body, edgeY .. "LEFT", x[1], inner)
+                s:SetPoint("BOTTOMRIGHT", body, edgeY .. "LEFT", x[2], cornerEnd)
+            end
+            -- (the right one's x are from the map's right edge)
+            if i == 2 then
+                s:ClearAllPoints()
+                s:SetPoint(above and "TOPLEFT" or "BOTTOMLEFT", body, edgeY .. "RIGHT", x[1], above and cornerEnd or cornerEnd)
+                s:SetPoint(above and "BOTTOMRIGHT" or "TOPRIGHT", body, edgeY .. "RIGHT", x[2], inner)
+            end
+            s:Show()
+        end
     end
 end
 
@@ -297,6 +339,61 @@ MasterOptions_MinimapBorder = {
 ---------------------------------------------------------------------------
 local tab
 
+-- Clear of the minimap's buttons: OpenMap_MiniMap lays other addons' buttons round the map's edge (its slots are its
+-- own - nothing outside it can take some away), and one where the tab sits covered it or sat under it. So the tab
+-- moves instead: along its edge, the least it can, to the first place no button overlaps - within the frame's
+-- corners. No such place: where it was asked to be.
+local placed -- { point, anchor, relPoint, x, y }: where PlaceCoords put it, before moving it clear
+local function Rect(r)
+    local l, rr, b, t = r:GetLeft(), r:GetRight(), r:GetBottom(), r:GetTop()
+    if not (l and rr and b and t) then return nil end
+    local e = r:GetEffectiveScale() or 1
+    return l * e, rr * e, b * e, t * e
+end
+local function MinimapButtons()
+    local out = {}
+    for _, c in ipairs({ Minimap:GetChildren() }) do
+        if c ~= tab and c ~= frame and c:IsShown() and c.IsObjectType and c:IsObjectType("Button") then
+            local l, r, b, t = Rect(c)
+            if l and (r - l) > 8 and (r - l) < 60 then out[#out + 1] = { l, r, b, t } end
+        end
+    end
+    return out
+end
+local function ClearOfButtons()
+    if not (placed and tab and tab:IsShown()) then return end
+    tab:ClearAllPoints()
+    tab:SetPoint(placed[1], placed[2], placed[3], placed[4], placed[5])
+    local L, R, B, T = Rect(tab)
+    if not L then return end
+    local hits = {}
+    for _, btn in ipairs(MinimapButtons()) do
+        if btn[3] < T - 1 and btn[4] > B + 1 then hits[#hits + 1] = btn end -- (level with the tab)
+    end
+    local function Free(dx)
+        for _, btn in ipairs(hits) do
+            if btn[1] < R + dx - 1 and btn[2] > L + dx + 1 then return false end
+        end
+        return true
+    end
+    if Free(0) then return end
+    -- the room along the edge: within the frame (the map without it), clear of its rounded corners
+    local ring = frame and frame:IsShown()
+    local fl, fr = Rect(ring and frame or body)
+    if not fl then return end
+    local inset = ring and BUTTON * CUT * Scale() * (frame:GetEffectiveScale() or 1) or 0
+    local best
+    for _, btn in ipairs(hits) do
+        for _, dx in ipairs({ btn[1] - 2 - R, btn[2] + 2 - L }) do
+            if L + dx >= fl + inset - 0.5 and R + dx <= fr - inset + 0.5 and Free(dx)
+                and (not best or math.abs(dx) < math.abs(best)) then best = dx end
+        end
+    end
+    if not best then return end
+    tab:ClearAllPoints()
+    tab:SetPoint(placed[1], placed[2], placed[3], placed[4] + best / (tab:GetEffectiveScale() or 1), placed[5])
+end
+
 local function Coords()
     local c = MinimapCluster and MinimapCluster.MinimapContainer and MinimapCluster.MinimapContainer.PlayerCoords
     return type(c) == "table" and c.SetAlpha and c or nil
@@ -327,13 +424,16 @@ local function TabBuild()
     tab.bg = tab:CreateTexture(nil, "BACKGROUND")
     HeadFill(tab.bg) -- (as the zone bar)
     tab.text = tab:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    local wait, shown = 0, nil
+    local wait, shown, look = 0, nil, 0
     tab:SetScript("OnUpdate", function(self, elapsed)
         wait = wait - elapsed
         if wait > 0 then return end
         wait = 0.2
         local xy = PlayerXY()
         if xy ~= shown then shown = xy; self.text:SetText(xy) end -- (standing still: nothing redrawn)
+        -- (OpenMap_MiniMap lays its buttons out again as addons add or move theirs: looked at once a second)
+        look = look + 1
+        if look >= 5 then look = 0; Check("keeping the coordinates clear of buttons", pcall(ClearOfButtons)) end
     end)
     return tab
 end
@@ -397,22 +497,25 @@ PlaceCoords = function()
     tab:ClearAllPoints()
     tab.text:ClearAllPoints()
     if side == "bottom" then
-        tab:SetPoint("TOP" .. point, bottom, "BOTTOM" .. point, x, tuck)
+        placed = { "TOP" .. point, bottom, "BOTTOM" .. point, x, tuck }
         tab.text:SetPoint("CENTER", 0, -tuck / 2)
     else
-        tab:SetPoint("BOTTOM" .. point, top, "TOP" .. point, x, -tuck)
+        placed = { "BOTTOM" .. point, top, "TOP" .. point, x, -tuck }
         tab.text:SetPoint("CENTER", 0, tuck / 2)
     end
+    tab:SetPoint(placed[1], placed[2], placed[3], placed[4], placed[5])
     local inner = RIM * s * 0.5
     tab.bg:ClearAllPoints()
     -- (to the rim's lines: theirs at the outer edge on the left and top, further in on the right and bottom -
     -- inset evenly, the top and left showed the world under the line's shading)
     tab.bg:SetPoint("TOPLEFT", inner * 0.3, -inner * 0.3)
     tab.bg:SetPoint("BOTTOMRIGHT", -inner, inner)
-    if tab.pieces then SliceLayout(tab.pieces, k) end
+    -- (rounded on its outer side; square where it's tucked under the frame's rim)
+    if tab.pieces then SliceLayout(tab.pieces, k, side ~= "bottom", side == "bottom") end
     tab:SetFrameStrata(ring and frame:GetFrameStrata() or edge:GetFrameStrata())
     tab:SetFrameLevel(math.max(0, (ring and frame:GetFrameLevel() or edge:GetFrameLevel() + 1) - 1))
     tab:Show()
+    ClearOfButtons()
 end
 
 local coordsHooked = false

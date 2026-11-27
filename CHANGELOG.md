@@ -19,9 +19,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ### Fixed
 
-- The minimap border's corners away from the zone bar (the bottom two, with the bar on top) showed a notch: the
-  border's edges crossed there, and their lines don't meet. They're the border's own rounded corners now. By the
-  zone bar the corners stay square.
+- **Minimap border corners:** they showed a notch, because the border's edges crossed there and their lines don't
+  meet. All four are now the border's own rounded corners, and the zone bar's background follows the curve. The
+  coordinates plate is rounded on its outer side too.
+- **The coordinates plate no longer sits on a minimap button.** OpenMap_MiniMap places other addons' buttons round
+  the map's edge. Where one is in the plate's way, the plate moves along its edge to the nearest free place, within
+  the border's corners. With no free place it stays where you chose.
 - A bag slot with the junk coin no longer also shows Mastercraft's advice icon, whatever the advice: the coin already
   says it goes at the next vendor. Before, only VENDOR's icon stepped aside, so the DISENCHANT pieces sold under
   the rule above showed two icons.
