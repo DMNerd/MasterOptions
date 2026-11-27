@@ -421,3 +421,15 @@ BetterBlizzPlates|config-key|avoidCVarPickup|Problems.lua (corpse enemy plates: 
 BetterBlizzPlates|config-key|nameplateToggles_|Problems.lua (its nameplate toggle sets: enemy plates off somewhere)
 Questie|function|GetQuestLinkStringById|Questie_Chattynator.lua (a quest link rebuilt on shift-click)
 Chattynator|function|GetHyperlinkHandler|Questie_Chattynator.lua (its chat's link clicks)
+
+# --- added in 2.19.0 (Questie_OpenMapTownsfolk: the two townsfolk menus in step, each icon drawn once)
+Questie|method|function QuestieMap:DrawManualIcon(|Questie_OpenMapTownsfolk.lua
+Questie|field|QuestieMap.manualFrames[typ][data.id]|Questie_OpenMapTownsfolk.lua
+Questie|field|icon.miniMapIcon = false|Questie_OpenMapTownsfolk.lua
+Questie|function|function _QuestieFrame.FakeHide(|Questie_OpenMapTownsfolk.lua
+Questie|function|function _QuestieFrame.FakeShow(|Questie_OpenMapTownsfolk.lua
+Questie|config-key|"Class Trainer"|Questie_OpenMapTownsfolk.lua
+Questie|config-key|"Spirit Healer"|Questie_OpenMapTownsfolk.lua
+OpenMap|config-key|key = "classTrainer"|Questie_OpenMapTownsfolk.lua
+OpenMap|config-key|key = "spirit"|Questie_OpenMapTownsfolk.lua
+OpenMap|function|function API.IsStitched|Questie_OpenMapTownsfolk.lua

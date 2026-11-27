@@ -218,6 +218,20 @@ lua.execute('QTOWN.Banker = false; QTOWN.Mailbox = true; Row("Town NPC icons").s
 res["Town NPC icons -> OpenMap + game's tracking: OpenMap's mailbox on the world map, the game's on the minimap, Questie's off"] = E(
     'OMTOWN.mailbox == true and TRACK[3].active == true and QTOWN.Mailbox == false and Row("Town NPC icons").get() == "OpenMap + game\'s tracking"')
 res["Town NPC icons: flight masters left to their own row"] = E('QTOWN["Flight Master"] == true')
+# Questie + OpenMap, synced: what's on anywhere on in both menus, the game's tracking off, the sync module told
+lua.execute(r'''
+  SYNC_CHANGED = 0
+  MasterOptions_TownSync = { Changed = function() SYNC_CHANGED = SYNC_CHANGED + 1 end }
+  TRACK[2].active = true
+  Row("Town NPC icons").set("Questie + OpenMap, synced")
+''')
+res["Town NPC icons -> synced: the kinds on anywhere (mailbox, banker) on in Questie's and OpenMap's menus, the game's tracking off"] = E(
+    'QTOWN.Mailbox == true and OMTOWN.mailbox == true and QTOWN.Banker == true and OMTOWN.banker == true and TRACK[2].active == false and TRACK[3].active == false')
+res["Town NPC icons -> synced: remembered for this character, the sync module told, shown as synced (no conflict)"] = E(
+    'SYNC_CHANGED == 1 and Row("Town NPC icons").get() == "Questie + OpenMap, synced"')
+lua.execute('Row("Town NPC icons").set("Questie")')
+res["Town NPC icons -> Questie again: sync off (told), OpenMap's copies off"] = E(
+    'SYNC_CHANGED == 2 and OMTOWN.mailbox == false and QTOWN.Mailbox == true and Row("Town NPC icons").get() == "Questie"')
 res["World map coordinates: both on = conflict"] = E('Row("World map coordinates").get() == "Both (conflict)"')
 lua.execute('Row("World map coordinates").set("OpenMap")')
 res["World map coordinates -> OpenMap: Questie's off"] = E('Questie.db.profile.mapCoordinatesEnabled == false and Row("World map coordinates").get() == "OpenMap"')

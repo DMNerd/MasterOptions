@@ -301,11 +301,34 @@ local function TownKinds()
     for _, k in ipairs(TOWN) do if not (k == "Flight Master" and FlightOwnRow()) then out[#out + 1] = k end end
     return out
 end
+-- "Questie + OpenMap, synced" (the Questie_OpenMapTownsfolk module): both menus ticked together, OpenMap's icons on
+-- the world map and Questie's on the minimap. Per character (MasterOptionsDB.townSync[character])
+local TOWN_SYNCED = "Questie + OpenMap, synced"
+local function TownSyncOn()
+    local t = MasterOptionsDB and MasterOptionsDB.townSync
+    return type(t) == "table" and t[MasterOptions_Shared.CharacterKey()] == true
+end
+local function SetTownSync(on)
+    MasterOptionsDB = MasterOptionsDB or {}
+    MasterOptionsDB.townSync = type(MasterOptionsDB.townSync) == "table" and MasterOptionsDB.townSync or {}
+    local key = MasterOptions_Shared.CharacterKey()
+    local was = MasterOptionsDB.townSync[key] == true
+    MasterOptionsDB.townSync[key] = on or nil
+    local m = _G.MasterOptions_TownSync
+    if was ~= (on and true or false) and m and m.Changed then pcall(m.Changed) end
+end
+
 -- Questie (world map and minimap), the game's tracking (minimap only), or OpenMap on the world map with the game's
--- tracking on the minimap (a kind OpenMap doesn't draw: the game's tracking alone)
+-- tracking on the minimap (a kind OpenMap doesn't draw: the game's tracking alone), or Questie and OpenMap synced
 local function TownGet()
     local t, q = TownTracking(), QuestieTown()
     if not q then return "Questie" end
+    if TownSyncOn() and Loaded("OpenMap") then
+        for _, k in ipairs(TownKinds()) do
+            if t[k] and t[k].active and q[k] == true then return "Both (conflict)" end
+        end
+        return TOWN_SYNCED
+    end
     local o = OpenMapTown() or {}
     local game, questie, openmap = false, false, false
     for _, k in ipairs(TownKinds()) do
@@ -329,11 +352,18 @@ local function TownSet(v)
     local function Track(g, on)
         if g and g.active ~= on and setTracking then pcall(setTracking, g.index, on) end
     end
+    local synced = v == TOWN_SYNCED and o ~= nil
     for _, k in ipairs(TownKinds()) do
         local g = t[k]
         local ok = o and TOWN_OPENMAP[k]
         local on = (g and g.active) or q[k] == true or (ok and o[ok] == true)
-        if v == "Questie" then
+        if v == TOWN_SYNCED then
+            -- (both menus: what's on anywhere on in both - the module holds Questie's world map icons back; the
+            -- game's tracking off, Questie's minimap icons are there)
+            if on then q[k] = true end
+            Track(g, false)
+            if ok and on and o[ok] ~= true then o[ok] = true; omChanged = true end
+        elseif v == "Questie" then
             if on then q[k] = true end
             Track(g, false)
             -- (Questie's own world map icons: OpenMap's of the same kind off, else each shows twice there)
@@ -349,6 +379,7 @@ local function TownSet(v)
     end
     if omChanged and omMod and omMod.RefreshTownsfolk then pcall(omMod.RefreshTownsfolk, omMod) end
     QuestieTownRefresh()
+    SetTownSync(synced) -- (after both have what's on: the module starts in step from there)
 end
 
 -- OpenMap_MiniMap: the profile in use - this character's own (OpenMap keys it on the first name), or the shared one

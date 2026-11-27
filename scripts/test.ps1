@@ -47,6 +47,7 @@ $tests = @(
     @("Mastercraft_FishingView",     "test_fish.py",   @((F "MasterOptions_Mastercraft_FishingView"))),
     @("Mastercraft_Chattynator",     "test_played.py", @((F "MasterOptions_Mastercraft_Chattynator"))),
     @("Questie_Chattynator (re-linked quest links)", "test_questiechatty.py", @((F "MasterOptions_Questie_Chattynator"))),
+    @("Questie_OpenMapTownsfolk (menus in step)", "test_townsync.py", @((F "MasterOptions_Questie_OpenMapTownsfolk"))),
     @("Chat_AddonWhispers (not-online lines)", "test_addonwhispers.py", @((F "MasterOptions_Chat_AddonWhispers")))
 )
 
