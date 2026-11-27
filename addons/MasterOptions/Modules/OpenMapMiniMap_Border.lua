@@ -124,16 +124,33 @@ local function Slice(parent, name)
 end
 
 -- the pieces in a holder, corners k across
--- Square corners: the atlas's rounded corners are left out and its four edges run the whole length, crossing
--- at the corners. Rounded, the corners let the zone bar's square ends show past them (a player's screenshot:
--- "make the border square").
-local function SliceLayout(p, k)
+-- By the zone bar, square corners: the atlas's rounded corners left out and its edges running the whole length,
+-- crossing there - rounded, the corners let the bar's square ends show past them (a player's screenshot: "make the
+-- border square"). Away from it, the atlas's own rounded corners: crossed there, the edges' lines don't meet (the
+-- atlas's line is at the outer edge on the left and further in at the bottom) - a notch at each corner (a player's
+-- screenshot of the bottom corners).
+local function SliceLayout(p, k, roundTop, roundBottom)
     for _, tex in pairs(p) do tex:ClearAllPoints() end
-    for _, c in ipairs({ 11, 13, 31, 33 }) do p[c]:Hide() end
-    p[12]:SetPoint("TOPLEFT") p[12]:SetPoint("TOPRIGHT") p[12]:SetHeight(k)
-    p[32]:SetPoint("BOTTOMLEFT") p[32]:SetPoint("BOTTOMRIGHT") p[32]:SetHeight(k)
-    p[21]:SetPoint("TOPLEFT") p[21]:SetPoint("BOTTOMLEFT") p[21]:SetWidth(k)
-    p[23]:SetPoint("TOPRIGHT") p[23]:SetPoint("BOTTOMRIGHT") p[23]:SetWidth(k)
+    p[11]:SetShown(roundTop) p[13]:SetShown(roundTop) p[31]:SetShown(roundBottom) p[33]:SetShown(roundBottom)
+    if roundTop then
+        p[11]:SetPoint("TOPLEFT") p[11]:SetSize(k, k)
+        p[13]:SetPoint("TOPRIGHT") p[13]:SetSize(k, k)
+        p[12]:SetPoint("TOPLEFT", p[11], "TOPRIGHT") p[12]:SetPoint("TOPRIGHT", p[13], "TOPLEFT")
+    else
+        p[12]:SetPoint("TOPLEFT") p[12]:SetPoint("TOPRIGHT")
+    end
+    p[12]:SetHeight(k)
+    if roundBottom then
+        p[31]:SetPoint("BOTTOMLEFT") p[31]:SetSize(k, k)
+        p[33]:SetPoint("BOTTOMRIGHT") p[33]:SetSize(k, k)
+        p[32]:SetPoint("BOTTOMLEFT", p[31], "BOTTOMRIGHT") p[32]:SetPoint("BOTTOMRIGHT", p[33], "BOTTOMLEFT")
+    else
+        p[32]:SetPoint("BOTTOMLEFT") p[32]:SetPoint("BOTTOMRIGHT")
+    end
+    p[32]:SetHeight(k)
+    -- the sides: between the corners where rounded, the whole height where square
+    p[21]:SetPoint("TOPLEFT", 0, roundTop and -k or 0) p[21]:SetPoint("BOTTOMLEFT", 0, roundBottom and k or 0) p[21]:SetWidth(k)
+    p[23]:SetPoint("TOPRIGHT", 0, roundTop and -k or 0) p[23]:SetPoint("BOTTOMRIGHT", 0, roundBottom and k or 0) p[23]:SetWidth(k)
 end
 
 local function Build()
@@ -160,7 +177,8 @@ local function Layout(top, bottom)
     frame:ClearAllPoints()
     frame:SetPoint("TOPLEFT", body, "TOPLEFT", -o * LEFT_SHARE, o * LEFT_SHARE + math.max(0, up))
     frame:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", o, -o - math.max(0, down))
-    SliceLayout(pieces, k)
+    -- (square by the zone bar - above the map, or under it - rounded at the other end)
+    SliceLayout(pieces, k, top == body, bottom == body)
 end
 
 -- OpenMap's own border: see-through while ours is on
