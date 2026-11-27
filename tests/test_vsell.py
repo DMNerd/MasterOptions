@@ -174,15 +174,25 @@ print("== Baganator advice icons")
 L(r'''
   local w = CORNER.masteroptions_mc_advice
   TEX = {}
+  -- (an icon as MasterOptions_Shared.CornerIcon makes it: a frame with .tex, on an item button whose cooldown sweep
+  -- is a frame two levels above it)
+  local function NewIcon()
+    local button = { level = 5, GetFrameLevel = function(s) return s.level end, Cooldown = { GetFrameLevel = function() return 7 end } }
+    local icon = { level = 5, button = button, tex = { SetTexture = function(s, p) s.p = p end } }
+    function icon:GetFrameLevel() return self.level end
+    function icon:SetFrameLevel(l) self.level = l end
+    return icon
+  end
   local function Icon(id)
-    local t = { SetTexture = function(self, p) self.p = p end }
-    local shown = w.onUpdate(t, { itemID = id })
-    return shown and t.p or "none"
+    local icon = NewIcon()
+    local shown = w.onUpdate(icon, { itemID = id })
+    if shown then LAST_LEVEL = icon.level end
+    return shown and icon.tex.p or "none"
   end
   POS = w.pos.corner .. ":" .. w.pos.priority
   I_LINEN, I_THREAD, I_SILK, I_POLE, I_GREY = Icon(2589), Icon(2320), Icon(4306), Icon(6256), Icon(3300)
-  I_LINEN_COIN = w.onUpdate({ SetTexture = function() end }, { itemID = 2589, isJunk = true })
-  I_POLE_COIN = w.onUpdate({ SetTexture = function() end }, { itemID = 6256, isJunk = true })
+  I_LINEN_COIN = w.onUpdate(NewIcon(), { itemID = 2589, isJunk = true })
+  I_POLE_COIN = w.onUpdate(NewIcon(), { itemID = 6256, isJunk = true })
 ''')
 check("advice icon registered top right, after lock and skull", E("POS") == "top_right:3")
 check("linen: vendor icon", "VendorGossipIcon" in E("I_LINEN"))
@@ -190,6 +200,7 @@ check("thread (keep some for a guide): keep tick", "ReadyCheck-Ready" in E("I_TH
 check("silk: auction icon", "Auctioneer" in E("I_SILK"))
 check("pole: keep tick", "ReadyCheck-Ready" in E("I_POLE"))
 check("grey (no advice): no icon", E("I_GREY") == "none")
+check("the icon above the item's cooldown sweep (it covered a texture on the button)", E("LAST_LEVEL") > 7)
 check("VENDOR with the junk coin already: no second icon", E("I_LINEN_COIN") is False)
 check("any advice next to a junk coin (DISENCHANT sold too): no second icon", E("I_POLE_COIN") is False)
 L('ACTIVE = false; Baganator.API.IsCornerWidgetActive = function(id) return ACTIVE and id == "masteroptions_mc_advice" end; '

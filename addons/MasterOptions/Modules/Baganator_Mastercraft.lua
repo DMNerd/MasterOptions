@@ -48,7 +48,7 @@ local ICONS = {
 local WIDGET = "masteroptions_mc_advice"
 if api.RegisterCornerWidget then
     local ok, err = pcall(api.RegisterCornerWidget, "Mastercraft advice (Master Options)", WIDGET,
-        function(tex, details)
+        function(icon, details)
             local id = type(details) == "table" and details.itemID
             local advice = id and Advice(id)
             local path = advice and ICONS[advice]
@@ -56,14 +56,11 @@ if api.RegisterCornerWidget then
             -- the junk coin (and grey) already says it goes at the next vendor: no second icon for it, whatever the
             -- advice (VENDOR; DISENCHANT on a soulbound piece you can't disenchant, sold too)
             if details.isJunk == true then return false end
-            tex:SetTexture(path)
+            icon.tex:SetTexture(path)
+            S.RaiseCornerIcon(icon) -- (above the item's cooldown sweep)
             return true
         end,
-        function(button)
-            local t = button:CreateTexture(nil, "OVERLAY")
-            t:SetSize(14, 14)
-            return t
-        end, { corner = "top_right", priority = 3 })
+        function(button) return S.CornerIcon(button, 14) end, { corner = "top_right", priority = 3 })
     if not ok then Check("adding the advice icons to Baganator", false, err) end
 end
 

@@ -49,6 +49,26 @@ function S.MastercraftSettings()
     return type(db) == "table" and type(db.settings) == "table" and db.settings or nil
 end
 
+-- Baganator corner icons of ours: a texture in a frame of its own, kept above the item's cooldown sweep (a frame
+-- over the button: a texture on the button itself went under it - a lock on a Hearthstone on cooldown didn't show).
+-- CornerIcon(button, size) for a widget's onInit; RaiseCornerIcon(icon) in its onUpdate (Baganator hides, shows and
+-- re-parents a corner's frame as it lays it out, which can drop it back to the button's level).
+function S.CornerIcon(button, size)
+    local f = CreateFrame("Frame", nil, button)
+    f:SetSize(size, size)
+    f.tex = f:CreateTexture(nil, "OVERLAY")
+    f.tex:SetAllPoints()
+    f.button = button
+    return f
+end
+function S.RaiseCornerIcon(f)
+    local b = type(f) == "table" and f.button
+    if not (b and b.GetFrameLevel and f.SetFrameLevel) then return end
+    local cd = b.Cooldown
+    local level = math.max(b:GetFrameLevel() or 0, cd and cd.GetFrameLevel and cd:GetFrameLevel() or 0)
+    if (f:GetFrameLevel() or 0) <= level then f:SetFrameLevel(level + 2) end
+end
+
 -- Baganator: redraw its item buttons (junk coins, corner icons). One for every caller, a moment after the first
 -- ask, so several changes at once redraw once.
 local bagRefreshPending = false

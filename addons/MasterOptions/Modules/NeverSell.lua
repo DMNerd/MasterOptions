@@ -297,15 +297,16 @@ local LOCK_TEXTURE = "Interface\\Buttons\\LockButton-Locked-Up"
 local bagAPI = _G.Baganator and _G.Baganator.API
 if bagAPI and bagAPI.RegisterCornerWidget then
     local ok, err = pcall(bagAPI.RegisterCornerWidget, "Never sell (Master Options)", "masteroptions_never_sell",
-        function(_, details)
+        function(icon, details)
             local id = type(details) == "table" and details.itemID
-            return id ~= nil and API.Has(id)
+            if not (id ~= nil and API.Has(id)) then return false end
+            MasterOptions_Shared.RaiseCornerIcon(icon) -- (above the item's cooldown sweep)
+            return true
         end,
         function(button)
-            local t = button:CreateTexture(nil, "OVERLAY")
-            t:SetTexture(LOCK_TEXTURE)
-            t:SetSize(16, 16)
-            return t
+            local icon = MasterOptions_Shared.CornerIcon(button, 16)
+            icon.tex:SetTexture(LOCK_TEXTURE)
+            return icon
         end, { corner = "top_right", priority = 1 })
     if not ok then Report("adding the lock icon to Baganator", err) end
 end

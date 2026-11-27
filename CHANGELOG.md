@@ -17,6 +17,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
   during a fight at a corpse could leave enemy plates on for good. Problems now flags it, only when BetterBlizzPlates
   keeps enemy plates off somewhere, and "Turn off" switches Sparkles' option off.
 
+### Fixed
+
+- The never-sell lock and Mastercraft's advice icons in Baganator's bags didn't show on items with a cooldown running
+  (a Hearthstone, a potion): the cooldown sweep covered them. They're drawn above it now.
+
 ### Changed
 
 - **Journey goal visible on OpenMap's minimap** stands aside with OpenMap_MiniMap 1.4.0 and newer, which keeps
