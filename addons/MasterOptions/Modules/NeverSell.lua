@@ -131,11 +131,38 @@ local function SeenKey(src) return src.perChar and (src.key .. ":" .. CharKey())
 ---------------------------------------------------------------------------
 local function Copy(t) local o = {} for k in pairs(t) do o[k] = true end return o end
 
+-- An item put on (or taken off) in one addon's list, gone to the others too: said in chat, so you know it's the same
+-- everywhere. (Not for a list seen for the first time - a new character's - nor for /mo never, which says it itself.)
+local function And(names)
+    if #names == 1 then return names[1] end
+    return table.concat(names, ", ", 1, #names - 1) .. " and " .. names[#names]
+end
+local function Tell(changes)
+    local ids = {}
+    for id in pairs(changes) do ids[#ids + 1] = id end
+    if #ids == 0 then return end
+    table.sort(ids)
+    local head = "|cffffd200Master Options:|r "
+    if #ids > 3 then
+        print(head .. ("%d items changed on the never-sell list - %s have the same list now."):format(#ids,
+            And(changes[ids[1]].to)))
+        return
+    end
+    for _, id in ipairs(ids) do
+        local c = changes[id]
+        local info = MasterOptions_Shared.GetItemInfo
+        local link = info and select(2, info(id)) -- (an item not seen this session yet: its ID)
+        print(head .. ("%s %s the never-sell list in %s - also %s %s."):format(link or ("item " .. id),
+            c.on and "put on" or "taken off", c.from, c.on and "in" or "from", And(c.to)))
+    end
+end
+
 local function Sync()
     local master, seen = DB()
     local live = {}
     -- 1. what changed in each list since the last sync -> into the master list
     local added, removed = {}, {}
+    local changedIn = {} -- [id] = the addon whose list it changed in (lists seen before only: a real change of yours)
     for _, src in ipairs(SOURCES) do
         local h = src.get()
         if h then
@@ -149,11 +176,17 @@ local function Sync()
             end
             live[#live + 1] = { src = src, h = h, now = now }
             for id in pairs(now) do
-                if not (was and was[id]) then added[id] = true end
+                if not (was and was[id]) then
+                    added[id] = true
+                    if was and not master[id] then changedIn[id] = src.name end
+                end
             end
             if was then
                 for id in pairs(was) do
-                    if not now[id] then removed[id] = true end
+                    if not now[id] then
+                        removed[id] = true
+                        if master[id] then changedIn[id] = src.name end
+                    end
                 end
             end
         end
@@ -161,17 +194,25 @@ local function Sync()
     for id in pairs(removed) do if not added[id] then master[id] = nil end end -- (added somewhere and removed elsewhere at once: kept)
     for id in pairs(added) do master[id] = true end
     -- 2. the master list -> every list
+    local changes = {} -- [id] = { on, from, to = { the addons it went to } }
+    local function Went(id, name)
+        local from = changedIn[id]
+        if not from or from == name then return end
+        changes[id] = changes[id] or { on = master[id] == true, from = from, to = {} }
+        table.insert(changes[id].to, name)
+    end
     for _, l in ipairs(live) do
         local changed = false
         for id in pairs(master) do
-            if not l.now[id] then l.src.add(l.h, id); changed = true end
+            if not l.now[id] then l.src.add(l.h, id); changed = true; Went(id, l.src.name) end
         end
         for id in pairs(l.now) do
-            if not master[id] then l.src.remove(l.h, id); changed = true end
+            if not master[id] then l.src.remove(l.h, id); changed = true; Went(id, l.src.name) end
         end
         seen[SeenKey(l.src)] = Copy(master)
         if changed and l.src.after then pcall(l.src.after) end
     end
+    Tell(changes)
 end
 
 local API = {}

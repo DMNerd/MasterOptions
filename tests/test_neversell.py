@@ -41,19 +41,30 @@ lua.execute('CORNER, BAGREFRESH = {}, 0; Baganator = { API = { RegisterCornerWid
 lua.eval("function(s) return load(s, '=p') end")(src)("MasterOptions_NeverSell")
 L, E = lua.execute, lua.eval
 res = {}
+L('SAID = {}; function print(...) SAID[#SAID + 1] = table.concat({ ... }, " ") end')
+def said(): s = "\n".join(lua.eval("SAID").values()); lua.execute("SAID = {}"); return s
 L('Login("Testchar Alpha")')
+res["first sync (lists seen for the first time): nothing said"] = said() == ""
 res["first sync: union of your entries, everywhere"] = E("Everywhere(101) and Everywhere(201) and Everywhere(301)")
 res["Keep's and Protect's automatic entries not taken in"] = E("MasterOptionsDB.neverSell[102] == nil and MasterOptionsDB.neverSell[302] == nil and not MastercraftDB.settings.lootNever[102] and not MastercraftDB.settings.lootNever[302]")
 res["their automatic entries left where they were"] = E("GearMaticDB.sellIgnore[102] == true and GearMaticDB.moKeep[102] == true and Has(DCI_CharDB.IgnoredItems, 302)")
 res["GearMatic's surfaces refreshed after a change"] = E("REFRESHED > 0")
 L('GearMaticDB.sellIgnore[500] = true; Tick()')
 res["added in GearMatic -> everywhere"] = E("Everywhere(500)")
+s = said()
+res["...and said: put on in GearMatic, also in the others"] = (
+    "item 500 put on the never-sell list in GearMatic - also in Mastercraft and DeleteCheapestItem" in s)
 L('MastercraftDB.settings.lootNever[201] = nil; Tick()')
 res["removed in Mastercraft -> removed everywhere"] = E("Nowhere(201) and MasterOptionsDB.neverSell[201] == nil")
+res["...and said: taken off in Mastercraft, also from the others"] = (
+    "item 201 taken off the never-sell list in Mastercraft - also from GearMatic and DeleteCheapestItem" in said())
 L('for i = #DCI_CharDB.IgnoredItems, 1, -1 do if DCI_CharDB.IgnoredItems[i] == 101 then table.remove(DCI_CharDB.IgnoredItems, i) end end; Tick()')
 res["removed in DeleteCheapestItem -> removed everywhere"] = E("Nowhere(101)")
+s = said()
+res["...and said: taken off in DeleteCheapestItem"] = "item 101 taken off the never-sell list in DeleteCheapestItem" in s
 L('MasterOptions_NeverSell.Set(600, true)')
 res["/mo never <item> -> everywhere at once"] = E("Everywhere(600)")
+res["...nothing more said for it (the command says it itself)"] = said() == ""
 L('MasterOptions_NeverSell.Set(102, true)')
 res["you add Keep's item yourself: yours now (Keep lets go of it)"] = E("Everywhere(102) and GearMaticDB.moKeep[102] == nil")
 L('MasterOptions_NeverSell.Set(600, false)')

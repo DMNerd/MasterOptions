@@ -13,6 +13,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
   whose advice is DISENCHANT is sold at the vendor when this character has no Enchanting. It can't go to an
   enchanter alt or the auction house. Upgrades, set and loadout pieces and the never-sell list still keep it, and
   `/mo vendor` lists these too.
+- **The never-sell list says when it followed you.** Put an item on (or take it off) in GearMatic's, Mastercraft's or
+  DeleteCheapestItem's own list, and Master Options says in chat that the other loaded addons have it too, for
+  example: "[item] put on the never-sell list in GearMatic - also in Mastercraft and DeleteCheapestItem."
 
 ### Fixed
 
