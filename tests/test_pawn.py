@@ -124,6 +124,8 @@ Settings = {
 function CreateSettingsListSectionHeaderInitializer(t) HEADERS[#HEADERS+1] = t; return t end
 function CreateSettingsButtonInitializer(l) BUTTONS[#BUTTONS+1] = l; return l end
 ''')
+import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
+from shared_lua import load_shared; load_shared(lua, mo_path)
 chunk = lua.eval("function(src) local f, e = load(src, '=MasterOptions.lua'); if not f then error(e) end; return f end")(open(mo_path, encoding="utf-8").read())
 chunk("MasterOptions")
 L = lua.execute
@@ -357,6 +359,41 @@ nopawn["Pawn back: its arrow back"] = "pawn" in back and "gearmatic_upgrade_corn
 print("without Pawn:", nopawn)
 if not all(nopawn.values()):
     lua.execute('ERRORS[#ERRORS+1] = "Without-Pawn checks wrong"')
+# Annoying mode (2.6.0): everything that posts in chat as you, off together and back as it was
+lua.execute(r"""
+  for _, s in ipairs(SETTINGS) do if s.name:find("Annoying mode", 1, true) == 1 then ANNOY = s end end
+  LOGIN_SAVED = MasterOptionsDB.annoyingSaved ~= nil -- (login applied the recommended "off" already)
+  MasterOptionsDB.annoyingSaved = nil
+  Questie = { db = { profile = { questAnnounceChannel = "party" } } }
+  local gp = GearMatic.db.profile
+  gp.social = { sendToGuild = true, sendToParty = false } -- (emote & co. nil: GearMatic's default, on)
+  MastercraftDB.settings.whoReply = nil
+  A_ON = ANNOY and ANNOY.get()
+  ANNOY.set(false)
+  A_OFF = ANNOY.get()
+  OFF_GM = tostring(gp.social.emote) .. tostring(gp.social.sendToGuild) .. tostring(gp.social.sendToParty) .. tostring(gp.social.vendorEmote)
+  OFF_Q, OFF_MC = Questie.db.profile.questAnnounceChannel, MastercraftDB.settings.whoReply
+  ANNOY.set(true)
+  BACK = ANNOY.get()
+  BACK_GM = tostring(gp.social.emote) .. tostring(gp.social.sendToGuild) .. tostring(gp.social.sendToParty)
+  BACK_Q, BACK_MC = Questie.db.profile.questAnnounceChannel, MastercraftDB.settings.whoReply
+  -- nothing remembered (another way of turning off): on = each addon's default, on
+  gp.social.sendToRaid = false; ANNOY.set(false); MasterOptionsDB.annoyingSaved = nil; ANNOY.set(true)
+  FRESH = tostring(gp.social.sendToRaid) .. tostring(gp.social.emote)
+  Questie = nil
+""")
+annoy = {
+    "row on the Options page, on while any posts": lua.eval("A_ON") is True,
+    "recommended off: applied at login": lua.eval("LOGIN_SAVED") is True,
+    "off: GearMatic's emotes and posts off (an already-off one too)": lua.eval("A_OFF") is False and lua.eval("OFF_GM") == "falsefalsefalsefalse",
+    "off: Questie's announcements disabled, Mastercraft's !who whispers off": lua.eval("OFF_Q") == "disabled" and lua.eval("OFF_MC") is False,
+    "on: each back as it was (default nil, guild on, party still off)": lua.eval("BACK") is True and lua.eval("BACK_GM") == "niltruefalse",
+    "on: Questie back to /party, Mastercraft to its default": lua.eval("BACK_Q") == "party" and lua.eval("BACK_MC") is None,
+    "on with nothing remembered: the addons' defaults (on)": lua.eval("FRESH") == "truetrue",
+}
+print("annoying mode:", annoy)
+if not all(annoy.values()):
+    lua.execute('ERRORS[#ERRORS+1] = "Annoying mode wrong"')
 print("synced:", lua.eval("MasterOptionsDB.syncChars"), "shared:", lua.eval("(function() local o = {} for k, v in pairs(MasterOptionsDB.shared or {}) do o[#o+1] = k .. '=' .. tostring(v) end table.sort(o) return table.concat(o, '; ') end)()"))
 errs = lua.eval("ERRORS")
 print("ERRORS:", len(errs))

@@ -17,12 +17,7 @@ MasterOptions_Module("Mastercraft_Keep", { "Mastercraft" }, function(ADDON)
 
 local DB -- MasterOptions_MastercraftKeepDB: { needed = { [itemID] = time last confirmed } }
 
--- (a caught error goes to Master Options' error log: /mo > Problems)
-local function Check(where, ok, ...)
-    local r = not ok and _G.MasterOptions_ReportError
-    if r then r(ADDON, where, ...) end
-    return ok, ...
-end
+local _, Check = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
 local function TrackerIDs()
     local out = {}
@@ -123,11 +118,7 @@ end
 
 -- Mastercraft's Settings > Modules (2.1.2): "Tooltip extras" off = no Mastercraft lines at all. Then a tooltip
 -- says nothing about the item, and reading it would forget what's needed: learn nothing until it's back on.
-local function TooltipLinesOn()
-    local s = type(_G.MastercraftDB) == "table" and _G.MastercraftDB.settings
-    local m = type(s) == "table" and s.modules
-    return not (type(m) == "table" and m.tip == false)
-end
+local function TooltipLinesOn() return MasterOptions_Shared.MastercraftModuleOn("tip") end
 
 local pending = false
 local function Learn(tooltip, data)

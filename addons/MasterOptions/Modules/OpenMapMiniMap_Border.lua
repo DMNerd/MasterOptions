@@ -23,22 +23,11 @@ local CUT = 0.30      -- the share of the atlas each corner takes (the rim and i
 local RIM = 4         -- the rim's width on a 45-unit button (UI units)
 local DB
 
-local function Check(where, ok, ...)
-    local r = not ok and _G.MasterOptions_ReportError
-    if r then r(ADDON, where, ...) end
-    return ok, ...
-end
+local _, Check = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
 local function On() return not DB or DB.on ~= false end
 
-local function OpenMapProfile()
-    local db = _G.OpenMapMiniMapDB
-    if type(db) ~= "table" then return nil end
-    local first = UnitName("player")
-    local c = first and type(db.char) == "table" and db.char[first .. "-" .. (GetRealmName() or "")]
-    if type(c) == "table" and c.own and type(c.profile) == "table" then return c.profile end
-    return type(db.profile) == "table" and db.profile or nil
-end
+local OpenMapProfile = MasterOptions_Shared.OpenMapMiniMapProfile
 local function Square()
     local p = OpenMapProfile()
     return not p or (p.shape or "square") == "square"

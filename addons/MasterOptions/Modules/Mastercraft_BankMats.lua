@@ -26,11 +26,7 @@ local slotInfo = C_Container.GetContainerItemInfo
 local numFree = C_Container.GetContainerNumFreeSlots
 local useItem = C_Container.UseContainerItem or UseContainerItem
 
-local function Check(where, ok, ...)
-    local r = not ok and _G.MasterOptions_ReportError
-    if r then r(ADDON, where, ...) end
-    return ok, ...
-end
+local _, Check = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
 local function Mode() return DB and DB.mode or "guide" end
 

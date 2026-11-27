@@ -24,10 +24,7 @@ MasterOptions_Module("CheapUpgrades_GearMatic", { "CheapUpgrades", "GearMatic" }
 
 local PROFILE = "GearMatic"
 
-local function Report(where, err)
-    local r = _G.MasterOptions_ReportError
-    if r then r(ADDON, where, err) end
-end
+local Report = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
 -- GearMatic stat -> CheapUpgrades stat, and how many rating points make 1% (nil: the same unit)
 local STAT = {

@@ -20,9 +20,7 @@ MasterOptions_Module("NeverSell", {}, function(ADDON)
 -- /mo never <item link or ID>       add          /mo never remove <item link or ID>   remove
 -- /mo never                          list
 
-local function Report(where, err)
-    if _G.MasterOptions_ReportError then MasterOptions_ReportError(ADDON, where, err) end
-end
+local Report = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
 local function Loaded(name)
     local f = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded

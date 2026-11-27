@@ -21,6 +21,8 @@ lua.execute(r'''
   function MasterOptions_ReportError() ERRS = ERRS + 1 end
   function Link(id) return "|cff|Hitem:" .. id .. "::::|h[x]|h|r" end
 ''')
+import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
+from shared_lua import load_shared; load_shared(lua, sys.argv[1])
 lua.eval("function(s) return load(s, '=p') end")(src)("MasterOptions_GearMatic_SellGuard")
 E = lua.eval
 res = {

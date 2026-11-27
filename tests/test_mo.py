@@ -107,6 +107,8 @@ loader = lua.eval("function(src, name) local f, e = load(src, '=' .. name); if n
 errlog = os.path.join(os.path.dirname(mo_path), "ErrorLog.lua")
 if os.path.exists(errlog):  # (loaded first, as the .toc does)
     loader(open(errlog, encoding="utf-8").read(), "ErrorLog.lua")("MasterOptions")
+import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
+from shared_lua import load_shared; load_shared(lua, mo_path)
 chunk = loader(open(mo_path, encoding="utf-8").read(), "MasterOptions.lua")
 chunk("MasterOptions")
 L = lua.execute

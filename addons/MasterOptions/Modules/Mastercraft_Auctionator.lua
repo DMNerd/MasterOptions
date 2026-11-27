@@ -37,11 +37,7 @@ local function FindMastercraft(ah)
 end
 
 -- Mastercraft's Settings > Modules (2.1.2): "AH prices" off = no Scan prices button (its old one stays hidden)
-local function AHPricesOn()
-    local s = type(_G.MastercraftDB) == "table" and _G.MastercraftDB.settings
-    local m = type(s) == "table" and s.modules
-    return not (type(m) == "table" and m.ah == false)
-end
+local function AHPricesOn() return MasterOptions_Shared.MastercraftModuleOn("ah") end
 
 local function Setup()
     if not AHPricesOn() then

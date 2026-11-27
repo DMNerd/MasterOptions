@@ -43,6 +43,8 @@ function list(t) local o = {} for k, v in pairs(t) do o[#o+1] = tostring(type(k)
 function arr(t) local o = {} for _, v in ipairs(t) do o[#o+1] = tostring(v) end table.sort(o) return table.concat(o, ",") end
 ''')
 load = lua.eval("function(src, name) local f, e = load(src, '=' .. name); if not f then error(e) end; return f end")
+import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
+from shared_lua import load_shared; load_shared(lua, protect_path)
 load(open(keep_path, encoding="utf-8").read(), "keep")("MasterOptions_Mastercraft_Keep")
 load(open(protect_path, encoding="utf-8").read(), "protect")("MasterOptions_DeleteCheapestItem_Protect")
 L = lua.execute

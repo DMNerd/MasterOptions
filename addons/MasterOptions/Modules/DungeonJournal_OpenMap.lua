@@ -335,11 +335,7 @@ local function DungeonMapPart()
         end
     end
 end
--- (a caught error goes to Master Options' error log: /mo > Problems)
-local function Check(where, ok, err)
-    local r = not ok and _G.MasterOptions_ReportError
-    if r then r("MasterOptions_DungeonJournal_OpenMap", where, err) end
-end
+local _, Check = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
 Check("setting up the map inside dungeons", pcall(DungeonMapPart))
 

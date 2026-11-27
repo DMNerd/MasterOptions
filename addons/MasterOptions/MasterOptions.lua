@@ -256,15 +256,8 @@ local function RestorePawn(widened)
     for _, w in ipairs(widened) do w.o.Visible = w.was end
 end
 
-local function NonEmpty(t) return type(t) == "table" and next(t) ~= nil end
-
 -- (the scales already widened)
-local function PawnKeepsOne(link)
-    local ok, item = pcall(_G.PawnGetItemData, link)
-    if not ok or type(item) ~= "table" then return false end
-    local ok2, up, _, best, second = pcall(_G.PawnIsItemAnUpgrade, item)
-    return ok2 and (NonEmpty(up) or NonEmpty(best) or NonEmpty(second)) or false
-end
+local PawnKeepsOne = MasterOptions_Shared.PawnSaysKeep
 
 function MasterOptions_PawnKeeps(link)
     if not PawnReady() then return false end
@@ -353,6 +346,80 @@ local function GMRefreshBagIcons()
     try(gm.QuestRewardHook, "RefreshVendorMarkers")
     try(gm.DisenchantWindow, "RequestRefresh")
     try(gm.Baganator, "RequestRefresh")
+end
+
+---------------------------------------------------------------------------
+-- Annoying mode: every setting with which an addon posts in chat AS YOU, for other players to see - upgrades
+-- shouted to the group or guild, public emotes, automatic whispers. Off turns them all off and remembers what
+-- each was (per character: GearMatic's and Questie's settings can be per profile); on puts that back. Lines
+-- only you see in your chat are not part of it. Found by what each addon sends (SendChatMessage / DoEmote),
+-- not by its labels; what is sent only when you ask (Details' reports, typed commands) isn't here.
+---------------------------------------------------------------------------
+local function GMSocial()
+    local s = GM()
+    if not s then return nil end
+    s.social = type(s.social) == "table" and s.social or {}
+    return s.social
+end
+local function QuestieProfile()
+    local q = Loaded("Questie") and type(_G.Questie) == "table" and _G.Questie.db and _G.Questie.db.profile
+    return type(q) == "table" and q or nil
+end
+
+-- { id, addon, what it sends, table, key, value that is "off" }; "on" = anything else (nil = the addon's default, on)
+local CHATTY = {}
+for _, k in ipairs({ { "emote", "an emote with each upgrade you equip" },
+                     { "vendorEmote", "a public emote with what auto-sell sold and repairs cost" },
+                     { "sendToParty", "your upgrades in /party" }, { "sendToRaid", "your upgrades in /raid" },
+                     { "sendToGuild", "your upgrades in /guild" }, { "sendToBattleGrounds", "your upgrades in battleground chat" } }) do
+    CHATTY[#CHATTY + 1] = { id = "gm:" .. k[1], addon = "GearMatic", what = k[2], tbl = GMSocial, key = k[1], off = false }
+end
+CHATTY[#CHATTY + 1] = { id = "questie:announce", addon = "Questie", what = "quest progress in /party or /raid",
+                        tbl = QuestieProfile, key = "questAnnounceChannel", off = "disabled" }
+CHATTY[#CHATTY + 1] = { id = "mc:whoReply", addon = "Mastercraft", what = "whispers answering !who in guild and group chat",
+                        tbl = MC, key = "whoReply", off = false }
+
+local function ChattyOn(c, t)
+    local v = t[c.key]
+    if c.off == "disabled" then return v ~= nil and v ~= "disabled" end -- (Questie's default is "disabled")
+    return v ~= false
+end
+
+local function AnnoyingSaved()
+    local first, last = UnitName("player")
+    local char = (first or "?") .. ((last and last ~= "") and (" " .. last) or "") .. "-" .. (GetRealmName() or "")
+    MasterOptionsDB.annoyingSaved = type(MasterOptionsDB.annoyingSaved) == "table" and MasterOptionsDB.annoyingSaved or {}
+    MasterOptionsDB.annoyingSaved[char] = MasterOptionsDB.annoyingSaved[char] or {}
+    return MasterOptionsDB.annoyingSaved[char]
+end
+
+-- on while any of them posts
+local function AnnoyingOn()
+    for _, c in ipairs(CHATTY) do
+        local t = Loaded(c.addon) and c.tbl()
+        if t and ChattyOn(c, t) then return true end
+    end
+    return false
+end
+
+local function SetAnnoying(on)
+    local saved = AnnoyingSaved()
+    for _, c in ipairs(CHATTY) do
+        local t = Loaded(c.addon) and c.tbl()
+        if t then
+            if not on then
+                -- every one remembered, an already-off one too (on must not turn on what you had off); a second
+                -- "off" keeps what the first remembered. (Wrapped: nil, the addon's default, is remembered too.)
+                if saved[c.id] == nil then saved[c.id] = { v = t[c.key] } end
+                t[c.key] = c.off
+            elseif saved[c.id] then
+                t[c.key] = saved[c.id].v
+                saved[c.id] = nil
+            elseif c.off == false then
+                t[c.key] = true -- (nothing remembered: the addon's default, on)
+            end
+        end
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -516,7 +583,7 @@ local function TownTracking()
     return out
 end
 local function QuestieTown()
-    local q = Loaded("Questie") and type(_G.Questie) == "table" and _G.Questie.db and _G.Questie.db.profile
+    local q = QuestieProfile()
     if not q then return nil end
     q.townsfolkConfig = type(q.townsfolkConfig) == "table" and q.townsfolkConfig or {}
     return q.townsfolkConfig
@@ -578,12 +645,7 @@ end
 
 -- OpenMap_MiniMap: the profile in use - this character's own (OpenMap keys it on the first name), or the shared one
 local function OMM()
-    local db = _G.OpenMapMiniMapDB
-    if not (Loaded("OpenMap_MiniMap") and type(db) == "table") then return nil end
-    local first = UnitName("player")
-    local c = first and type(db.char) == "table" and db.char[first .. "-" .. (GetRealmName() or "")]
-    if type(c) == "table" and c.own and type(c.profile) == "table" then return c.profile end
-    return type(db.profile) == "table" and db.profile or nil
+    return Loaded("OpenMap_MiniMap") and MasterOptions_Shared.OpenMapMiniMapProfile() or nil
 end
 
 local STYLES = {
@@ -681,10 +743,7 @@ local function mcOn(key) local s = MC(); return s ~= nil and s[key] == true end
 local function mcNotOff(key) local s = MC(); return s ~= nil and s[key] ~= false end
 -- Mastercraft's Settings > Modules (2.1.2): settings.modules[key] = false turns a whole part off ("tip": every
 -- tooltip line, "loot": the KEEP / VENDOR advice, "ah": the Scan prices button)
-local function mcModule(key)
-    local s = MC(); local m = s and s.modules
-    return s ~= nil and not (type(m) == "table" and m[key] == false)
-end
+local function mcModule(key) return MC() ~= nil and MasterOptions_Shared.MastercraftModuleOn(key) end
 local function mcModuleOn(key) local s = MC(); if s and type(s.modules) == "table" then s.modules[key] = nil end end
 -- a Mastercraft tooltip line: its own switch and Tooltip extras both on
 local function mcTip(key) return mcNotOff(key) and mcModule("tip") end
@@ -783,6 +842,40 @@ local function Multi(label, rec, since, tip, sources, offLabel)
     }
 end
 
+-- A row picking GearMatic or Mastercraft for a job both can do, each with one on/off setting (gmKey in GearMatic's
+-- profile, on unless false; mcKey in Mastercraft's settings, on only when true): both on shows the conflict.
+local function GearMaticOrMastercraftRow(opt, gmKey, mcKey)
+    opt.get = function()
+        local g, m = gmOn(gmKey) and GM(), mcOn(mcKey)
+        if g and m then return "Both (conflict)" end
+        return g and "GearMatic" or m and "Mastercraft" or "Off"
+    end
+    opt.set = function(v)
+        local g, m = GM(), MC()
+        if g then g[gmKey] = (v == "GearMatic") end
+        if m then m[mcKey] = (v == "Mastercraft") end
+    end
+    return opt
+end
+
+-- A Baganator icon row with a "Match ..." choice that follows another setting (MasterOptionsDB.iconsMatch[key]):
+-- shows the match choice while it's on, else what Baganator has (state(profile)); picking writes Baganator's
+-- profile through apply(profile, choice), the matched choice worked out by matched().
+local function MatchedIconRow(opt, key, matchLabel, none, state, apply, matched)
+    opt.get = function()
+        local p = BAG(); if not p then return none end
+        if IconsMatch()[key] then return matchLabel end
+        return state(p)
+    end
+    opt.set = function(v)
+        local p = BAG(); if not p then return end
+        MasterOptionsDB.iconsMatch = MasterOptionsDB.iconsMatch or {}
+        MasterOptionsDB.iconsMatch[key] = (v == matchLabel) or nil
+        apply(p, v == matchLabel and matched() or v)
+    end
+    return opt
+end
+
 local SeedShared -- set below: copies this character's per-character choices to the account
 local OPTIONS = {
     { header = "This account" },
@@ -798,21 +891,11 @@ local OPTIONS = {
     },
 
     { header = "Vendor and bank" },
-    {
+    GearMaticOrMastercraftRow({
         kind = "choice", label = "Sell junk automatically", rec = "GearMatic",
         tip = "GearMatic and Mastercraft both sell junk at every vendor. When both are on they sell the same items and the game can say \"item busy\".",
         choices = { "GearMatic", "Mastercraft", "Off" },
-        get = function()
-            local g, m = gmOn("autoSellJunk") and GM(), mcOn("autoJunk")
-            if g and m then return "Both (conflict)" end
-            return g and "GearMatic" or m and "Mastercraft" or "Off"
-        end,
-        set = function(v)
-            local g, m = GM(), MC()
-            if g then g.autoSellJunk = (v == "GearMatic") end
-            if m then m.autoJunk = (v == "Mastercraft") end
-        end,
-    },
+    }, "autoSellJunk", "autoJunk"),
     {
         kind = "choice", label = "Also sell what Mastercraft says to VENDOR", rec = "Goods", since = 17,
         needs = "MasterOptions_Mastercraft_VendorSell", choices = { "Goods", "Goods and gear", "Off" },
@@ -841,21 +924,11 @@ local OPTIONS = {
             MasterOptions_MastercraftBankDB.mode = (v == "Guide and tracked mats" and "tracked") or (v == "Off" and "off") or "guide"
         end,
     },
-    {
+    GearMaticOrMastercraftRow({
         kind = "choice", label = "Repair automatically", rec = "Mastercraft",
         tip = "Mastercraft repairs from the guild bank first when your rank allows it. GearMatic uses your own gold.",
         choices = { "Mastercraft", "GearMatic", "Off" },
-        get = function()
-            local g, m = gmOn("autoRepair") and GM(), mcOn("autoRepair")
-            if g and m then return "Both (conflict)" end
-            return g and "GearMatic" or m and "Mastercraft" or "Off"
-        end,
-        set = function(v)
-            local g, m = GM(), MC()
-            if g then g.autoRepair = (v == "GearMatic") end
-            if m then m.autoRepair = (v == "Mastercraft") end
-        end,
-    },
+    }, "autoRepair", "autoRepair"),
     {
         kind = "toggle", label = "Mastercraft: repair from guild bank first", rec = true,
         needs = "Mastercraft",
@@ -970,7 +1043,7 @@ local OPTIONS = {
         choices = { "BetterBlizzPlates", "Questie", "Off" },
         tip = "Questie and BetterBlizzPlates can both mark the mobs your quests need with an icon on their nameplate, so a mob gets two. BetterBlizzPlates reads the game's own quest data (Forever's own quests too, and in dungeons); Questie uses its quest database (and has no nameplate icons in Forever's dungeons).",
         get = function()
-            local q = Loaded("Questie") and type(_G.Questie) == "table" and _G.Questie.db and _G.Questie.db.profile
+            local q = QuestieProfile()
             local b = Loaded("BetterBlizzPlates") and type(_G.BetterBlizzPlatesDB) == "table" and _G.BetterBlizzPlatesDB
             local qOn = q and q.nameplateEnabled ~= false
             local bOn = b and b.questIndicator == true
@@ -978,7 +1051,7 @@ local OPTIONS = {
             return bOn and "BetterBlizzPlates" or qOn and "Questie" or "Off"
         end,
         set = function(v)
-            local q = Loaded("Questie") and type(_G.Questie) == "table" and _G.Questie.db and _G.Questie.db.profile
+            local q = QuestieProfile()
             if q then q.nameplateEnabled = (v == "Questie") end
             local b = Loaded("BetterBlizzPlates") and type(_G.BetterBlizzPlatesDB) == "table" and _G.BetterBlizzPlatesDB
             if b then b.questIndicator = (v == "BetterBlizzPlates") end
@@ -990,7 +1063,7 @@ local OPTIONS = {
         choices = { "BetterBlizzFrames", "Questie", "Off" },
         tip = "BetterBlizzFrames and Questie can both put a quest icon on the target (and focus) frame of a mob your quests need, so it gets two.",
         get = function()
-            local q = Loaded("Questie") and type(_G.Questie) == "table" and _G.Questie.db and _G.Questie.db.profile
+            local q = QuestieProfile()
             local b = Loaded("BetterBlizzFrames") and type(_G.BetterBlizzFramesDB) == "table" and _G.BetterBlizzFramesDB
             local qOn = q and q.nameplateEnabled ~= false and q.nameplateTargetFrameEnabled ~= false
             local bOn = b and b.questIndicator == true
@@ -998,7 +1071,7 @@ local OPTIONS = {
             return bOn and "BetterBlizzFrames" or qOn and "Questie" or "Off"
         end,
         set = function(v)
-            local q = Loaded("Questie") and type(_G.Questie) == "table" and _G.Questie.db and _G.Questie.db.profile
+            local q = QuestieProfile()
             if q then q.nameplateTargetFrameEnabled = (v == "Questie") end
             local b = Loaded("BetterBlizzFrames") and type(_G.BetterBlizzFramesDB) == "table" and _G.BetterBlizzFramesDB
             if b then b.questIndicator = (v == "BetterBlizzFrames") end
@@ -1162,41 +1235,19 @@ local OPTIONS = {
     },
 
     { header = "Bags (Baganator)" },
-    {
+    MatchedIconRow({
         -- (since 17: "Match stat weights" added, and recommended)
         kind = "choice", label = "Upgrade arrow in bags", rec = MATCH_ARROW, since = 17, reload = true,
         needs = "Baganator", choices = { MATCH_ARROW, "Pawn", "GearMatic", "Off" },
         tip = "Pawn's arrow and GearMatic's chevron both sit in the top-left corner of Baganator's bag slots. Match stat weights: the arrow of whoever judges upgrades under Stat weights - Pawn's while GearMatic uses Pawn's weights, GearMatic's chevron (which also marks upgrades for your alts) when it uses its own. Follows when you change that. Also sets Baganator's \"Upgrade\" plugin (its Upgrades category and search).",
-        get = function()
-            local p = BAG(); if not p then return "Off" end
-            if IconsMatch().arrow then return MATCH_ARROW end
-            return ArrowState(p)
-        end,
-        set = function(v)
-            local p = BAG(); if not p then return end
-            MasterOptionsDB.iconsMatch = MasterOptionsDB.iconsMatch or {}
-            MasterOptionsDB.iconsMatch.arrow = (v == MATCH_ARROW) or nil
-            ApplyUpgradeArrow(p, v == MATCH_ARROW and MatchedArrow() or v)
-        end,
         scope = "Baganator profile",
-    },
-    {
+    }, "arrow", MATCH_ARROW, "Off", ArrowState, ApplyUpgradeArrow, MatchedArrow),
+    MatchedIconRow({
         kind = "choice", label = "Junk coin in bags", rec = MATCH_JUNK, since = 17, reload = true,
         needs = "Baganator", choices = { MATCH_JUNK, "GearMatic", "Mastercraft", "Greys only" }, off = "Greys only",
         tip = "Which items Baganator marks with its junk coin (and sorts to the end). Match junk seller: exactly what the addon picked under Vendor > Sell junk automatically will sell - follows when you change that. GearMatic: greys, your GearMatic junk and marked items, outgrown gear and low-value items when turned on in GearMatic (needs MasterOptions_GearMatic_Baganator). Mastercraft: greys (with MasterOptions_Mastercraft_VendorSell also what Mastercraft says to VENDOR). With the VendorSell patch, VENDOR items get the coin under GearMatic too. Greys only: Baganator's own rule.",
-        get = function()
-            local p = BAG(); if not p then return "Greys only" end
-            if IconsMatch().junk then return MATCH_JUNK end
-            return JunkState(p)
-        end,
-        set = function(v)
-            local p = BAG(); if not p then return end
-            MasterOptionsDB.iconsMatch = MasterOptionsDB.iconsMatch or {}
-            MasterOptionsDB.iconsMatch.junk = (v == MATCH_JUNK) or nil
-            ApplyJunk(p, v == MATCH_JUNK and MatchedJunk() or v)
-        end,
         scope = "Baganator profile",
-    },
+    }, "junk", MATCH_JUNK, "Greys only", JunkState, ApplyJunk, MatchedJunk),
     {
         -- (GearMatic's skull is Baganator's corner widget "gearmatic_bis", top right; Baganator auto-inserts a
         -- widget once only, so taking it out sticks)
@@ -1235,6 +1286,15 @@ local OPTIONS = {
             MasterOptionsDB.bagIconSize = ICON_SCALE[v] and v or "Large"
             ApplyBagIconSize()
         end,
+    },
+
+    { header = "Chat" },
+    {
+        kind = "toggle", label = "Annoying mode", rec = false, since = 28, scope = "character",
+        needs_any = { "GearMatic", "Questie", "Mastercraft" },
+        tip = "Addons posting in chat as you, for other players to see. Off turns all of these off (and remembers how each was, so On puts it back): GearMatic's upgrade posts to /party, /raid, /guild and battlegrounds, its emotes on equipping and after selling or repairing; Questie's quest progress to your group; Mastercraft's whispers answering !who. Lines only you see in your own chat stay as they are.",
+        get = function() return AnnoyingOn() end,
+        set = function(v) SetAnnoying(v) end,
     },
 
     { header = "Quests" },
@@ -1724,7 +1784,7 @@ local function RecOf(opt)
     return opt.rec
 end
 
-local DEFAULTS_VERSION = 27
+local DEFAULTS_VERSION = 28
 local Remember -- set below
 local function ApplyRecommended(after, manual) -- after: only options added after this defaults version
     local n = 0
@@ -1794,6 +1854,11 @@ local function ApplyShared()
 end
 
 function Available(opt)
+    if type(opt.needs_any) == "table" then -- (any one of these addons is enough)
+        local any = false
+        for _, n in ipairs(opt.needs_any) do if Loaded(n) then any = true break end end
+        if not any then return false end
+    end
     if type(opt.needs) == "table" then
         for _, n in ipairs(opt.needs) do if not Loaded(n) then return false end end
     elseif opt.needs and not Loaded(opt.needs) then
@@ -2681,19 +2746,17 @@ ev:SetScript("OnEvent", function()
             :format(#list, #list > 1 and "s" or "", list[1].text:match("^[^\n]*") .. (#list > 1 and (" (+" .. (#list - 1) .. " more)") or "")))
     end)
 
-    -- Warn once per login if anything is doubled up
-    local conflicts = {}
-    for _, opt in ipairs(OPTIONS) do
-        if opt.kind == "choice" and Available(opt) and opt.get() == "Both (conflict)" then
-            conflicts[#conflicts + 1] = opt.label
+    -- Warn once per login if anything is doubled up (looked at again 3 s later: still doubled up?)
+    local function Conflicts()
+        local out = {}
+        for _, opt in ipairs(OPTIONS) do
+            if opt.kind == "choice" and Available(opt) and opt.get() == "Both (conflict)" then out[#out + 1] = opt.label end
         end
+        return out
     end
-    if #conflicts > 0 then
+    if #Conflicts() > 0 then
         C_Timer.After(3, function()
-            conflicts = {}
-            for _, opt in ipairs(OPTIONS) do
-                if opt.kind == "choice" and Available(opt) and opt.get() == "Both (conflict)" then conflicts[#conflicts + 1] = opt.label end
-            end
+            local conflicts = Conflicts()
             if #conflicts == 0 then return end
             print("|cffffd200Master Options:|r two addons doing the same job: " .. table.concat(conflicts, ", ") .. ". Type /mo to pick one.")
         end)

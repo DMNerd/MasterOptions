@@ -18,11 +18,7 @@ local gm = _G.GearMatic
 local api = _G.Baganator and _G.Baganator.API
 if type(gm) ~= "table" or type(api) ~= "table" then return end
 
--- (a caught error goes to Master Options' error log: /mo > Problems)
-local function Check(where, ok, err)
-    local r = not ok and _G.MasterOptions_ReportError
-    if r then r("MasterOptions_GearMatic_Baganator", where, err) end
-end
+local _, Check = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
 local function Settings() return gm.db and gm.db.profile end
 

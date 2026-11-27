@@ -72,6 +72,8 @@ function Coords:GetPoint(i) return unpack(self.points[i]) end
 MinimapCluster = { MinimapContainer = { PlayerCoords = Coords } }
 Cluster.children = { Region("frame"), Body }
 ''')
+import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
+from shared_lua import load_shared; load_shared(lua, sys.argv[1])
 lua.eval("function(s) local f, e = load(s, '=border'); if not f then error(e) end; return f end")(open(sys.argv[1], encoding="utf-8").read())("MasterOptions_OpenMapMiniMap_Border")
 L, E = lua.execute, lua.eval
 fails = []

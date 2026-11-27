@@ -20,12 +20,7 @@ MasterOptions_Module("Mastercraft_VendorSell", { "Mastercraft" }, function(ADDON
 
 local DB
 
--- (a caught error goes to Master Options' error log: /mo > Problems)
-local function Check(where, ok, ...)
-    local r = not ok and _G.MasterOptions_ReportError
-    if r then r(ADDON, where, ...) end
-    return ok, ...
-end
+local _, Check = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 local IsEquippable = (C_Item and C_Item.IsEquippableItem) or IsEquippableItem
 local GetInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
 local numSlots = C_Container.GetContainerNumSlots
@@ -89,50 +84,12 @@ end
 ---------------------------------------------------------------------------
 -- Gear that must stay (only asked in "all" mode)
 ---------------------------------------------------------------------------
-local function PawnUpgrade(link)
-    -- (Master Options' shared check: also every spec's scale while Pawn follows GearMatic's spec)
-    if type(_G.MasterOptions_GearKeeps) == "function" then return MasterOptions_GearKeeps(link) end
-    if type(_G.PawnGetItemData) ~= "function" or type(_G.PawnIsItemAnUpgrade) ~= "function" then return false end
-    local ok, item = pcall(_G.PawnGetItemData, link)
-    if not ok or type(item) ~= "table" then return false end
-    -- an upgrade for a scale you show, or already your best or second-best item for one (Pawn's 3rd / 4th
-    -- returns: an off-spec piece you keep in your bags is never "an upgrade", but it is your best)
-    local ok2, up, _, best, second = pcall(_G.PawnIsItemAnUpgrade, item)
-    if not ok2 then return false end
-    for _, t in ipairs({ up or false, best or false, second or false }) do
-        if type(t) == "table" and next(t) ~= nil then return true end
-    end
-    return false
-end
-
-local function LoadoutIDs()
-    local ids = {}
-    local store = GM() and GM().Loadouts and GM().Loadouts.Store
-    if not (store and store.List and store.Get) then return ids end
-    local ok, names = pcall(store.List)
-    for _, n in ipairs(ok and names or {}) do
-        local e = store.Get(n)
-        for _, s in pairs(type(e) == "table" and e.slots or {}) do
-            if type(s) == "table" and s.itemID then ids[s.itemID] = true end
-        end
-    end
-    return ids
-end
+local Shared = MasterOptions_Shared
+local PawnUpgrade = Shared.KeepsGear          -- (Pawn or GearMatic: Master Options' shared check)
+local LoadoutIDs = Shared.GearMaticLoadoutIDs -- (GearMatic loadouts: every item ID in them)
 
 local function GearStays(link, bag, slot, itemID, loadouts)
-    if loadouts[itemID] or PawnUpgrade(link) then return true end
-    local gm = GM()
-    local bo = gm and gm.BagOverlay
-    if bo and bo.MarkerVerdict then
-        local ok, v = pcall(bo.MarkerVerdict, link, bag, slot)
-        if ok and type(v) == "table" and (v.upgrade or v.alt or v.skull) then return true end
-    end
-    local va = gm and gm.VendorAutomation
-    if va and va.InEquipmentSet then
-        local ok, inSet = pcall(va.InEquipmentSet, bag, slot, itemID)
-        if ok and inSet then return true end
-    end
-    return false
+    return loadouts[itemID] or PawnUpgrade(link) or Shared.GearMaticKeeps(link, bag, slot, itemID)
 end
 
 ---------------------------------------------------------------------------

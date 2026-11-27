@@ -70,6 +70,8 @@ GearMatic = { db = { profile = GMProf }, VendorAutomation = {
 function Reset() for _, i in ipairs(BAG) do i.sold = nil end; SOLD = {}; GMQ = {} end
 function List(t) local o = {} for _, v in ipairs(t) do o[#o+1] = tostring(type(v) == "table" and v.itemID or v) end table.sort(o) return table.concat(o, ",") end
 ''')
+import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
+from shared_lua import load_shared; load_shared(lua, sys.argv[1])
 lua.eval("function(s) return load(s, '=vsell') end")(open(sys.argv[1], encoding="utf-8").read())("MasterOptions_Mastercraft_VendorSell")
 L, E = lua.execute, lua.eval
 L('Fire("ADDON_LOADED", "MasterOptions_Mastercraft_VendorSell")')

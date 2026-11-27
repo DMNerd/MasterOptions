@@ -16,10 +16,7 @@ MasterOptions_Module("GearMatic_SpecKeep", { "GearMatic" }, function(ADDON)
 -- Used through Master Options' MasterOptions_GearKeeps (Mastercraft_VendorSell, DeleteCheapestItem_Protect and
 -- GearMatic_SellGuard, which GearMatic's own sell pass asks through its sell guard). GearMatic is only read.
 
-local function Report(where, err)
-    local r = _G.MasterOptions_ReportError
-    if r then r(ADDON, where, err) end
-end
+local Report = MasterOptions_Shared.ErrorReporters(ADDON) -- (caught errors to /mo > Problems)
 
 local InstantInfo = (C_Item and C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
 
