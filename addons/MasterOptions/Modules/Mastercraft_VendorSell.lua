@@ -10,6 +10,8 @@ MasterOptions_Module("Mastercraft_VendorSell", { "Mastercraft" }, function(ADDON
 --   * Mastercraft: it only sells greys, so this patch sells them the way it does (one at a time, stops when
 --     the vendor closes or a fight starts).
 --   * Off: nothing is sold.
+-- Also sold: DISENCHANT advice on a soulbound piece when this character has no Enchanting (no enchanter alt or
+-- auction house can have it, and you can't disenchant it).
 -- Never sold: greys (the junk seller has them), anything the Keep patch or GearMatic's never-sell list keeps,
 -- items where Mastercraft says "Keep N for your guide", and in "goods and gear" mode upgrades (Pawn,
 -- GearMatic), set and loadout pieces.
@@ -41,10 +43,29 @@ local function Seller()
     return nil
 end
 
--- what Mastercraft last said to VENDOR (the Mastercraft_Advice module; without it: nothing known)
-local function Sells(itemID)
+-- what Mastercraft last said (the Mastercraft_Advice module; without it: nothing known)
+local function LastAdvice(itemID)
     local a = _G.MasterOptions_MastercraftAdvice
-    return a ~= nil and a.Sells(itemID)
+    return a and a.Get(itemID) or nil
+end
+
+-- this character has Enchanting (read again when its skills change)
+local enchanter
+local function Enchanter()
+    if enchanter == nil then enchanter = S.ProfessionRanks()[S.ENCHANTING] ~= nil end
+    return enchanter
+end
+
+-- DISENCHANT advice is sold too when the piece is soulbound and you're no enchanter: it can't go to an enchanter
+-- alt or the auction house, and you can't disenchant it - the vendor is what's left
+local function DisenchantSells(bag, slot, link)
+    return not Enchanter() and S.Soulbound(bag, slot, link) == true
+end
+
+-- what Mastercraft last said may sell (VENDOR, or DISENCHANT under the rule above - its bag slot decides)
+local function MaySell(itemID)
+    local a = LastAdvice(itemID)
+    return a == "VENDOR" or a == "DISENCHANT"
 end
 
 ---------------------------------------------------------------------------
@@ -71,7 +92,7 @@ local function SlotSells(bag, slot, info, fresh, readCache)
     local id, link = info and info.itemID, info and info.hyperlink
     if not (id and link) then return false, nil, "no item" end
     if info.hasNoValue or (info.quality or 1) <= 0 then return false, nil, "grey or no vendor price (the junk seller's)" end
-    if not fresh and not Sells(id) then return false, nil, "Mastercraft doesn't say VENDOR" end
+    if not fresh and not MaySell(id) then return false, nil, "Mastercraft doesn't say VENDOR" end
     local gdb = S.GearMaticDB()
     if gdb and type(gdb.sellIgnore) == "table" and gdb.sellIgnore[id] then return false, nil, "on GearMatic's never-sell list" end
     local keep = _G.MasterOptions_MastercraftKeep
@@ -81,14 +102,22 @@ local function SlotSells(bag, slot, info, fresh, readCache)
     if price <= 0 then return false, nil, "no vendor price" end
     local gear = IsEquippable(link) and true or false
     if gear and Mode() ~= "all" then return false, price, "gear (sell mode is Goods)" end
+    local advice
     if fresh then
-        local sell = readCache and readCache[id]
-        if sell == nil then
+        advice = readCache and readCache[id]
+        if advice == nil then
             local verdict, _, keepSome = S.MastercraftSlotAdvice(bag, slot)
-            sell = verdict == "VENDOR" and not keepSome
-            if readCache then readCache[id] = sell end
+            advice = ((verdict == "VENDOR" and keepSome) and "KEEP" or verdict) or false
+            if readCache then readCache[id] = advice end
         end
-        if not sell then return false, price, "Mastercraft doesn't say VENDOR" end
+    else
+        advice = LastAdvice(id)
+    end
+    if advice == "DISENCHANT" then
+        if Enchanter() then return false, price, "DISENCHANT, and you're an enchanter" end
+        if not DisenchantSells(bag, slot, link) then return false, price, "DISENCHANT, not soulbound (an enchanter alt can have it)" end
+    elseif advice ~= "VENDOR" then
+        return false, price, "Mastercraft doesn't say VENDOR"
     end
     if gear then
         local stays, why = GearStays(link, bag, slot, id)
@@ -101,7 +130,7 @@ end
 -- info: the slot's C_Container info when the caller has it already
 local function WouldSell(bag, slot, itemID, info)
     if not (bag and slot) or Mode() == "off" then return false end
-    if itemID and not Sells(itemID) then return false end -- (most slots end here)
+    if itemID and not MaySell(itemID) then return false end -- (most slots end here)
     if not Seller() then return false end
     info = info or slotInfo(bag, slot)
     if not info or (itemID and info.itemID ~= itemID) then return false end
@@ -146,7 +175,10 @@ local function Explain()
             if id and not seen[id] and (info.quality or 1) > 0 and not info.hasNoValue then
                 seen[id] = true
                 local verdict, _, keepSome = S.MastercraftSlotAdvice(bag, slot)
-                if verdict == "VENDOR" or Sells(id) then
+                -- (VENDOR, now or last time; DISENCHANT on a soulbound piece: the rule above decides)
+                local listed = verdict == "VENDOR" or LastAdvice(id) == "VENDOR"
+                    or (verdict == "DISENCHANT" and S.Soulbound(bag, slot, info.hyperlink) == true)
+                if listed then
                     local okS, sell, _, reason = pcall(SlotSells, bag, slot, info, true, nil)
                     if not okS then sell, reason = false, "error: " .. tostring(sell) end
                     if verdict == "VENDOR" and keepSome and not sell then reason = "your guide uses some of them" end
@@ -310,8 +342,11 @@ f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_LOGIN")
 f:RegisterEvent("MERCHANT_SHOW")
 f:RegisterEvent("MERCHANT_CLOSED")
+pcall(f.RegisterEvent, f, "SKILL_LINES_CHANGED")
 f:SetScript("OnEvent", function(_, event, name)
-    if event == "ADDON_LOADED" and name == ADDON then
+    if event == "SKILL_LINES_CHANGED" then
+        enchanter = nil -- (learned or dropped a profession: Enchanting asked again)
+    elseif event == "ADDON_LOADED" and name == ADDON then
         MasterOptions_MastercraftVendorDB = MasterOptions_MastercraftVendorDB or {}
         DB = MasterOptions_MastercraftVendorDB
         DB.mode = DB.mode or "goods"

@@ -147,6 +147,29 @@ check("goods and gear: sword sold, boots kept with the reason", "sold at the ven
 L('GMProf.autoSellJunk = false; OUT = {}; local p = print; print = function(s) OUT[#OUT+1] = s end; MasterOptions_MastercraftVendorSell.Explain(); print = p')
 out = list(lua.eval("OUT").values())
 check("no seller: says why", "GearMatic's Sell junk is off" in out[0] and "no junk seller" in line_for("item:2589"))
+print("== DISENCHANT on a soulbound piece, no Enchanting: sold too")
+L(r'''
+  Fire("MERCHANT_CLOSED"); Run()
+  BAG[#BAG + 1] = { itemID = 4000, hyperlink = "item:4000", quality = 2, stackCount = 1, gear = true, isBound = true }
+  BAG[#BAG + 1] = { itemID = 4001, hyperlink = "item:4001", quality = 2, stackCount = 1, gear = true, isBound = false }
+  ADVICE[4000], ADVICE[4001] = { "DISENCHANT" }, { "DISENCHANT" }
+  GMProf.autoSellJunk = true; MasterOptions_MastercraftVendorDB.mode = "all"
+  Reset(); Fire("MERCHANT_SHOW"); Run()
+  Q1 = List(GMQ); Fire("MERCHANT_CLOSED"); Run()
+  -- an enchanter: kept (read again when the skills change)
+  function GetNumSkillLines() return 1 end
+  function GetSkillLineInfo(i) return "Enchanting", false, nil, 120 end
+  Fire("SKILL_LINES_CHANGED")
+  Reset(); Fire("MERCHANT_SHOW"); Run()
+  Q2 = List(GMQ); Fire("MERCHANT_CLOSED"); Run()
+  GetNumSkillLines, GetSkillLineInfo = nil, nil; Fire("SKILL_LINES_CHANGED")
+  MasterOptions_MastercraftVendorDB.mode = "goods"
+''')
+check("no Enchanting: the soulbound DISENCHANT piece is sold, the bind-on-equip one isn't",
+      "4000" in E("Q1").split(",") and "4001" not in E("Q1").split(","))
+check("an enchanter: neither is sold", "4000" not in E("Q2").split(",") and "4001" not in E("Q2").split(","))
+L('table.remove(BAG); table.remove(BAG)')
+
 print("== Baganator advice icons")
 L(r'''
   local w = CORNER.masteroptions_mc_advice

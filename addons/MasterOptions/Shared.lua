@@ -218,16 +218,17 @@ end
 ---------------------------------------------------------------------------
 -- Gathering (Herbalism, Mining): your skill, and which nodes are worth it by Mastercraft's rule
 ---------------------------------------------------------------------------
-S.HERB, S.MINE = 182, 186 -- (skill line IDs)
+S.HERB, S.MINE, S.ENCHANTING = 182, 186, 333 -- (skill line IDs)
 local HERB, MINE = S.HERB, S.MINE
 local MAX_GATHER_SKILL = 300
 local PROF_NAMES = {
     [HERB] = { Herbalism = true, Herboristerie = true, ["Kr\195\164uterkunde"] = true, ["Herborister\195\173a"] = true, Erbalismo = true, Herborismo = true },
     [MINE] = { Mining = true, Minage = true, Bergbau = true, ["Miner\195\173a"] = true, Estrazione = true, ["Minera\195\167\195\163o"] = true },
+    [S.ENCHANTING] = { Enchanting = true, Enchantement = true, Verzauberkunst = true, Encantamiento = true, Incantamento = true, Encantamento = true },
 }
 
--- { [S.HERB] = rank, [S.MINE] = rank } for the gathering professions you have
-function S.GatheringRanks()
+-- { [skill line] = rank } for the professions you have (of S.HERB, S.MINE, S.ENCHANTING)
+function S.ProfessionRanks()
     local found = {}
     if GetProfessions and GetProfessionInfo then
         local res = { pcall(GetProfessions) }
@@ -236,7 +237,7 @@ function S.GatheringRanks()
                 local idx = res[i]
                 if idx then
                     local ok, _, _, rank, _, _, _, sl = pcall(GetProfessionInfo, idx)
-                    if ok and (sl == HERB or sl == MINE) then found[sl] = rank or 0 end
+                    if ok and PROF_NAMES[sl] then found[sl] = rank or 0 end
                 end
             end
         end
@@ -251,6 +252,13 @@ function S.GatheringRanks()
             end
         end
     end
+    return found
+end
+
+-- { [S.HERB] = rank, [S.MINE] = rank } for the gathering professions you have
+function S.GatheringRanks()
+    local all, found = S.ProfessionRanks(), {}
+    found[HERB], found[MINE] = all[HERB], all[MINE]
     return found
 end
 

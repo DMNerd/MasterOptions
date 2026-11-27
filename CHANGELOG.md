@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+### Added
+
+- **Selling what Mastercraft says to DISENCHANT, when you can't** (sell mode "Goods and gear"): a soulbound piece
+  whose advice is DISENCHANT is sold at the vendor when this character has no Enchanting. It can't go to an
+  enchanter alt or the auction house. Upgrades, set and loadout pieces and the never-sell list still keep it, and
+  `/mo vendor` lists these too.
+
 ## [2.15.2] - 2026-11-27
 
 ### Changed
