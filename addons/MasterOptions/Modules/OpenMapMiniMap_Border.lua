@@ -172,9 +172,23 @@ local function Layout(top, bottom)
     -- end (the calendar) under the rim on the right (a player's screenshot). Height: the bar's, above or under.
     local up = top ~= body and (top:GetTop() or 0) - (body:GetTop() or 0) or 0
     local down = bottom ~= body and (body:GetBottom() or 0) - (bottom:GetBottom() or 0) or 0
+    local L, T = -o * LEFT_SHARE, o * LEFT_SHARE + math.max(0, up)
+    local R, B = o, -o - math.max(0, down)
+    -- on the screen: OpenMap_MiniMap's "Snap to the screen's edge" puts the map flush against it, leaving room for its
+    -- own thin border only - the rim past it went off the screen (a player's report). There the rim comes in over the
+    -- map's edge instead, whole.
+    local ue, be = UIParent and UIParent.GetEffectiveScale and UIParent:GetEffectiveScale(), body.GetEffectiveScale and body:GetEffectiveScale()
+    local bl, br, bt, bb = body:GetLeft(), body.GetRight and body:GetRight(), body:GetTop(), body:GetBottom()
+    if ue and be and be > 0 and bl and br and bt and bb then
+        local W, H = (UIParent:GetWidth() or 0) * ue / be, (UIParent:GetHeight() or 0) * ue / be -- (the screen, in the map's units)
+        if bl + L < 0 then L = -bl end
+        if br + R > W then R = W - br end
+        if bt + T > H then T = H - bt end
+        if bb + B < 0 then B = -bb end
+    end
     frame:ClearAllPoints()
-    frame:SetPoint("TOPLEFT", body, "TOPLEFT", -o * LEFT_SHARE, o * LEFT_SHARE + math.max(0, up))
-    frame:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", o, -o - math.max(0, down))
+    frame:SetPoint("TOPLEFT", body, "TOPLEFT", L, T)
+    frame:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", R, B)
     -- (rounded corners all round: the zone bar's background follows them - BarFill)
     SliceLayout(pieces, k, true, true)
 end
@@ -591,6 +605,8 @@ local function Hook()
     body:HookScript("OnShow", function() ApplySoon() end)
     body:HookScript("OnHide", function() ApplySoon(0) end) -- (OpenMap_MiniMap's look off: the game's coordinates back)
     body:HookScript("OnSizeChanged", function() ApplySoon() end)
+    -- OpenMap_MiniMap places the map again (Edit Mode, its snap, a size change): the rim kept on the screen (Layout)
+    if body.SetPoint and hooksecurefunc then hooksecurefunc(body, "SetPoint", function() ApplySoon() end) end
     -- OpenMap sets its border up again when its look changes (any of its settings): shown, and its colour set -
     -- SetVertexColor(1, 1, 1, 1) puts its alpha back too. Hidden again at once, not after the 0.2 s wait
     -- (its gold frame blinked through - a player's report); the rest a moment later.

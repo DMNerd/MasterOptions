@@ -171,6 +171,19 @@ L(r'''
 check("coordinates tab: a minimap button where it sits - moved along the edge clear of it", E("X1 ~= X0 and (X1 > X0 + 30 or X1 < X0 - 30)"), True)
 check("...the button gone: back where asked", E("X2 == X0"), True)
 
+# OpenMap_MiniMap's "Snap to the screen's edge": the map flush against the screen's right and top edges - the rim
+# comes in over the map's edge there, not off the screen
+L(r'''
+  UIParent = NewRegion("frame"); UIParent.w, UIParent.h = 298, 500 -- (the map: 100..298 across, its top at 500)
+  MasterOptions_MinimapBorderDB.coords = "inside"; Bar.top = 500
+  MasterOptions_MinimapBorder.Apply(); Run()
+  P = MasterOptionsMinimapBorder.points
+''')
+check("map flush against the screen's right and top: the rim's right and top kept on the screen", E("P[2][4] <= 0.001 and P[1][5] <= 0.001"), True)
+L('UIParent.w, UIParent.h = 2000, 2000; MasterOptions_MinimapBorder.Apply(); Run(); P = MasterOptionsMinimapBorder.points')
+check("...with room round it: the rim outside the map as before", E("P[2][4] > 0"), True)
+L('UIParent = nil; Bar.top = 525')
+
 # "inside": the numbers alone in the map's top-right corner - no tab
 L('MasterOptions_MinimapBorderDB.coords = "inside"; MasterOptions_MinimapBorder.Apply(); Run()')
 check("inside: the numbers in the map's top-right corner, outlined, no tab", E("(function() local f = MasterOptionsMinimapCoordsInside; return f ~= nil and f.shown and f.points[1][1] == 'TOPRIGHT' and f.points[1][2] == Body and f.text.fontFlags == 'OUTLINE' and not MasterOptionsMinimapCoords.shown end)()"), True)
