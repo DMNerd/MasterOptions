@@ -143,6 +143,14 @@ L(r'''
   local OTHER = { GetParent = function() return nil end }
   function EnumerateFrames(f) if f == nil then return OTHER elseif f == OTHER then return BTN end end
   function WM.RefreshPins() REFRESH = REFRESH + 1; BTN.OnClick = OpenMapClick; BTN.hooks = {} end
+  -- OpenMap's Pins list window: rows made once, row.pin the pin shown, its own OnClick (Shift: share)
+  LISTSHARED, WENT = 0, 0
+  ROW = { pin = DJ, scripts = {}, hooked = {} }
+  function ROW:GetScript(k) return self.scripts[k] end
+  function ROW:SetScript(k, fn) self.scripts[k] = fn end
+  function ROW:HookScript(k, fn) self.hooked[#self.hooked + 1] = fn end
+  ROW.scripts.OnClick = function(self, button) if IsShiftKeyDown() then LISTSHARED = LISTSHARED + 1 else WENT = WENT + 1 end end
+  OpenMapPins = { rows = { ROW } }
   -- (the module hooked RefreshPins at login: hook the new one as OpenMap's own would be)
 ''')
 L('Fire("PLAYER_LOGIN")')  # (a second login in the sandbox: hooks the replaced RefreshPins)
@@ -159,6 +167,12 @@ L('COMBAT = false; ALT = true; BTN:OnClick()')
 res["Alt-click: still OpenMap's delete"] = E("DELETED == DJ") and E("NAV == nil")
 L('ALT = false; SHIFT = false; WM.RefreshPins()')
 res["wrapped again after the next RefreshPins"] = E("BTN.OnClick ~= OpenMapClick") and E("#BTN.hooks") == 1
+# OpenMap's Pins list window: Shift-click on a row journeys there too; its other clicks are OpenMap's
+L('NAV = nil; SHIFT = true; CHAT = false; ROW.scripts.OnClick(ROW, "LeftButton")')
+res["pin list row, Shift-click: a journey there, not shared"] = E('NAV ~= nil and NAV.title == "Dungeon Journal: Deadmines"') and E("LISTSHARED") == 0
+L('NAV = nil; CHAT = true; ROW.scripts.OnClick(ROW, "LeftButton"); CHAT = false; SHIFT = false; ROW.scripts.OnClick(ROW, "LeftButton")')
+res["pin list row: chat box open shares it; a plain click is OpenMap's (go there)"] = E("NAV == nil") and E("LISTSHARED") == 1 and E("WENT") == 1
+res["pin list row: its tooltip line hooked, wrapped once"] = E("#ROW.hooked") == 1
 # the tooltip's Shift-click line says what it does now
 L(r'''
   LINES = { { t = "Dungeon Journal: Deadmines" }, { t = "|cffffd200Shift-click:|r share in chat" }, { t = "|cffffd200Alt-click:|r delete it" } }

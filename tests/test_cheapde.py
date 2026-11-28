@@ -15,7 +15,9 @@ lua.execute(r'''
     local r = { scripts = {}, shown = false }
     for _, m in ipairs({ "SetSize", "SetPoint", "SetHeight", "SetWidth", "SetJustifyH", "SetAllPoints", "SetColorTexture",
       "EnableMouse", "EnableMouseWheel", "SetChecked", "SetTexture", "SetFrameLevel", "SetHitRectInsets", "SetWordWrap",
-      "SetAtlas", "SetAutoFocus", "ClearFocus" }) do r[m] = function() end end
+      "SetAtlas", "SetAutoFocus", "ClearFocus", "ClearAllPoints", "SetStatusBarTexture", "SetStatusBarColor", "SetMinMaxValues", "SetEnabled" }) do r[m] = function() end end
+    function r:SetValue(v) self.value = v end
+    function r:GetStringWidth() return 60 end
     function r:GetText() return self.text end
     function r:HookScript(k, fn) self.scripts[k] = fn end
     function r:GetFrameLevel() return 1 end
@@ -240,7 +242,7 @@ res["Auctionator's quick scan: its rows listed (none left: not), while an item's
 L('for _, fn in ipairs(LOADS) do fn() end; LOADS = {}; Run(); MasterOptionsCheapDisenchants:Show()')
 res["...once loaded: listed, with the loaded one, by their lowest price"] = E("Has(4001) ~= nil and Has(4001).profit == 2500 and Has(4003) ~= nil and Has(4002) == nil") is True
 res["...the footer says where it came from"] = "Auctionator's quick scan" in (E("MasterOptionsCheapDisenchants.count.text") or "")
-res["...no 15-minute countdown on the button with Auctionator"] = E("MasterOptionsCheapDisenchants.scan.text") == "Scan AH"
+res["...with Auctionator: a Quick scan button, and the full scan beside it as Full scan"] = E("MasterOptionsCheapDisenchants.quick.shown and MasterOptionsCheapDisenchants.quick.text == 'Quick scan'") is True and (E("MasterOptionsCheapDisenchants.scan.text") or "").find("Full scan") >= 0
 
 # Auctionator's full scan finishing while our tab is closed: kept, and listed when the tab opens
 L(r'''
@@ -254,6 +256,63 @@ L(r'''
 res["Auctionator's full scan with our tab closed: not read then"] = E("Has(5001)") is None
 L('MasterOptionsCheapDisenchants:Show(); Run()')
 res["...read when the tab opens (your own auction left out)"] = E("Has(5001) ~= nil and Has(5001).buyout == 900") is True
+# Your own auctions in Auctionator's quick scan (containsOwnerItem): yours alone - not listed; yours among others -
+# listed, marked "the cheapest may be yours"
+L(r'''
+  for _, id in ipairs({ 6001, 6002 }) do ITEMQ[id] = 2; ITEM[id] = { 40, 4, "INVTYPE_HAND" }; DE[id] = 9000 end
+  LISTENER:ReceiveEvent("full_incremental_scan_complete", {
+    { itemKey = { itemID = 6001 }, minPrice = 1000, totalQuantity = 1, containsOwnerItem = true },  -- only yours
+    { itemKey = { itemID = 6002 }, minPrice = 1000, totalQuantity = 4, containsOwnerItem = true },  -- yours among others
+  })
+  Run()
+''')
+res["quick scan, only your own listing: not listed"] = E("Has(6001)") is None
+res["quick scan, yours among others: listed, marked (the cheapest may be yours)"] = E("Has(6002) ~= nil and Has(6002).yours == true") is True
+L('MasterOptionsCheapDisenchants:Show()')
+res["...the row says so, and the profit shows its share of the price"] = any(
+    "may be yours" in (E("MasterOptionsCheapDisenchants.rows[%d].sub.text" % i) or "") and "800%" in (E("MasterOptionsCheapDisenchants.rows[%d].profit.text" % i) or "")
+    for i in range(1, 4))
+
+# Hide "needs an enchanter": left out at once, back when unticked
+L(r'''
+  ITEMQ[6003] = 2; ITEM[6003] = { 41, 4, "INVTYPE_HAND" }; DE[6003] = 9000; NEEDS = { [6003] = true }
+  local set = GameTooltip.SetHyperlink
+  function GameTooltip:SetHyperlink(link) set(self, link); if NEEDS[tonumber(link:match("item:(%d+)"))] then LEFT[#LEFT + 1] = "Needs an enchanter - a friend or guild mate." end end
+  LISTENER:ReceiveEvent("full_incremental_scan_complete", { { itemKey = { itemID = 6003 }, minPrice = 1000, totalQuantity = 2 } })
+  Run()
+''')
+res["needs an enchanter: listed and marked"] = E("Has(6003) ~= nil and Has(6003).enchanter == true") is True
+L('MasterOptions_CheapDisenchantsDB.hideEnchanter = true; MasterOptions_CheapDisenchants.Rerank()')
+res["Hide \"needs an enchanter\": left out"] = E("Has(6003)") is None
+L('MasterOptions_CheapDisenchantsDB.hideEnchanter = nil; MasterOptions_CheapDisenchants.Rerank()')
+res["...unticked: back"] = E("Has(6003) ~= nil") is True
+
+# Full scan with Auctionator: its own full scan (its 15 minutes), rows taken when it says it's complete
+L(r'''
+  FULLS, CANFULL = 0, true
+  Auctionator.State.FullScanFrameRef = { state = {}, InitiateScan = function() FULLS = FULLS + 1 end,
+    CanInitiate = function() return CANFULL end }
+  R4 = REPLICATES
+  MasterOptions_CheapDisenchants.ScanFull()
+''')
+res["Full scan with Auctionator: Auctionator's full scan started, not ours"] = E("FULLS") == 1 and E("REPLICATES") == E("R4")
+L(r'''
+  ITEMQ[7001] = 2; ITEM[7001] = { 45, 2, "INVTYPE_WEAPON" }; DE[7001] = 20000
+  LISTENER:ReceiveEvent("replicate_scan_complete", {
+    { replicateInfo = { "Item 7001", "tex", 1, 2, true, 10, 0, 0, 0, 5000, 0, false, nil, "Seller", "x", 0, 7001, true } } })
+  Run()
+''')
+res["...its rows listed when it's complete"] = E("Has(7001) ~= nil and Has(7001).buyout == 5000") is True
+L('CANFULL = false; FULLS = 0; Auctionator.State.FullScanFrameRef.state.TimeOfLastReplicateScan = NOW; MasterOptions_CheapDisenchants.ScanFull()')
+res["Full scan within Auctionator's 15 minutes: not started, says when it can"] = E("FULLS") == 0 and "full scan can run again in 15 min" in (E("PRINTS[#PRINTS]") or "")
+
+# the empty list says what to do
+L(r'''
+  MasterOptionsCheapDisenchants:Show()
+  MasterOptions_CheapDisenchants.SetMaxPrice(1)
+  Run()
+''')
+res["nothing found under the max price: the empty list says so"] = "Nothing up to" in (E("MasterOptionsCheapDisenchants.empty.text") or "") and E("MasterOptionsCheapDisenchants.empty.shown") is True
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

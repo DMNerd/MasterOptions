@@ -67,7 +67,7 @@ local function UnderCap(e) local c = Cap(); return not c or e.buyout <= c end
 local function Rank()
     local out = {}
     for _, e in pairs(cheapest) do
-        if e.value and e.value > e.buyout and UnderCap(e) then
+        if e.value and e.value > e.buyout and UnderCap(e) and not (DB and DB.hideEnchanter and e.enchanter) then
             e.profit = e.value - e.buyout
             out[#out + 1] = e
         end
@@ -99,7 +99,7 @@ local function Work(gen, list, fn, status, done, i)
         if Spent(start) > FRAME_MS then break end
     end
     if last < #list then
-        if Refresh then Refresh(status(last, #list)) end
+        if Refresh then Refresh(status(last, #list), last / #list) end
         C_Timer.After(0, function() Check("valuing disenchants", pcall(Work, gen, list, fn, status, done, last + 1)) end)
         return
     end
@@ -155,7 +155,7 @@ local function Value(list, gen)
         end
         groupCache[g.key] = { time(), g.value, g.partial }
     end
-    Work(gen, order, GroupValue, function(k, n) return ("Valuing %d / %d kinds of item..."):format(k, n) end, function()
+    Work(gen, order, GroupValue, function(k, n) return ("Valuing each kind of item (3/4): %d / %d"):format(k, n) end, function()
         -- 3. what costs less than its group's value: read on its own
         local maybe = {}
         for _, g in ipairs(order) do
@@ -164,7 +164,7 @@ local function Value(list, gen)
             end
         end
         Work(gen, maybe, function(e) e.value, e.partial, e.enchanter = Disenchant(e.link) end,
-            function(k, n) return ("Checking %d / %d finds..."):format(k, n) end, function()
+            function(k, n) return ("Checking the finds (4/4): %d / %d"):format(k, n) end, function()
                 busy = false
                 lastFinish = GetTime and GetTime() or 0
                 Rank()
@@ -189,6 +189,7 @@ end
 local LOAD_TIMEOUT = 10       -- seconds to wait for items' data
 local RESPONSE_TIMEOUT = 20   -- seconds without an answer to our own read: the server's limit
 local QUICK_TIMEOUT = 180     -- Auctionator's quick scan, at most
+local FULL_TIMEOUT = 600      -- Auctionator's full scan, at most (it loads every item's data)
 local OTHER_SETTLE = 3        -- another addon's replicate read: picked up when its events stopped this long
 local ECHO = 10               -- seconds after our own read in which its events are ours
 
@@ -201,16 +202,17 @@ local function ItemInfo(id)
     if f then return f(id) end
 end
 
--- a row: its item at its price per item (copper); quality when the row knows it. Only gear that can be disenchanted
-local function Offer(itemID, each, quality)
+-- a row: its item at its price per item (copper); quality when the row knows it; yours: one of your own auctions may
+-- be among it (Auctionator's quick scan can't say which price is whose). Only gear that can be disenchanted
+local function Offer(itemID, each, quality, yours)
     if not itemID or not each or each <= 0 then return end
     if quality and quality >= 0 and not Wanted(quality) then return end
     local _, _, _, equipLoc, _, classID = Instant(itemID)
     if classID and ((classID ~= 2 and classID ~= 4) or NOT_DE[equipLoc or ""]) then return end
     each = math.floor(each + 0.5)
     local e = cheapest[itemID]
-    if not e then cheapest[itemID] = { itemID = itemID, buyout = each }
-    elseif each < e.buyout then e.buyout = each end
+    if not e then cheapest[itemID] = { itemID = itemID, buyout = each, yours = yours or nil }
+    elseif each < e.buyout then e.buyout, e.yours = each, yours or nil end
 end
 
 local function Begin(name)
@@ -242,7 +244,7 @@ local function Resolve(gen)
         Value(wanted, gen)
     end
     Work(gen, list, function(e) if not Fill(e) then missing[#missing + 1] = e end end,
-        function(k, n) return ("Looking at %d / %d items..."):format(k, n) end, function()
+        function(k, n) return ("Looking at the items (2/4): %d / %d"):format(k, n) end, function()
             local waiting = 0
             local Item = _G.Item
             for _, e in ipairs(missing) do
@@ -257,7 +259,7 @@ local function Resolve(gen)
                 end
             end
             if waiting == 0 then return Finish() end
-            if Refresh then Refresh(("Loading %d items..."):format(waiting)) end
+            if Refresh then Refresh(("Loading the items the game hasn't sent yet (2/4): %d"):format(waiting)) end
             C_Timer.After(LOAD_TIMEOUT, Finish)
         end)
 end
@@ -276,15 +278,15 @@ local function ReadReplicate(name)
     Work(gen, rows, function(k)
         local _, _, count, quality, _, _, _, _, _, buyout, _, _, _, owner, _, _, itemID = AH.GetReplicateItemInfo(k)
         if owner ~= me then Offer(itemID, (buyout or 0) / math.max(1, count or 1), quality) end -- (not your own)
-    end, function(k, total) return ("Reading the auction house: %d / %d..."):format(k, total) end, function() Resolve(gen) end)
+    end, function(k, total) return ("Reading the auction house (1/4): %d / %d"):format(k, total) end, function() Resolve(gen) end)
 end
 
 -- Auctionator's rows: its full scan ({ replicateInfo = GetReplicateItemInfo's, itemLink, timeLeft }) or its quick scan
 -- (browse results: { itemKey = { itemID, ... }, minPrice, totalQuantity, ... })
-local waitingQuick = false
+local waitingAuctionator = false
 local function TakeAuctionator(rows, full)
     if type(rows) ~= "table" then return end
-    waitingQuick = false
+    waitingAuctionator = false
     if full then
         local AH = C_AuctionHouse
         lastReadCount = AH and AH.GetNumReplicateItems and AH.GetNumReplicateItems() or nil -- (the same list, read)
@@ -296,9 +298,12 @@ local function TakeAuctionator(rows, full)
             local info = type(r.replicateInfo) == "table" and r.replicateInfo
             if info and info[14] ~= me then Offer(info[17], (info[10] or 0) / math.max(1, info[3] or 1), info[4]) end
         elseif type(r.itemKey) == "table" and (r.totalQuantity or 1) > 0 then
-            Offer(r.itemKey.itemID, r.minPrice)
+            -- (containsOwnerItem: one of yours is among them - only yours, a single one: not offered at all; with
+            -- others, its lowest price may be yours: marked)
+            local yours = r.containsOwnerItem == true
+            if not (yours and (r.totalQuantity or 0) <= 1) then Offer(r.itemKey.itemID, r.minPrice, nil, yours) end
         end
-    end, function(k, n) return ("Reading Auctionator's scan: %d / %d..."):format(k, n) end, function() Resolve(gen) end)
+    end, function(k, n) return ("Reading Auctionator's scan (1/4): %d / %d"):format(k, n) end, function() Resolve(gen) end)
 end
 
 -- Auctionator's scans as they complete: taken while our tab is open or we asked for one; else kept for when it opens
@@ -321,7 +326,7 @@ local function HookAuctionator()
         ReceiveEvent = function(_, eventName, rows)
             local isFull = full and eventName == full.ScanComplete
             if not (isFull or (quick and eventName == quick.ScanComplete)) then return end
-            if Shown() or waitingQuick then
+            if Shown() or waitingAuctionator then
                 held = nil
                 Check("reading Auctionator's scan", pcall(TakeAuctionator, rows, isFull))
             else
@@ -345,29 +350,64 @@ local function AuctionatorQuick()
     return HookAuctionator() and type(ref) == "table" and type(ref.InitiateScan) == "function" and ref or nil
 end
 
-local function Scan()
+local function AuctionatorFull()
+    local A = _G.Auctionator
+    local ref = A and A.State and A.State.FullScanFrameRef
+    return HookAuctionator() and type(ref) == "table" and type(ref.InitiateScan) == "function" and ref or nil
+end
+
+-- seconds until a full read of the auction house can be asked for again (the server's 15 minutes: Auctionator's own
+-- count when it's the one to ask, else ours); 0: now
+local function FullWait()
+    local ref = AuctionatorFull()
+    if ref then
+        if ref.inProgress then return 0 end
+        local last = type(ref.state) == "table" and ref.state.TimeOfLastReplicateScan
+        return last and math.max(0, last + SCAN_GAP - time()) or 0
+    end
+    return DB and DB.lastScan and math.max(0, DB.lastScan + SCAN_GAP - time()) or 0
+end
+
+-- waiting for Auctionator's scan to say it's complete (at most `limit` seconds)
+local function WaitForAuctionator(limit, what)
+    busy, waitingAuctionator = true, true
+    if Refresh then Refresh(("%s - waiting for Auctionator..."):format(what)) end
+    local gen = generation
+    C_Timer.After(limit, function()
+        if waitingAuctionator and gen == generation then
+            waitingAuctionator, busy = false, false
+            if Refresh then Refresh(("Auctionator's %s didn't finish - try again."):format(what:lower())) end
+        end
+    end)
+end
+
+-- Quick scan: Auctionator's (one browse search for everything: each item's lowest price; no 15-minute wait)
+local function ScanQuick()
     if busy then return end
-    -- with Auctionator: its quick scan (no 15-minute limit), its rows handed over when it's complete
     local quick = AuctionatorQuick()
-    if quick then
-        busy, waitingQuick = true, true
-        if Refresh then Refresh("Auctionator is scanning the auction house...") end
-        if pcall(quick.InitiateScan, quick) then
-            local gen = generation
-            C_Timer.After(QUICK_TIMEOUT, function()
-                if waitingQuick and gen == generation then
-                    waitingQuick, busy = false, false
-                    if Refresh then Refresh("Auctionator's scan didn't finish - try Scan AH again.") end
-                end
-            end)
+    if not quick then return false end
+    WaitForAuctionator(QUICK_TIMEOUT, "Quick scan")
+    if not pcall(quick.InitiateScan, quick) then busy, waitingAuctionator = false, false; return false end
+    return true
+end
+
+-- Full scan: every listing ("of the ..." variants, and whose they are: yours left out), once per 15 minutes -
+-- Auctionator's full scan when it's installed (its prices updated too), else the game's replicate list ourselves
+local function ScanFull()
+    if busy then return end
+    local AH = C_AuctionHouse
+    local full = AuctionatorFull()
+    if full then
+        if full.CanInitiate and not full:CanInitiate() then
+            Say(("a full scan can run again in %d min."):format(math.ceil(FullWait() / 60)))
             return
         end
-        busy, waitingQuick = false, false
+        WaitForAuctionator(FULL_TIMEOUT, "Full scan")
+        if not pcall(full.InitiateScan, full) then busy, waitingAuctionator = false, false end
+        return
     end
-    -- without it: the replicate list ourselves
-    local AH = C_AuctionHouse
     if not (AH and AH.ReplicateItems) then Say("this game's auction house can't be read all at once.") return end
-    local wait = DB and DB.lastScan and (DB.lastScan + SCAN_GAP - time()) or 0
+    local wait = FullWait()
     if wait > 0 and (AH.GetNumReplicateItems and AH.GetNumReplicateItems() or 0) > 0 then
         -- (the server answers one full read per 15 minutes: what's read already, valued again - values are kept)
         Say(("the auction house can be read again in %d min - showing the last read."):format(math.ceil(wait / 60)))
@@ -388,6 +428,10 @@ local function Scan()
     end)
 end
 
+-- the main scan: Auctionator's quick scan when it's there, else the full read
+local function Scan()
+    if not ScanQuick() then ScanFull() end
+end
 -- REPLICATE_ITEM_LIST_UPDATE: the answer to ours (read at once, once), or another addon's read (one timer: read
 -- when the events stopped, not the same list twice, not our own read's echoes)
 local otherToken, settlePending = 0, false
@@ -441,7 +485,7 @@ end
 -- and CheapUpgrades share).
 ---------------------------------------------------------------------------
 local offset, sortKey = 0, "profit"
-local TITLE_H, TOP_H, FOOT_H, LIST_ROW = 22, 34, 22, 30
+local TITLE_H, TOP_H, FOOT_H, LIST_ROW = 22, 60, 22, 30
 local COLS = { -- key, title, width (the item: the rest)
     { "name", "Item" }, { "buyout", "Buyout", 130 }, { "value", "Disenchants into", 150 }, { "profit", "Profit", 130 },
 }
@@ -531,24 +575,60 @@ local function Build()
     bg:SetPoint("BOTTOMRIGHT")
     bg:SetColorTexture(0.05, 0.05, 0.05, 1)
 
-    -- top: Scan AH (its countdown while the server's 15 minutes run), Blues too, the best find
-    local scan = CreateFrame("Button", nil, h, "UIPanelButtonTemplate")
-    scan:SetSize(120, 22)
-    scan:SetPoint("TOPLEFT", 8, -(TITLE_H + 6))
-    scan:SetScript("OnClick", function() Check("scanning", pcall(Scan)) end)
-    h.scan = scan
-    local blues = CreateFrame("CheckButton", nil, h, "UICheckButtonTemplate")
-    blues:SetSize(24, 24)
-    blues:SetPoint("LEFT", scan, "RIGHT", 10, 0)
-    blues:SetChecked(DB and DB.blues)
-    blues:SetScript("OnClick", function(self) DB.blues = self:GetChecked() and true or false end)
-    local bl = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    bl:SetPoint("LEFT", blues, "RIGHT", 0, 0)
-    bl:SetText("Blues too (next scan)")
+    -- top, two rows: the scans and the max price; the options and what's going on, a progress bar under them
+    local function Tip(owner, title, text)
+        GameTooltip:SetOwner(owner, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine(title)
+        GameTooltip:AddLine(text, 1, 1, 1, true)
+        GameTooltip:Show()
+    end
+    local function Button(width, onClick, title, text)
+        local b = CreateFrame("Button", nil, h, "UIPanelButtonTemplate")
+        b:SetSize(width, 22)
+        b:SetScript("OnClick", onClick)
+        b:SetScript("OnEnter", function(self) Tip(self, title, type(text) == "function" and text() or text) end)
+        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        return b
+    end
+    local quick = Button(104, function() Check("scanning", pcall(ScanQuick)) end, "Quick scan",
+        "Auctionator's quick scan: one search for everything, each item's lowest price. No 15-minute wait, and your Auctionator prices are updated too.")
+    quick:SetPoint("TOPLEFT", 8, -(TITLE_H + 6))
+    quick:SetText("Quick scan")
+    h.quick = quick
+    local full = Button(126, function() Check("scanning", pcall(ScanFull)) end, "Full scan", function()
+        return (AuctionatorFull() and "Auctionator's full scan" or "The whole auction house")
+            .. ": every listing, \"of the ...\" variants too, and your own auctions left out. The server allows it once every 15 minutes."
+    end)
+    full:SetPoint("LEFT", quick, "RIGHT", 6, 0) -- (without Auctionator in its place: UpdateScan)
+    h.scan = full
+    -- (the options: what's read, what's listed)
+    local function Option(anchor, gap, text, key, title, help, now)
+        local c = CreateFrame("CheckButton", nil, h, "UICheckButtonTemplate")
+        c:SetSize(22, 22)
+        c:SetPoint("TOPLEFT", anchor, gap, -(TITLE_H + 31))
+        c:SetChecked(DB and DB[key])
+        c:SetScript("OnClick", function(self)
+            DB[key] = self:GetChecked() and true or nil
+            if now then now() end
+        end)
+        c:SetScript("OnEnter", function(self) Tip(self, title, help) end)
+        c:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        local l = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        l:SetPoint("LEFT", c, "RIGHT", 0, 0)
+        l:SetText(text)
+        return c, l
+    end
+    local _, bl = Option(h, 8, "Blues too", "blues", "Blues too",
+        "Blue gear as well as green, from the next scan. Blues disenchant into shards.")
+    local _, el = Option(h, 8 + 22 + ((bl.GetStringWidth and bl:GetStringWidth()) or 60) + 16, "Hide \"needs an enchanter\"",
+        "hideEnchanter", "Hide \"needs an enchanter\"",
+        "Leave out what your own Enchanting can't disenchant yet (Mastercraft's word). Shown again when you untick it.",
+        function() Rank(); if Refresh then Refresh() end end)
+    h.optionsEnd = el
     -- Max price (as CheapUpgrades' tab: the game's own gold / silver / copper input, the auction house Sell tab's;
     -- applied a moment after typing stops, or at Enter; 0: no max). Our own box where the client has no such input.
     local ml = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    ml:SetPoint("LEFT", bl, "RIGHT", 16, 0)
+    ml:SetPoint("LEFT", full, "RIGHT", 24, 0)
     ml:SetText("Max price:")
     local function PriceHelp(owner)
         GameTooltip:SetOwner(owner, "ANCHOR_BOTTOM")
@@ -562,7 +642,6 @@ local function Build()
         local t = token
         C_Timer.After(0.35, function() if t == token then Check("setting the max price", pcall(SetMaxPrice, get())) end end)
     end
-    local priceEnd
     local ok, mf = pcall(CreateFrame, "Frame", nil, h, "LargeMoneyInputFrameTemplate")
     if ok and mf and type(mf.GoldBox) == "table" and mf.GetAmount and mf.SetAmount then
         mf:SetSize(200, 30)
@@ -578,7 +657,6 @@ local function Build()
             box:HookScript("OnEnter", PriceHelp)
             box:HookScript("OnLeave", function() GameTooltip:Hide() end)
         end
-        priceEnd = mf
     else
         -- "25" (gold), "25g", "1g 50s", "5s": as CheapUpgrades reads its /cu max
         local box = CreateFrame("EditBox", nil, h, "InputBoxTemplate")
@@ -610,20 +688,35 @@ local function Build()
         box:SetScript("OnEscapePressed", function(b) h.SetPriceShown(Cap()); b:ClearFocus() end)
         box:SetScript("OnEnter", PriceHelp)
         box:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        priceEnd = box
     end
     h.SetPriceShown(Cap())
-    h.status = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    h.status:SetPoint("LEFT", priceEnd, "RIGHT", 16, 0)
+    -- what's going on (row two, after the options), and a thin bar for how far a step is
+    h.status = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    h.status:SetPoint("LEFT", el, "RIGHT", 20, 0)
     h.status:SetPoint("RIGHT", h, "RIGHT", -10, 0)
     h.status:SetJustifyH("RIGHT")
     h.status:SetWordWrap(false)
+    local bar = CreateFrame("StatusBar", nil, h)
+    bar:SetHeight(3)
+    bar:SetPoint("TOPLEFT", 6, -(TITLE_H + TOP_H - 5))
+    bar:SetPoint("TOPRIGHT", -6, -(TITLE_H + TOP_H - 5))
+    bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+    bar:SetStatusBarColor(0.3, 0.65, 1)
+    bar:SetMinMaxValues(0, 1)
+    bar:Hide()
+    h.bar = bar
+
 
     -- the list: column headers, rows
     local inset = Inset(h)
     inset:SetPoint("TOPLEFT", 4, -(TITLE_H + TOP_H))
     inset:SetPoint("BOTTOMRIGHT", -4, FOOT_H)
     h.inset = inset
+    -- a message in the list itself when it's empty (what to do, or that nothing was found)
+    h.empty = inset:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    h.empty:SetWidth(460)
+    h.empty:SetJustifyH("CENTER")
+    h.empty:SetPoint("CENTER", inset, "CENTER", 0, 10)
     local x, prev = 0, nil
     h.headers = {}
     for i = #COLS, 1, -1 do -- (from the right: the item takes what's left)
@@ -665,6 +758,11 @@ local function Build()
         local hl = r:CreateTexture(nil, "HIGHLIGHT")
         hl:SetAllPoints()
         hl:SetColorTexture(1, 1, 1, 0.14)
+        if i % 2 == 0 then -- (every other row a shade lighter: a long list reads across)
+            local stripe = r:CreateTexture(nil, "BACKGROUND")
+            stripe:SetAllPoints()
+            stripe:SetColorTexture(1, 1, 1, 0.035)
+        end
         r.border = r:CreateTexture(nil, "BORDER")
         r.border:SetSize(28, 28)
         r.border:SetPoint("LEFT", 2, 0)
@@ -706,16 +804,21 @@ local function Build()
         if tick >= 1 then tick = 0; if h.UpdateScan then h.UpdateScan() end end
     end)
     h.UpdateScan = function()
-        local left = DB and DB.lastScan and (DB.lastScan + SCAN_GAP - time()) or 0
+        -- Quick scan only with Auctionator (its quick scan); the full scan's button then beside it, else in its place
+        local hasQuick = AuctionatorQuick() ~= nil
+        if hasQuick then quick:Show() else quick:Hide() end
+        full:ClearAllPoints()
+        if hasQuick then full:SetPoint("LEFT", quick, "RIGHT", 6, 0) else full:SetPoint("TOPLEFT", 8, -(TITLE_H + 6)) end
+        local label, wait = hasQuick and "Full scan" or "Scan AH", FullWait()
         if busy then
-            scan:SetText("|cff9d9d9dScanning...|r")
-        elseif left > 0 and not AuctionatorQuick() then -- (Auctionator's quick scan has no 15 minutes)
-            scan:SetText(("|cff9d9d9dScan AH (%d:%02d)|r"):format(math.floor(left / 60), left % 60))
+            quick:SetText("|cff9d9d9dScanning...|r")
+            full:SetText(hasQuick and ("|cff9d9d9d" .. label .. "|r") or "|cff9d9d9dScanning...|r")
         else
-            scan:SetText("Scan AH")
+            quick:SetText("Quick scan")
+            full:SetText(wait > 0 and ("|cff9d9d9d%s (%d:%02d)|r"):format(label, math.floor(wait / 60), wait % 60) or label)
         end
-    end
-    h:SetScript("OnShow", function()
+        if quick.SetEnabled then quick:SetEnabled(not busy); full:SetEnabled(not busy) end
+    end    h:SetScript("OnShow", function()
         local a = _G.AuctionHouseFrame
         if a and a.SetTitle then pcall(a.SetTitle, a, "Cheap Disenchants") end
         if Refresh then Refresh() end
@@ -728,7 +831,7 @@ end
 
 local QUALITY_BORDER = { [2] = { 0.12, 1, 0 }, [3] = { 0, 0.44, 0.87 } }
 
-Refresh = function(statusText)
+Refresh = function(statusText, fraction)
     if not (host and host:IsShown()) then return end
     local shown = 0
     local listH = host.inset:GetHeight() or 0
@@ -746,27 +849,49 @@ Refresh = function(statusText)
                 local lvl = C_Item and C_Item.GetDetailedItemLevelInfo and e.link and C_Item.GetDetailedItemLevelInfo(e.link)
                 e.ilvl = lvl or false
             end
-            r.sub:SetText((e.ilvl and ("Item level " .. e.ilvl) or "") .. (e.enchanter and "  |cffff6666needs an enchanter|r" or ""))
+            local notes = {}
+            if e.ilvl then notes[#notes + 1] = "Item level " .. e.ilvl end
+            if e.enchanter then notes[#notes + 1] = "|cffff6666needs an enchanter|r" end
+            if e.yours then notes[#notes + 1] = "|cffbbbbbbyou have one listed - the cheapest may be yours|r" end
+            r.sub:SetText(table.concat(notes, "  -  "))
             r.buyout:SetText(Money(e.buyout))
             r.value:SetText("~" .. Money(e.value) .. (e.partial and "|cffff6666*|r" or ""))
-            r.profit:SetText("|cff4dff4d+" .. Money(e.profit) .. "|r")
+            -- (the profit, and what it is of the price: a 2g find on a 50c item beats one on a 40g item)
+            local pct = e.buyout > 0 and math.floor(e.profit / e.buyout * 100 + 0.5) or 0
+            r.profit:SetText(("|cff4dff4d+%s|r |cff9d9d9d%d%%|r"):format(Money(e.profit), pct))
             r:Show()
             shown = shown + 1
         else
             r:Hide()
         end
     end
+    -- the bar: how far the step is (shown while something's going on)
+    if host.bar then
+        if busy and fraction then host.bar:SetValue(math.max(0, math.min(1, fraction))); host.bar:Show()
+        elseif not busy then host.bar:Hide() end
+    end
+    -- the empty list says what to do, or that nothing was found
+    local empty
+    if #results == 0 then
+        if busy then empty = statusText or "Scanning..."
+        elseif source then
+            empty = Cap() and ("Nothing up to %s disenchants into more than it costs right now."):format(Money(Cap()))
+                or "Nothing on the auction house disenchants into more than it costs right now."
+        else
+            empty = AuctionatorQuick() and "Press Quick scan: Auctionator looks through the auction house, and what disenchants into more than it costs is listed here."
+                or "Press Scan AH: the whole auction house is read, and what disenchants into more than it costs is listed here."
+        end
+    end
+    host.empty:SetText(empty or "")
+    if empty then host.empty:Show() else host.empty:Hide() end
     if statusText then
         host.status:SetText(statusText)
     elseif results[1] then
         local best = results[1]
         for _, e in ipairs(results) do if e.profit > best.profit then best = e end end
         host.status:SetText(("%d worth disenchanting.  Best: %s  |cff4dff4d+%s|r"):format(#results, best.link or Name(best), Money(best.profit)))
-    elseif DB and DB.lastScan then
-        host.status:SetText(Cap() and ("Nothing up to %s disenchants into more than it costs right now."):format(Money(Cap()))
-            or "Nothing on the auction house disenchants into more than it costs right now.")
     else
-        host.status:SetText("Scan AH reads the whole auction house: what disenchants into more than it costs.")
+        host.status:SetText("")
     end
     local from = ""
     if source and not busy then
@@ -822,6 +947,7 @@ MasterOptions_Shared.ReplayAddonLoaded(f, ADDON) -- (its ADDON_LOADED setup, now
 
 MasterOptions_CheapDisenchants = { -- (for the tests)
     ParseMoney = ParseMoney, Disenchant = Disenchant, Scan = Scan, Open = Open, SetMaxPrice = SetMaxPrice,
+    ScanFull = ScanFull, ScanQuick = ScanQuick, Rerank = function() Rank(); if Refresh then Refresh() end end,
     Results = function() return results end,
 }
 end)

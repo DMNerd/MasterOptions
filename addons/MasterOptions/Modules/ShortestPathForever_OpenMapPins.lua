@@ -304,6 +304,27 @@ local function WrapPins()
     end
 end
 
+-- OpenMap's Pins list window (OpenMapPins: its rows made once, each row.pin the pin it shows) - Shift-click on a row
+-- journeys there too, as on the pin itself; its own click otherwise (go there, Alt delete, right-click its card, and
+-- with a chat box open still share it)
+local listWrapped = setmetatable({}, { __mode = "k" })
+local function WrapList()
+    local list = _G.OpenMapPins
+    if type(list) ~= "table" or type(list.rows) ~= "table" then return false end
+    for _, row in ipairs(list.rows) do
+        if not listWrapped[row] and row.GetScript and row.SetScript then
+            local own = row:GetScript("OnClick")
+            listWrapped[row] = true
+            row:SetScript("OnClick", function(self, button, ...)
+                if button == "LeftButton" and Journey(self.pin) then return end
+                if own then return own(self, button, ...) end
+            end)
+            if row.HookScript then row:HookScript("OnEnter", TooltipLine) end
+        end
+    end
+    return true
+end
+
 local function WatchPinClicks()
     local mod = WorldMap()
     if not mod or type(mod.RefreshPins) ~= "function" or not hooksecurefunc then return false end
@@ -316,8 +337,10 @@ local function WatchPinClicks()
             if next(roots) == nil and C_Timer then
                 C_Timer.After(0, function() Check("Shift-click on OpenMap's pins", pcall(WrapPins)) end)
             end
+            Check("Shift-click in OpenMap's pin list", pcall(WrapList)) -- (its rows made with the map)
         end)
     end
+    Check("Shift-click in OpenMap's pin list", pcall(WrapList))
     return true
 end
 

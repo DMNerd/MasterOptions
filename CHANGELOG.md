@@ -7,6 +7,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+### Added
+
+- **Cheap Disenchants: Quick scan and Full scan.** With Auctionator, two buttons. Quick scan is Auctionator's quick
+  scan (each item's lowest price, no wait). Full scan is Auctionator's full scan: every listing, "of the ..."
+  variants too, your own auctions left out, once per 15 minutes, with its countdown on the button. Without
+  Auctionator, one Scan AH as before.
+- **Cheap Disenchants: Hide "needs an enchanter"**, applied at once.
+- **OpenMap's Pins list window: Shift-click on a row starts a Shortest Path journey there**, as Shift-click on the
+  pin itself does. With a chat box open it still shares the pin. The row's tooltip says so.
+
+### Changed
+
+- **Cheap Disenchants' tab is easier to read.** The top has two rows: the scans and the max price, then the options
+  and the status. A thin bar shows how far each step is, and the status names the step (1/4 reading, 2/4 looking at
+  the items, 3/4 valuing, 4/4 checking the finds), so the counts no longer seem to jump. Every other row is a shade
+  lighter. The profit shows its share of the price too ("+1g 20s 150%"). The empty list says what to do, or that
+  nothing was found. The buttons and options explain themselves on mouse-over.
+- **Your own auctions in Auctionator's quick scan:** an item where your listing is the only one isn't listed. Where
+  yours is among others, the row says "you have one listed - the cheapest may be yours" (the quick scan can't tell
+  whose the lowest price is; a Full scan can).
+
 ### Fixed
 
 - **Cheap Disenchants' scan finishes again, and reuses Auctionator's scans.** The game sends "the auction house list

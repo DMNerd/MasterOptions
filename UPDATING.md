@@ -57,6 +57,9 @@ Log in, `/reload` once, then:
    Dungeon Journal's map.
 5. Visit a vendor: junk sells, and nothing on the never-sell list does.
 
+Before a release, also go through **Waiting** in [IN-GAME-CHECKS.md](IN-GAME-CHECKS.md): what each change since the
+last release needs a real game session to confirm.
+
 ## 5. Record it
 
 In [COMPATIBILITY.md](COMPATIBILITY.md), replace the new entry's Notes line: per updated addon, what changed that
