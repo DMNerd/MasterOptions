@@ -1,11 +1,12 @@
 # AuctionHouse_SideTabs: the auction house's tabs (the game's and LibAHTab's) stacked down the window's side, one
 # width; on the left when the right is off the screen; again when a tab is added later or the game sizes one again.
-import sys
-import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import module_test, module_source, fake_frames
-src = module_source(sys.argv[1])
-lua = module_test(sys.argv[1])
-fake_frames(lua, timers_now=True)
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # (run with -I: the tests' own folder for shared_lua)
+import shared_lua
+MODULE = sys.argv[1]
+lua = shared_lua.module_test(MODULE)
+shared_lua.fake_frames(lua, timers_now=True)
+src = shared_lua.module_source(MODULE)
 lua.execute(r'''
   HOOKS = {}
   function hooksecurefunc(t, k, fn)
