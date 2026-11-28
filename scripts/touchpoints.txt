@@ -454,3 +454,12 @@ Questie|config-key|"Spirit Healer"|OpenMap_QuestieTownsfolk.lua
 ShortestPathForever|config-key|destinationPin = false|AddonSettings.lua (Navigation arrow), Problems.lua (spf:nopointer)
 ShortestPathForever|literal|"destinationPin",|AddonSettings.lua (its Settings entry ShortestPathForever_destinationPin)
 ShortestPathForever|literal|"ShortestPathForever_" .. key,|AddonSettings.lua SetSPF (its settings registered by key)
+
+# --- 2.20.1 (Cheap Disenchants: Auctionator's scans reused, as CheapUpgrades' Scanner)
+Auctionator|literal|ScanComplete = "full_incremental_scan_complete",|Mastercraft_CheapDisenchants.lua (its quick scan's rows)
+Auctionator|literal|ScanComplete = "replicate_scan_complete",|Mastercraft_CheapDisenchants.lua (its full scan's rows)
+Auctionator|literal|Auctionator.EventBus:Fire(self, Auctionator.IncrementalScan.Events.ScanComplete, rawScan)|Mastercraft_CheapDisenchants.lua (browse rows handed over)
+Auctionator|literal|Auctionator.EventBus:Fire(self, Auctionator.FullScan.Events.ScanComplete, fixedScanData)|Mastercraft_CheapDisenchants.lua (replicateInfo rows handed over)
+Auctionator|literal|Auctionator.State.IncrementalScanFrameRef = frame|Mastercraft_CheapDisenchants.lua (Scan AH: its quick scan)
+Auctionator|method|function AuctionatorIncrementalScanFrameMixin:InitiateScan()|Mastercraft_CheapDisenchants.lua
+Auctionator|literal|self.inProgress = true|Mastercraft_CheapDisenchants.lua (its full scan running: its rows come when done)

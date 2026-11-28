@@ -55,6 +55,19 @@ lua.execute(r'''
     { 1001, 2, 1, 1, "Me" },                       -- your own auction: never counted
   }
   DE = { [1001] = 4000, [1002] = 8000, [1003] = 5000, [1005] = 1500, [1007] = 9000 }
+  -- the client's item data (name, link, quality, item level - none here: each its own group - ..., texture), from the
+  -- listings' quality; NOTLOADED: not in the client yet (loaded through Item:ContinueOnItemLoad)
+  NOTLOADED = {}
+  function GetItemInfo(id)
+    if NOTLOADED[id] then return nil end
+    local q
+    for _, l in ipairs(LIST) do if l[1] == id then q = l[2] end end
+    if ITEMQ and ITEMQ[id] then q = ITEMQ[id] end
+    if not q then return nil end
+    return "Item " .. id, "|cff1eff00|Hitem:" .. id .. "|h[Item " .. id .. "]|h|r", q, nil, 1, "Armor", "Cloth", 1, "INVTYPE_CHEST", 0, "tex" .. id
+  end
+  LOADS = {}
+  Item = { CreateFromItemID = function(_, id) return { ContinueOnItemLoad = function(_, fn) LOADS[#LOADS + 1] = function() NOTLOADED[id] = nil; fn() end end } end }
   local function Coins(c) -- (the game's money string: coin icons)
     local g, s, k = math.floor(c / 10000), math.floor(c / 100) % 100, c % 100
     local o = ""
@@ -148,7 +161,7 @@ res["another addon's read while our tab isn't open: left alone"] = E("Order()") 
 L(r'''
   ITEM = {}  -- itemID -> { ilvl, classID, equipLoc }
   C_Item = { GetDetailedItemLevelInfo = function(link) local i = ITEM[tonumber(link:match("item:(%d+)"))]; return i and i[1] end,
-             GetItemInfoInstant = function(link) local id = tonumber(link:match("item:(%d+)")); local i = ITEM[id]
+             GetItemInfoInstant = function(link) local id = type(link) == "number" and link or tonumber(link:match("item:(%d+)")); local i = ITEM[id]
                if i then return id, nil, nil, i[3], nil, i[2] end end }
   LIST = {}
   for k = 0, 29 do -- thirty greens of item level 20, armour: they all disenchant into 5000
@@ -177,6 +190,70 @@ res["max price 30s: only what costs up to it listed (the 1000-3000 ones), the we
 res["...saved, no new scan, nothing read again"] = E("MasterOptions_CheapDisenchantsDB.maxPrice") == 3000 and E("REPLICATES") == E("R0") and E("READS") == 0
 L('MasterOptions_CheapDisenchants.SetMaxPrice(0); Run()')
 res["max price 0: no max, every find back"] = E("#MasterOptions_CheapDisenchants.Results()") == 8 and E("MasterOptions_CheapDisenchantsDB.maxPrice") is None
+# Our own read under the game's flood of REPLICATE_ITEM_LIST_UPDATE (one per row whose data comes in): read once, to
+# the end - not restarted by each - and its echoes afterwards read nothing again
+L(r'''
+  function RunTimers() local t = TIMERS; TIMERS = {}; for _, fn in ipairs(t) do fn() end end
+  ROWREADS = 0
+  local get = C_AuctionHouse.GetReplicateItemInfo
+  C_AuctionHouse.GetReplicateItemInfo = function(i) ROWREADS = ROWREADS + 1; return get(i) end
+  ITEM[3001] = { 25, 4, "INVTYPE_LEGS" }; DE[3001] = 6000
+  LIST = { { 3001, 2, 1, 2000 }, { 3001, 2, 1, 2500 } }
+  NOW = NOW + 16 * 60
+  MasterOptions_CheapDisenchants.Scan(); R1 = REPLICATES
+  Fire("REPLICATE_ITEM_LIST_UPDATE")
+  for _ = 1, 3 do RunTimers(); for _ = 1, 30 do Fire("REPLICATE_ITEM_LIST_UPDATE") end end
+  Run()
+''')
+res["flood of list events during our read: read to the end once, the find listed"] = E("Has(3001) ~= nil and Has(3001).profit == 4000") is True and E("ROWREADS") == 2
+L('R2 = ROWREADS; for _ = 1, 50 do Fire("REPLICATE_ITEM_LIST_UPDATE") end; Run()')
+res["...the events after it (its echoes): nothing read again"] = E("ROWREADS") == E("R2")
+res["...the Scan button free again (not stuck on Scanning)"] = "Scanning" not in (E("MasterOptionsCheapDisenchants.scan.text") or "")
+
+# With Auctionator: Scan AH starts its quick scan (no 15 minutes), its rows taken when it says it's complete; an item
+# whose data isn't in the client yet is loaded first
+L(r'''
+  QUICKS, LISTENER = 0, nil
+  Auctionator = {
+    EventBus = { Register = function(_, obj, events) LISTENER = obj; LISTENED = events end },
+    IncrementalScan = { Events = { ScanComplete = "full_incremental_scan_complete" } },
+    FullScan = { Events = { ScanComplete = "replicate_scan_complete" } },
+    State = { IncrementalScanFrameRef = { InitiateScan = function() QUICKS = QUICKS + 1 end }, FullScanFrameRef = {} },
+  }
+  Fire("AUCTION_HOUSE_SHOW")
+  ITEMQ = { [4001] = 2, [4002] = 2, [4003] = 2, [5001] = 2 }
+  for _, id in ipairs({ 4001, 4002, 4003, 5001 }) do ITEM[id] = { 30, 4, "INVTYPE_FEET" }; DE[id] = 3000 end
+  ITEM[4003] = { 31, 4, "INVTYPE_FEET" } -- (its own group: its tooltip read once it's loaded)
+  NOTLOADED[4003] = true
+  R3 = REPLICATES
+  MasterOptions_CheapDisenchants.Scan()
+''')
+res["with Auctionator: Scan AH starts its quick scan, not our own 15-minute read"] = E("QUICKS") == 1 and E("REPLICATES") == E("R3") and E("LISTENER ~= nil")
+L(r'''
+  LISTENER:ReceiveEvent("full_incremental_scan_complete", {
+    { itemKey = { itemID = 4001, itemLevel = 30 }, minPrice = 500, totalQuantity = 3 },
+    { itemKey = { itemID = 4002, itemLevel = 30 }, minPrice = 100, totalQuantity = 0 },  -- (none left)
+    { itemKey = { itemID = 4003, itemLevel = 31 }, minPrice = 700, totalQuantity = 1 },  -- (data not loaded yet)
+  })
+''')
+res["Auctionator's quick scan: its rows listed (none left: not), while an item's data is loading the rest waits"] = E("Has(4001)") is None
+L('for _, fn in ipairs(LOADS) do fn() end; LOADS = {}; Run(); MasterOptionsCheapDisenchants:Show()')
+res["...once loaded: listed, with the loaded one, by their lowest price"] = E("Has(4001) ~= nil and Has(4001).profit == 2500 and Has(4003) ~= nil and Has(4002) == nil") is True
+res["...the footer says where it came from"] = "Auctionator's quick scan" in (E("MasterOptionsCheapDisenchants.count.text") or "")
+res["...no 15-minute countdown on the button with Auctionator"] = E("MasterOptionsCheapDisenchants.scan.text") == "Scan AH"
+
+# Auctionator's full scan finishing while our tab is closed: kept, and listed when the tab opens
+L(r'''
+  MasterOptionsCheapDisenchants:Hide()
+  LISTENER:ReceiveEvent("replicate_scan_complete", {
+    { replicateInfo = { "Item 5001", "tex", 1, 2, true, 10, 0, 0, 0, 900, 0, false, nil, "Seller", "x", 0, 5001, true }, itemLink = "x" },
+    { replicateInfo = { "Item 5001", "tex", 1, 2, true, 10, 0, 0, 0, 1, 0, false, nil, "Me", "x", 0, 5001, true }, itemLink = "x" }, -- (yours)
+  })
+  Run()
+''')
+res["Auctionator's full scan with our tab closed: not read then"] = E("Has(5001)") is None
+L('MasterOptionsCheapDisenchants:Show(); Run()')
+res["...read when the tab opens (your own auction left out)"] = E("Has(5001) ~= nil and Has(5001).buyout == 900") is True
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

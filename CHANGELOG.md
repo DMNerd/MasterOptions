@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+### Fixed
+
+- **Cheap Disenchants' scan finishes again, and reuses Auctionator's scans.** The game sends "the auction house list
+  changed" again for every listing whose item data comes in: tens of thousands of times after one scan. Since 2.20.0
+  each of them started the read over, so it never got to the end, and its numbers jumped between the steps. Now it
+  works as CheapUpgrades does:
+  - With Auctionator: Scan AH starts Auctionator's own quick scan (no 15-minute wait), and the tab lists from
+    Auctionator's scans when they complete, its quick scan and its full scan alike. Your Auctionator prices update
+    from the same scan, and nothing is read twice. Auctionator's scan as the auction house opens is shown when you
+    open the tab.
+  - Without it: our own full read, read once when the server answers. Another addon's read is picked up only once its
+    events have stopped, never the same list twice, and our own read's echoes are ignored.
+  - Items whose data the game hasn't sent yet are loaded first (for at most 10 seconds) rather than dropped. The
+    footer says where the list came from and how long ago.
+
 ## [2.20.0] - 2026-11-28
 
 ### Added

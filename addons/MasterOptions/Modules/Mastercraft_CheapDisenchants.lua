@@ -76,10 +76,12 @@ local function Rank()
     if Sort then Sort() end
 end
 
--- One read of the list at a time: a list arriving again mid-way (REPLICATE_ITEM_LIST_UPDATE more than once, another
--- addon's scan) starts over, and the chain running stops - two chains at once each did the whole work
+-- One read at a time: a newer one (another scan's rows) starts over, and the chain running stops (generation)
 local generation = 0
-local reading = false -- (the replicate list being read: OnList until Read is through)
+local reading = false   -- (rows being taken in and their items loaded: until the valuing starts)
+local lastFinish = 0    -- (GetTime() when the last read was through)
+local lastReadCount     -- (the replicate list's row count when it was last read: the same list isn't read twice)
+local source            -- what the list shown came from ("Auctionator's quick scan" ...) and when: { name, at }
 
 -- `list` worked through a few milliseconds a frame: fn(entry) on each, then done(); status(k, n) says how far.
 -- Stops when a newer read has started (gen)
@@ -164,50 +166,257 @@ local function Value(list, gen)
         Work(gen, maybe, function(e) e.value, e.partial, e.enchanter = Disenchant(e.link) end,
             function(k, n) return ("Checking %d / %d finds..."):format(k, n) end, function()
                 busy = false
+                lastFinish = GetTime and GetTime() or 0
                 Rank()
                 if Refresh then Refresh() end
             end)
     end)
 end
 
-local function Read(i, n, gen)
-    if gen ~= generation then return end
-    local AH = C_AuctionHouse
-    local me = UnitName("player")
-    local start, last = clock and clock() or 0, i - 1
-    for k = i, math.min(n - 1, i + (clock and n or 1500) - 1) do
-        last = k
-        local _, texture, count, quality, _, _, _, _, _, buyout, _, _, _, owner, _, _, itemID = AH.GetReplicateItemInfo(k)
-        if itemID and Wanted(quality) and (buyout or 0) > 0 and owner ~= me then -- (not your own auctions)
-            local each = math.floor(buyout / math.max(1, count or 1) + 0.5) -- (per item, in whole copper)
-            local e = cheapest[itemID]
-            if not e or each < e.buyout then
-                local link = AH.GetReplicateItemLink and AH.GetReplicateItemLink(k)
-                cheapest[itemID] = { itemID = itemID, link = link, texture = texture, quality = quality, buyout = each }
-            end
-        end
-        if k % 200 == 0 and Spent(start) > FRAME_MS then break end
-    end
-    if last < n - 1 then
-        if Refresh then Refresh(("Reading the auction house: %d / %d..."):format(last + 1, n)) end
-        C_Timer.After(0, function() Check("reading the auction house", pcall(Read, last + 1, n, gen)) end)
-        return
-    end
-    reading = false
-    local list = {}
-    for _, e in pairs(cheapest) do if e.link then list[#list + 1] = e end end
-    Value(list, gen)
+---------------------------------------------------------------------------
+-- Where the rows come from (as CheapUpgrades' Scanner does it):
+--   * Auctionator, when it's installed: its quick scan (one browse search for everything - each item's lowest price,
+--     no 15-minute limit; its Scan button, and its scan when the auction house opens) and its full scan (the replicate
+--     list, every item's data loaded by Auctionator) both hand their rows over when they're complete (its EventBus).
+--     Scan AH starts its quick scan: your Auctionator prices are updated with it, and nothing is read twice.
+--   * without it, the replicate list ourselves (one full read per 15 minutes): read once when the server answers. The
+--     game sends REPLICATE_ITEM_LIST_UPDATE again for every row whose item data comes in (CheapUpgrades counted
+--     179,597 in 6 minutes) - restarting on each (2.20.0) never got to the end. Another addon's read is picked up
+--     once those have stopped for a few seconds (one timer, not one per event), never the same list twice.
+-- Each row offers its item at its price per item; then the items' data (quality, link) is filled in - loaded first
+-- where the client hasn't got it yet, with a time limit - and the list is valued (Value, above).
+---------------------------------------------------------------------------
+local LOAD_TIMEOUT = 10       -- seconds to wait for items' data
+local RESPONSE_TIMEOUT = 20   -- seconds without an answer to our own read: the server's limit
+local QUICK_TIMEOUT = 180     -- Auctionator's quick scan, at most
+local OTHER_SETTLE = 3        -- another addon's replicate read: picked up when its events stopped this long
+local ECHO = 10               -- seconds after our own read in which its events are ours
+
+local function Instant(id)
+    local f = (C_Item and C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
+    if f then return f(id) end
+end
+local function ItemInfo(id)
+    local f = (C_Item and C_Item.GetItemInfo) or _G.GetItemInfo
+    if f then return f(id) end
 end
 
--- the replicate list is in (ours, or another addon's scan): read it all again
-local function OnList()
+-- a row: its item at its price per item (copper); quality when the row knows it. Only gear that can be disenchanted
+local function Offer(itemID, each, quality)
+    if not itemID or not each or each <= 0 then return end
+    if quality and quality >= 0 and not Wanted(quality) then return end
+    local _, _, _, equipLoc, _, classID = Instant(itemID)
+    if classID and ((classID ~= 2 and classID ~= 4) or NOT_DE[equipLoc or ""]) then return end
+    each = math.floor(each + 0.5)
+    local e = cheapest[itemID]
+    if not e then cheapest[itemID] = { itemID = itemID, buyout = each }
+    elseif each < e.buyout then e.buyout = each end
+end
+
+local function Begin(name)
+    generation = generation + 1
+    busy, reading, cheapest = true, true, {}
+    source = { name = name, at = time() }
+    return generation
+end
+
+-- the items' data filled in (loaded first where it isn't there yet), what isn't wanted dropped, then valued
+local function Resolve(gen)
+    if gen ~= generation then return end
+    local list, missing = {}, {}
+    for _, e in pairs(cheapest) do list[#list + 1] = e end
+    local function Fill(e)
+        local name, link, quality, _, _, _, _, _, _, texture = ItemInfo(e.itemID)
+        if name then e.link, e.quality, e.texture = link, quality, texture end
+        return name ~= nil
+    end
+    local finished = false
+    local function Finish()
+        if finished or gen ~= generation then return end
+        finished = true
+        reading = false
+        local wanted = {}
+        for id, e in pairs(cheapest) do
+            if e.link and Wanted(e.quality) then wanted[#wanted + 1] = e else cheapest[id] = nil end
+        end
+        Value(wanted, gen)
+    end
+    Work(gen, list, function(e) if not Fill(e) then missing[#missing + 1] = e end end,
+        function(k, n) return ("Looking at %d / %d items..."):format(k, n) end, function()
+            local waiting = 0
+            local Item = _G.Item
+            for _, e in ipairs(missing) do
+                if Item and Item.CreateFromItemID then
+                    waiting = waiting + 1
+                    Item:CreateFromItemID(e.itemID):ContinueOnItemLoad(function()
+                        if gen ~= generation then return end
+                        Fill(e)
+                        waiting = waiting - 1
+                        if waiting == 0 then Finish() end
+                    end)
+                end
+            end
+            if waiting == 0 then return Finish() end
+            if Refresh then Refresh(("Loading %d items..."):format(waiting)) end
+            C_Timer.After(LOAD_TIMEOUT, Finish)
+        end)
+end
+
+-- The replicate list in the client (ours, or another addon's read): its rows offered, a few milliseconds a frame
+local waitingOwn = false
+local function ReadReplicate(name)
     local AH = C_AuctionHouse
     local n = AH and AH.GetNumReplicateItems and AH.GetNumReplicateItems() or 0
     if n <= 0 then busy = false; if Refresh then Refresh() end return end
-    busy, cheapest, reading = true, {}, true
+    lastReadCount = n
+    local gen = Begin(name)
+    local me = UnitName("player")
+    local rows = {}
+    for i = 0, n - 1 do rows[#rows + 1] = i end
+    Work(gen, rows, function(k)
+        local _, _, count, quality, _, _, _, _, _, buyout, _, _, _, owner, _, _, itemID = AH.GetReplicateItemInfo(k)
+        if owner ~= me then Offer(itemID, (buyout or 0) / math.max(1, count or 1), quality) end -- (not your own)
+    end, function(k, total) return ("Reading the auction house: %d / %d..."):format(k, total) end, function() Resolve(gen) end)
+end
+
+-- Auctionator's rows: its full scan ({ replicateInfo = GetReplicateItemInfo's, itemLink, timeLeft }) or its quick scan
+-- (browse results: { itemKey = { itemID, ... }, minPrice, totalQuantity, ... })
+local waitingQuick = false
+local function TakeAuctionator(rows, full)
+    if type(rows) ~= "table" then return end
+    waitingQuick = false
+    if full then
+        local AH = C_AuctionHouse
+        lastReadCount = AH and AH.GetNumReplicateItems and AH.GetNumReplicateItems() or nil -- (the same list, read)
+    end
+    local gen = Begin(full and "Auctionator's full scan" or "Auctionator's quick scan")
+    local me = UnitName("player")
+    Work(gen, rows, function(r)
+        if full then
+            local info = type(r.replicateInfo) == "table" and r.replicateInfo
+            if info and info[14] ~= me then Offer(info[17], (info[10] or 0) / math.max(1, info[3] or 1), info[4]) end
+        elseif type(r.itemKey) == "table" and (r.totalQuantity or 1) > 0 then
+            Offer(r.itemKey.itemID, r.minPrice)
+        end
+    end, function(k, n) return ("Reading Auctionator's scan: %d / %d..."):format(k, n) end, function() Resolve(gen) end)
+end
+
+-- Auctionator's scans as they complete: taken while our tab is open or we asked for one; else kept for when it opens
+local host -- (the tab's frame: the window, below)
+local held -- { rows, full }: the last one that came while the tab was closed
+local function Shown() return host and host:IsShown() end
+local hookedAuctionator = false
+local function HookAuctionator()
+    if hookedAuctionator then return true end
+    local A = _G.Auctionator
+    local bus = A and A.EventBus
+    local quick = A and A.IncrementalScan and A.IncrementalScan.Events
+    local full = A and A.FullScan and A.FullScan.Events
+    if not (bus and bus.Register and ((quick and quick.ScanComplete) or (full and full.ScanComplete))) then return false end
+    hookedAuctionator = true
+    local wanted = {}
+    if quick and quick.ScanComplete then wanted[#wanted + 1] = quick.ScanComplete end
+    if full and full.ScanComplete then wanted[#wanted + 1] = full.ScanComplete end
+    bus:Register({
+        ReceiveEvent = function(_, eventName, rows)
+            local isFull = full and eventName == full.ScanComplete
+            if not (isFull or (quick and eventName == quick.ScanComplete)) then return end
+            if Shown() or waitingQuick then
+                held = nil
+                Check("reading Auctionator's scan", pcall(TakeAuctionator, rows, isFull))
+            else
+                held = { rows = rows, full = isFull }
+            end
+        end,
+    }, wanted)
+    return true
+end
+local function TakeHeld()
+    if held and not busy then
+        local h = held
+        held = nil
+        Check("reading Auctionator's scan", pcall(TakeAuctionator, h.rows, h.full))
+    end
+end
+
+local function AuctionatorQuick()
+    local A = _G.Auctionator
+    local ref = A and A.State and A.State.IncrementalScanFrameRef
+    return HookAuctionator() and type(ref) == "table" and type(ref.InitiateScan) == "function" and ref or nil
+end
+
+local function Scan()
+    if busy then return end
+    -- with Auctionator: its quick scan (no 15-minute limit), its rows handed over when it's complete
+    local quick = AuctionatorQuick()
+    if quick then
+        busy, waitingQuick = true, true
+        if Refresh then Refresh("Auctionator is scanning the auction house...") end
+        if pcall(quick.InitiateScan, quick) then
+            local gen = generation
+            C_Timer.After(QUICK_TIMEOUT, function()
+                if waitingQuick and gen == generation then
+                    waitingQuick, busy = false, false
+                    if Refresh then Refresh("Auctionator's scan didn't finish - try Scan AH again.") end
+                end
+            end)
+            return
+        end
+        busy, waitingQuick = false, false
+    end
+    -- without it: the replicate list ourselves
+    local AH = C_AuctionHouse
+    if not (AH and AH.ReplicateItems) then Say("this game's auction house can't be read all at once.") return end
+    local wait = DB and DB.lastScan and (DB.lastScan + SCAN_GAP - time()) or 0
+    if wait > 0 and (AH.GetNumReplicateItems and AH.GetNumReplicateItems() or 0) > 0 then
+        -- (the server answers one full read per 15 minutes: what's read already, valued again - values are kept)
+        Say(("the auction house can be read again in %d min - showing the last read."):format(math.ceil(wait / 60)))
+        ReadReplicate(source and source.name or "the last scan")
+        return
+    end
+    busy, waitingOwn = true, true
     if DB then DB.lastScan = time() end
-    generation = generation + 1 -- (a read already going stops: this one starts over)
-    Read(0, n, generation)
+    if Refresh then Refresh("Asking the auction house...") end
+    AH.ReplicateItems()
+    local gen = generation
+    C_Timer.After(RESPONSE_TIMEOUT, function()
+        if waitingOwn and gen == generation then
+            waitingOwn = false
+            if (AH.GetNumReplicateItems() or 0) > 0 then ReadReplicate("the last scan")
+            else busy = false; if Refresh then Refresh("No answer - the server's 15 minutes may not be over yet.") end end
+        end
+    end)
+end
+
+-- REPLICATE_ITEM_LIST_UPDATE: the answer to ours (read at once, once), or another addon's read (one timer: read
+-- when the events stopped, not the same list twice, not our own read's echoes)
+local otherToken, settlePending = 0, false
+local function OnReplicate()
+    local AH = C_AuctionHouse
+    if waitingOwn then
+        if (AH.GetNumReplicateItems() or 0) == 0 then return end -- (an empty answer is no answer yet)
+        waitingOwn = false
+        ReadReplicate("your scan")
+        return
+    end
+    if busy or not Shown() then return end
+    if GetTime and GetTime() - lastFinish < ECHO then return end
+    otherToken = otherToken + 1
+    if settlePending then return end
+    settlePending = true
+    local function Look(seen)
+        if busy or not Shown() then settlePending = false return end
+        if otherToken ~= seen then local now = otherToken; return C_Timer.After(OTHER_SETTLE, function() Look(now) end) end
+        settlePending = false
+        local A = _G.Auctionator
+        local fs = A and A.State and A.State.FullScanFrameRef
+        if type(fs) == "table" and fs.inProgress then return end -- (Auctionator's own: its rows come when it's done)
+        local n = AH.GetNumReplicateItems() or 0
+        if n == 0 or n == lastReadCount then return end
+        if DB then DB.lastScan = time() end -- (the server's 15 minutes run from another addon's read too)
+        ReadReplicate("another addon's scan")
+    end
+    C_Timer.After(OTHER_SETTLE, function() Look(otherToken) end)
 end
 
 -- The max price changed (the tab's field, as CheapUpgrades'): the last read listed again at once - what's newly under
@@ -217,7 +426,7 @@ local function SetMaxPrice(copper)
     copper = math.max(0, math.floor(tonumber(copper) or 0))
     if copper == (tonumber(DB.maxPrice) or 0) then return end
     DB.maxPrice = copper > 0 and copper or nil
-    if reading then return end -- (the list still being read: it's valued with the new max price when it's in)
+    if reading then return end -- (the rows still coming in: valued with the new max price when they're in)
     local list = {}
     for _, e in pairs(cheapest) do if e.link then list[#list + 1] = e end end
     if #list == 0 then if Refresh then Refresh() end return end
@@ -226,28 +435,12 @@ local function SetMaxPrice(copper)
     Value(list, generation)
 end
 
-local function Scan()
-    local AH = C_AuctionHouse
-    if busy then return end
-    if not (AH and AH.ReplicateItems) then Say("this game's auction house can't be read all at once.") return end
-    local wait = DB and DB.lastScan and (DB.lastScan + SCAN_GAP - time()) or 0
-    if wait > 0 and (AH.GetNumReplicateItems and AH.GetNumReplicateItems() or 0) > 0 then
-        -- (the server answers one full read per 15 minutes: what's read already, valued again)
-        Say(("the auction house can be read again in %d min - showing the last read."):format(math.ceil(wait / 60)))
-        OnList()
-        return
-    end
-    busy = true
-    if Refresh then Refresh("Asking the auction house...") end
-    AH.ReplicateItems()
-end
-
 ---------------------------------------------------------------------------
 -- The window: a "Cheap Disenchants" tab of the auction house, in its own look (as CheapUpgrades' tabs): the
 -- auction house's background and column headers, rows like its lists. The tab through LibAHTab (the tab row Auctionator
 -- and CheapUpgrades share).
 ---------------------------------------------------------------------------
-local host, offset, sortKey = nil, 0, "profit"
+local offset, sortKey = 0, "profit"
 local TITLE_H, TOP_H, FOOT_H, LIST_ROW = 22, 34, 22, 30
 local COLS = { -- key, title, width (the item: the rest)
     { "name", "Item" }, { "buyout", "Buyout", 130 }, { "value", "Disenchants into", 150 }, { "profit", "Profit", 130 },
@@ -516,7 +709,7 @@ local function Build()
         local left = DB and DB.lastScan and (DB.lastScan + SCAN_GAP - time()) or 0
         if busy then
             scan:SetText("|cff9d9d9dScanning...|r")
-        elseif left > 0 then
+        elseif left > 0 and not AuctionatorQuick() then -- (Auctionator's quick scan has no 15 minutes)
             scan:SetText(("|cff9d9d9dScan AH (%d:%02d)|r"):format(math.floor(left / 60), left % 60))
         else
             scan:SetText("Scan AH")
@@ -526,6 +719,7 @@ local function Build()
         local a = _G.AuctionHouseFrame
         if a and a.SetTitle then pcall(a.SetTitle, a, "Cheap Disenchants") end
         if Refresh then Refresh() end
+        TakeHeld() -- (an Auctionator scan that finished while the tab was closed - the one as the auction house opened)
     end)
     h:Hide()
     host = h
@@ -574,7 +768,12 @@ Refresh = function(statusText)
     else
         host.status:SetText("Scan AH reads the whole auction house: what disenchants into more than it costs.")
     end
-    host.count:SetText(#results > 0 and ("%d-%d of %d"):format(offset + 1, offset + shown, #results) or "")
+    local from = ""
+    if source and not busy then
+        local ago = math.floor((time() - (source.at or time())) / 60)
+        from = ("  -  %s, %s"):format(source.name, ago < 1 and "just now" or (ago .. " min ago"))
+    end
+    host.count:SetText((#results > 0 and ("%d-%d of %d"):format(offset + 1, offset + shown, #results) or "") .. from)
     if host.UpdateScan then host.UpdateScan() end
 end
 
@@ -612,11 +811,12 @@ f:SetScript("OnEvent", function(_, event, name)
         end
     elseif event == "AUCTION_HOUSE_SHOW" then
         Check("the Cheap Disenchants tab", pcall(AddTab))
+        Check("listening to Auctionator's scans", pcall(HookAuctionator)) -- (its scan as the auction house opens)
     elseif event == "REPLICATE_ITEM_LIST_UPDATE" then
-        -- (ours, or another addon's full read: only while our panel is open, else it's theirs alone)
-        if host and host:IsShown() or busy then Check("reading the auction house", pcall(OnList)) end
+        Check("reading the auction house", pcall(OnReplicate))
     end
 end)
+Check("listening to Auctionator's scans", pcall(HookAuctionator))
 
 MasterOptions_Shared.ReplayAddonLoaded(f, ADDON) -- (its ADDON_LOADED setup, now: the saved variables are in)
 
