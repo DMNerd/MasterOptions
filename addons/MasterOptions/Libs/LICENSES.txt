@@ -1,0 +1,30 @@
+The libraries in this folder are other people's work, included unchanged. Each keeps its own license:
+
+LibStub.lua
+  By Kaelten, Cladhaire, ckknight, Mikk, Ammo, Nevcairiel, joshborke.
+  Public domain - as LibStub.lua itself states ("LibStub is hereby placed in the Public Domain").
+
+CallbackHandler-1.0.lua, AceSerializer-3.0.lua
+  By the Ace3 Development Team (https://github.com/WoWUIDev/Ace3).
+  BSD-style license: Ace3-LICENSE.txt.
+
+LibDataBroker-1.1.lua
+  By tekkub (https://github.com/tekkub/libdatabroker-1-1).
+  No license text is published with it (neither in the file nor in its repository); included unchanged, credited
+  to its author.
+
+LibDBIcon-1.0.lua
+  By funkehdude (https://www.curseforge.com/wow/addons/libdbicon-1-0).
+  No license text is published with it (the file states none); included unchanged, credited to its author.
+
+LibAHTab.lua
+  By plusmouse (https://github.com/TheMouseNest/LibAHTab, commit 2ddbec58c8be37b2cd911bee7512d597e7dfdfe1).
+  MIT License: LibAHTab-LICENSE.txt.
+
+LibDeflate.lua
+  By Haoqian He (https://github.com/SafeteeWoW/LibDeflate, commit afc3b78d12fb3bcfa6b21e5332031ad3d7572e19).
+  zlib License: LibDeflate-LICENSE.txt.
+
+HereBeDragons-2.0.lua, HereBeDragons-Pins-2.0.lua
+  By Nevcairiel (https://github.com/Nevcairiel/HereBeDragons, commit 90a7b2d8c065010dfb866e2b6bd56f5bc930029b).
+  BSD - as the library states ("## X-License: BSD"): HereBeDragons-LICENSE.txt.

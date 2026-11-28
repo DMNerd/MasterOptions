@@ -7,17 +7,9 @@ src = open(sys.argv[1], encoding="utf-8").read()
 lua = LuaRuntime()
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
 from shared_lua import load_shared; load_shared(lua, _sys.argv[1]); from shared_lua import load_pawn; load_pawn(lua, _sys.argv[1])
+from shared_lua import fake_frames; fake_frames(lua)
 lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
 lua.execute(r'''
-  FRAMES, TIMERS, ERRS = {}, {}, 0
-  function CreateFrame() local f = { ev = {} }
-    function f:RegisterEvent(e) self.ev[e] = true end
-    function f:SetScript(k, fn) self[k] = fn end
-    FRAMES[#FRAMES + 1] = f; return f end
-  C_Timer = { After = function(d, fn) TIMERS[#TIMERS + 1] = fn end }
-  function RunTimers() local t = TIMERS; TIMERS = {}; for _, fn in ipairs(t) do fn() end end
-  function Fire(e) for _, f in ipairs(FRAMES) do if f.ev[e] and f.OnEvent then f.OnEvent(f, e) end end end
-  function MasterOptions_ReportError(_, _, e) ERRS = ERRS + 1; print("ERR", e) end
   function hooksecurefunc(t, k, fn) local orig = t[k]; t[k] = function(...) local r = orig(...); fn(...); return r end end
   LOADED = { GearMatic = true, CheapUpgrades = true, ForeverDungeonJournal = true }
   C_AddOns = { IsAddOnLoaded = function(n) return LOADED[n] == true end }

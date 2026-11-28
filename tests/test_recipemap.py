@@ -1,12 +1,9 @@
 # Mastercraft_RecipeMap: vendors selling patterns for recipes you haven't learned (Mastercraft's save + QuestieDB)
 # and your profession's trainers near your cap get map markers (HereBeDragons pins), your faction only.
 import sys
-from lupa import LuaRuntime
 src = open(sys.argv[1], encoding="utf-8").read()
-lua = LuaRuntime()
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
-lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
+from shared_lua import module_test; lua = module_test(_sys.argv[1])
 lua.execute(r'''
   FRAMES, TIMERS, ERRS = {}, {}, 0
   local function Region() local r = {} for _, k in ipairs({ "SetSize", "SetPoint", "SetVertexColor",
@@ -60,8 +57,13 @@ lua.execute(r'''
     AddMinimapIconMap = function(_, ref, icon, map, x, y) MINI[#MINI + 1] = { icon = icon } end,
     RemoveAllWorldMapIcons = function() WORLD = {}; REDRAWS = (REDRAWS or 0) + 1 end, RemoveAllMinimapIcons = function() MINI = {} end }
   -- (as Questie 12.8 has it: one of its own modules, not in LibStub)
-  QuestieLoader._modules = { HBDPins = pins }
-  LibStub = nil
+  -- Master Options' own HereBeDragons-Pins (its Libs, through LibStub); Questie's private copy as the fallback, which
+  -- records what it was given in QWORLD
+  QWORLD = {}
+  QuestieLoader._modules = { HBDPins = { AddWorldMapIconMap = function(_, ref, icon, map, x, y) QWORLD[#QWORLD + 1] = icon end,
+    AddMinimapIconMap = function() end, RemoveAllWorldMapIcons = function() QWORLD = {} end, RemoveAllMinimapIcons = function() end } }
+  OWN_PINS = pins
+  function LibStub(name) if name == "HereBeDragons-Pins-2.0" then return OWN_PINS end end
   function Marks() local o = {} for _, w in ipairs(WORLD) do o[#o + 1] = w.icon.title .. "@" .. w.map .. ":" .. w.x .. "," .. w.y end table.sort(o) return table.concat(o, " | ") end
   function Lines(title) for _, w in ipairs(WORLD) do if w.icon.title == title then return table.concat(w.icon.lines, "; ") end end end
 ''')
@@ -174,6 +176,9 @@ lua.execute(r'''
   end
 ''')
 res["Questie's rescale: no 'lacking the GetIconScale' error, ours not resized"] = E("RESCALE_ERRS") == 0 and E("RESIZED") == 0
+res["the markers through Master Options' own HereBeDragons-Pins, not Questie's copy"] = E("#WORLD > 0 and #QWORLD == 0") is True
+L('OWN_PINS = nil; COMBAT = false; MastercraftDB.chars["Player-1"].professions[1].skill = 146; Fire("SKILL_LINES_CHANGED"); RunTimers()')
+res["...ours missing: Questie's copy as the fallback"] = E("#QWORLD > 0") is True
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

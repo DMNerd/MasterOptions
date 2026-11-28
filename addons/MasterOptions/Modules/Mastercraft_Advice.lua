@@ -2,9 +2,10 @@
 MasterOptions_Module("Mastercraft_Advice", { "Mastercraft" }, function(ADDON)
 
 -- Mastercraft's advice per item (KEEP / VENDOR / AUCTION / DISENCHANT), remembered: what VendorSell's bag icons and
--- Baganator's advice icons show without a tooltip read. Learned from every item tooltip GameTooltip shows (yours,
--- and the hidden reads of the modules that read bag slots - MasterOptions_Shared.ReadMastercraftAdvice), and for
--- new items in your bags in the background, a few at a time when no tooltip is on screen and out of combat.
+-- Baganator's advice icons show without a tooltip read. Learned from every tooltip GameTooltip shows of an item you
+-- have (yours, and the hidden reads of the modules that read bag slots - MasterOptions_Shared.ReadMastercraftAdvice;
+-- not the auction house's, a chat link's or a quest reward's), and for new items in your bags in the background, a
+-- few at a time when no tooltip is on screen and out of combat.
 -- Selling never trusts this: at a vendor every item is read again.
 --
 -- MasterOptions_MastercraftAdviceDB.advice[itemID] = "KEEP" (also "VENDOR, but keep some for a guide") | "VENDOR" |

@@ -32,6 +32,7 @@ public data and settings; the third-party addons themselves are never edited.
 .\scripts\pack.ps1      # dist\MasterOptionsPack.zip
 .\scripts\pull.ps1      # copy changes made directly in AddOns back into the repo
 .\scripts\lint.ps1      # luacheck (.luacheckrc); first run downloads luacheck 1.2.0 into .tools\ (checksum pinned)
+.\scripts\dedup.ps1     # copy-paste check (jscpd, .jscpd.json): fails on a clone not in .jscpd-baseline.json; -Update rewrites it
 .\scripts\check-addons.ps1  # after updating other addons: every name we use still there? missing dependencies, old patches?
 ```
 
@@ -70,10 +71,11 @@ Master Options only makes these addons work together: everything it connects is 
 | BetterBlizzFrames, BetterBlizzPlates | Bodify |
 | Details! Damage Meter | Terciob |
 
-And to the libraries Master Options ships with or uses: LibStub (Kaelten, Cladhaire, ckknight, Mikk, Ammo, Nevcairiel,
-joshborke), CallbackHandler (the Ace3 team), LibDataBroker (tekkub), LibDBIcon (funkehdude) and HereBeDragons
-(Nevcairiel, through Questie's copy) - and to the WoWSims Forever and Wowhead Forever data GearMatic, CheapUpgrades
-and Mastercraft are built on.
+And to the libraries Master Options ships with: LibStub (Kaelten, Cladhaire, ckknight, Mikk, Ammo, Nevcairiel,
+joshborke), CallbackHandler and AceSerializer (the Ace3 team), LibDataBroker (tekkub), LibDBIcon (funkehdude), LibAHTab
+(plusmouse), LibDeflate (Haoqian He) and HereBeDragons (Nevcairiel) - each under its own license, listed with its
+source in `Libs/LICENSES.txt` - and to the WoWSims Forever and Wowhead Forever data GearMatic, CheapUpgrades and
+Mastercraft are built on.
 
 ## Releases
 
@@ -107,6 +109,7 @@ purpose (no `.pkgmeta`).
 | GearMatic / Baganator | GearMatic, Baganator | Junk coin from GearMatic's sell rules; loadouts as equipment sets |
 | GearMatic / Forever | GearMatic | Separate GearMatic data per character (Forever has no realm name) |
 | CheapUpgrades / Baganator | CheapUpgrades, Baganator | "+23%" badges on bag slots |
+| CheapUpgrades / Mastercraft | CheapUpgrades, Mastercraft | On an upgrade's tooltip: what the piece it replaces brings back (Mastercraft's pick), who of your characters already has one, who can craft it and its materials' cost |
 | CheapUpgrades / GearMatic | CheapUpgrades, GearMatic | CheapUpgrades values items with GearMatic's stat weights: a "GearMatic" weights profile per spec (ratings converted to CheapUpgrades' per-1% units), kept up to date and used unless you picked a profile of your own |
 | OpenMapTweaks / Mastercraft | OpenMap_Tweaks, Mastercraft | Mastercraft's node rule filters OpenMap_Tweaks' pins |
 | DungeonJournal / Upgrades | ForeverDungeonJournal | Dungeon Journal's loot marked: an upgrade arrow and its size (Pawn with Pawn Forever, else GearMatic + CheapUpgrades' size), GearMatic's best-in-slot skull, and a cog on what your Mastercraft guides need |

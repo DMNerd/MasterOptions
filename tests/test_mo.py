@@ -1,92 +1,14 @@
 import sys, os
 from lupa import LuaRuntime
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # (run with -I)
+from wow_harness import fake_wow
 
 scratch = os.path.dirname(os.path.abspath(__file__))
 mo_path = sys.argv[1]
 lua = LuaRuntime(unpack_returned_tuples=True)
-
-# saved variables (copies)
-for f in sorted(os.listdir(os.path.join(scratch, "fixtures", "sv"))):
-    lua.execute(open(os.path.join(scratch, "fixtures", "sv", f), encoding="utf-8").read())
-
-addons = open(os.path.join(scratch, "fixtures", "addons.txt"), encoding="utf-8").read().strip().split(",")
-lua.globals().ADDON_LIST = lua.table_from(addons + ["FakeOutdated", "CheapUpgrades_Baganator"])
+fake_wow(lua, scratch, extra_addons=[], rows_visible=True)
 
 lua.execute(r'''
--- ---------- fake WoW ----------
-ERRORS = {}
-function print(...) local t = {} for i = 1, select("#", ...) do t[#t+1] = tostring((select(i, ...))) end io.write("[chat] ", table.concat(t, " "), "\n") end
-local loaded = {}
-for _, n in ipairs(ADDON_LIST) do loaded[n] = true end
-loaded["FakeOutdated"] = false; loaded["CheapUpgrades_Baganator"] = false -- an old copy: exists, enabled, not loaded
-local enabled = {}
-for _, n in ipairs(ADDON_LIST) do enabled[n] = true end
-LOADED, ENABLED = loaded, enabled
-C_AddOns = {
-  IsAddOnLoaded = function(n) return loaded[n] == true end,
-  GetNumAddOns = function() return #ADDON_LIST end,
-  GetAddOnInfo = function(i)
-    local n = type(i) == "number" and ADDON_LIST[i] or i
-    if n == "FakeOutdated" then return n, n, "", false, "INTERFACE_VERSION" end
-    return n, n, "", true, nil
-  end,
-  GetAddOnDependencies = function(i) return end,
-  IsAddOnLoadOnDemand = function(i) return false end,
-  DoesAddOnExist = function(n) return enabled[n] ~= nil end,
-  GetAddOnEnableState = function(n, who) return enabled[n] and 2 or 0 end,
-  EnableAddOn = function(n) enabled[n] = true end,
-  DisableAddOn = function(n) enabled[n] = false end,
-}
-PLAYER = { "Testchar", "Alpha", "ROGUE", 4 }
-function UnitName() return PLAYER[1], PLAYER[2] end
-function UnitClass() return PLAYER[3], PLAYER[3], PLAYER[4] end
-function GetRealmName() return "" end
-function IsModifierKeyDown() return false end
-function ReloadUI() end
-function GameTooltip_Hide() end
-function hooksecurefunc(a, b, c) end
-function tinsert(t, v) table.insert(t, v) end
-function LibStub() return nil end
-UISpecialFrames = {}
-SlashCmdList = {}
-PawnPlayerFullName = "Testchar Alpha"
-local timers = {}
-C_Timer = { After = function(d, fn) timers[#timers+1] = fn end }
-function RunTimers() local i = 1 while i <= #timers do local fn = timers[i]; i = i + 1; local ok, e = pcall(fn); if not ok then ERRORS[#ERRORS+1] = "timer: " .. tostring(e) end end; timers = {} end
-
--- frames: any method is a no-op; a few return values
-FRAMES = {}
-local Frame = {}
-local methods = {
-  GetHeight = function() return 768 end, GetStringHeight = function() return 12 end, GetAlpha = function() return 1 end,
-  GetChecked = function(self) return self._checked end, SetChecked = function(self, v) self._checked = v end,
-  SetScript = function(self, k, fn) self.scripts[k] = fn end, GetScript = function(self, k) return self.scripts[k] end,
-  RegisterEvent = function(self, e) self.events[e] = true end, UnregisterAllEvents = function(self) self.events = {} end,
-  SetText = function(self, t) self._text = t end, GetText = function(self) return self._text end,
-  IsShown = function(self) return self._shown end, Show = function(self) self._shown = true; if self.scripts.OnShow then self.scripts.OnShow(self) end end,
-  Hide = function(self) self._shown = false end, SetShown = function(self, v) self._shown = v end,
-  CreateFontString = function(self) return NewFrame() end, CreateTexture = function(self) return NewFrame() end,
-  IsVisible = function() return true end, GetName = function() return nil end, -- (every row counts as on screen)
-}
-Frame.__index = function(t, k) return methods[k] or function() end end
-function NewFrame() local f = setmetatable({ scripts = {}, events = {} }, Frame); FRAMES[#FRAMES+1] = f; return f end
-time, date = time or os.time, date or os.date
-function CreateFrame(kind, name) local f = NewFrame(); if name then _G[name] = f end return f end
-UIParent = NewFrame()
-GameTooltip = NewFrame()
-function Fire(ev, ...) for _, f in ipairs(FRAMES) do if f.events[ev] and f.scripts.OnEvent then local ok, e = pcall(f.scripts.OnEvent, f, ev, ...); if not ok then ERRORS[#ERRORS+1] = ev .. ": " .. tostring(e) end end end end
-
--- other addons' globals
-local profile = GearMaticDB.profiles.Default
-GearMatic = {
-  db = { profile = profile },
-  Compat = { CurrentCharKey = function() return "-Testchar Alpha" end },
-  ScaleImport = {
-    IsBuiltinChosen = function(k) local b = GearMaticDB.scales and GearMaticDB.scales[k]; return b and b._builtin == true or false end,
-    UsePawnScale = function() print("GM: UsePawnScale") end, UseBuiltinScale = function() print("GM: UseBuiltinScale") end,
-  },
-  Pawn = { ImportAllScales = function() end },
-}
 Baganator = { API = { RequestItemButtonsRefresh = function() end } }
 CheapUpgrades = {}
 SlashCmdList.PAWN_FOREVER = function(m) print("/pff " .. m) end
@@ -124,21 +46,7 @@ L('RunTimers(); RunTimers()')
 # open the window and click every row
 L(r'''
   MasterOptionsFrame:Show()
-  local clicked = 0
-  for _, f in ipairs(FRAMES) do
-    local fn = f.scripts.OnClick
-    if fn and f ~= nil then
-      local ok, e = pcall(fn, f)
-      clicked = clicked + 1
-      if not ok then ERRORS[#ERRORS+1] = "click: " .. tostring(e) end
-    end
-  end
-  print("clicked " .. clicked .. " buttons")
-  MasterOptionsFrame:Show()
-  -- tooltips
-  for _, f in ipairs(FRAMES) do
-    if f.scripts.OnEnter then local ok, e = pcall(f.scripts.OnEnter, f); if not ok then ERRORS[#ERRORS+1] = "tooltip: " .. tostring(e) end end
-  end
+  ClickAndHoverAll()
   Fire("PLAYER_LOGOUT")
 ''')
 # the Never sell section: its rows (clicking every button above pressed their Remove), the header, adding from the box

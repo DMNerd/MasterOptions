@@ -1,19 +1,9 @@
 import sys
-from lupa import LuaRuntime
-
-lua = LuaRuntime(unpack_returned_tuples=True)
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
-lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")  # (module files: run at once, as their old addon did)
+from shared_lua import module_test; lua = module_test(_sys.argv[1], unpack_returned_tuples=True)
+from shared_lua import fake_frames; fake_frames(lua)
 lua.execute(r'''
 function print(...) local t = {} for i = 1, select("#", ...) do t[#t+1] = tostring((select(i, ...))) end io.write(table.concat(t, " "), "\n") end
-FRAMES, TIMERS = {}, {}
-function CreateFrame() local f = { ev = {} }
-  function f:RegisterEvent(e) self.ev[e] = true end
-  function f:SetScript(k, fn) self[k] = fn end
-  FRAMES[#FRAMES+1] = f; return f end
-C_Timer = { After = function(d, fn) TIMERS[#TIMERS+1] = fn end }
-function Fire(e, ...) for _, f in ipairs(FRAMES) do if f.ev[e] and f.OnEvent then f.OnEvent(f, e, ...) end end end
 function time() return 1000 end
 function hooksecurefunc(t, k, fn) local orig = t[k]; t[k] = function(...) local r = { orig(...) }; fn(...); return table.unpack(r) end end
 -- OpenMap's world map module (only what the patch uses)

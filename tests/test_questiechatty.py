@@ -1,21 +1,11 @@
 # Questie_Chattynator: shift-clicking a Questie quest link in Chattynator's chat puts Questie's fresh link in the chat
 # box in place of the one the game put in - what you typed around it stays; nothing else is touched.
 import sys
-from lupa import LuaRuntime
 src = open(sys.argv[1], encoding="utf-8").read()
-lua = LuaRuntime()
 import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, sys.argv[1])
-lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
+from shared_lua import module_test; lua = module_test(sys.argv[1])
+from shared_lua import fake_frames; fake_frames(lua, timers_now=True)
 lua.execute(r'''
-  FRAMES, ERRS = {}, 0
-  function CreateFrame() local f = { ev = {} }
-    function f:RegisterEvent(e) self.ev[e] = true end
-    function f:SetScript(k, fn) self[k] = fn end
-    FRAMES[#FRAMES + 1] = f; return f end
-  C_Timer = { After = function(d, fn) fn() end }
-  function Fire(e) for _, f in ipairs(FRAMES) do if f.ev[e] and f.OnEvent then f.OnEvent(f, e) end end end
-  function MasterOptions_ReportError() ERRS = ERRS + 1 end
   strsplit = function(sep, s) local out = {} for part in (s .. sep):gmatch("(.-)" .. sep:gsub("%p", "%%%0")) do out[#out + 1] = part end return unpack(out) end
   unpack = unpack or table.unpack
   SHIFT = true

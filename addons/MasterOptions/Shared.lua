@@ -322,6 +322,7 @@ S.StripColour = StripColour
 
 -- GameTooltip, hidden, filled by `method` (SetBagItem, SetItemByID, SetHyperlink) with its arguments, and handed to
 -- `read(tip)` while it's filled; read's results (up to four) back - nothing when it couldn't be filled
+local quiet = false -- (a quiet read: not one of your items - the advice hook below leaves it alone)
 function S.HiddenTooltip(read, method, ...)
     local tip = GameTooltip
     if not (tip and tip[method]) then return nil end
@@ -330,6 +331,15 @@ function S.HiddenTooltip(read, method, ...)
     if pcall(tip[method], tip, ...) then a, b, c, d = read(tip) end
     tip:Hide()
     return a, b, c, d
+end
+
+-- the same, for an item that isn't yours (an auction house listing): Master Options' modules don't learn from it
+-- (remembered advice, the keep list) - a scan's thousand reads saved nothing, synced nothing, redrew no bag
+function S.QuietTooltip(read, method, ...)
+    quiet = true
+    local ok, a, b, c, d = pcall(S.HiddenTooltip, read, method, ...)
+    quiet = false
+    if ok then return a, b, c, d end
 end
 local KEEP_REASONS = { "guide still needs", "guide uses all", "^You're tracking it:" }
 
@@ -372,7 +382,7 @@ end
 local adviceSubs, adviceHooked = {}, false
 local lastRead = { id = nil }
 local function OnItemTooltip(tip, data)
-    if tip ~= GameTooltip then return end
+    if quiet or tip ~= GameTooltip then return end
     local id = data and type(data.id) == "number" and data.id
     if not id then
         local _, link = tip:GetItem()
@@ -385,6 +395,11 @@ local function OnItemTooltip(tip, data)
         return
     end
     lastRead.id, lastRead.verdict, lastRead.reason, lastRead.keepSome, lastRead.guideNeeds = id, verdict, reason, keepSome, guideNeeds
+    -- (learned only for your own items - in your bags, bank or worn: a tooltip of the auction house, a chat link, a quest
+    -- reward or a journal's loot isn't yours - remembered advice grew with every item looked at, and its KEEP ones
+    -- reached GearMatic's never-sell list. Your new items are read in the background anyway: Mastercraft_Advice)
+    local count = (C_Item and C_Item.GetItemCount) or GetItemCount
+    if count and (count(id, true) or 0) == 0 then return end
     for i = 1, #adviceSubs do
         local sub = adviceSubs[i]
         local okS, err = pcall(sub.fn, id, verdict, reason, keepSome, guideNeeds)
@@ -610,3 +625,52 @@ function S.MarkerTooltip(owner, title, lines, hint, source)
     GameTooltip:AddLine(source and ("Master Options - " .. source) or "Master Options", 0.5, 0.5, 0.5)
     GameTooltip:Show()
 end
+
+-- copper as the game writes money (coin icons), "1g 20s 5c" where it can't
+function S.Money(c)
+    if GetMoneyString then return GetMoneyString(math.floor(c + 0.5), true) end
+    return ("%dg %ds %dc"):format(math.floor(c / 10000), math.floor(c / 100) % 100, math.floor(c) % 100)
+end
+
+---------------------------------------------------------------------------
+-- Money in a tooltip (the game's money string: coin icons, "1,234" thousands; or "1g 20s 5c"), in copper
+---------------------------------------------------------------------------
+function S.ParseMoney(text)
+    if type(text) ~= "string" then return nil end
+    local t = S.StripColour(text):gsub(",", "")
+    local total, found = 0, false
+    for _, coin in ipairs({ { "Gold", "g", 10000 }, { "Silver", "s", 100 }, { "Copper", "c", 1 } }) do
+        local n = t:match("(%d+)%s*|T[^|]-" .. coin[1] .. "Icon") or t:match("(%d+)" .. coin[2] .. "%f[%A]")
+        if n then total, found = total + tonumber(n) * coin[3], true end
+    end
+    return found and total or nil
+end
+
+-- Mastercraft's value rows in a filled tooltip: { vendor, auction, disenchant (copper, or nil), best = "vendor" |
+-- "auction" | "disenchant" (the row it draws brighter: its pick, bound items and its rules counted), partial (some
+-- material prices missing), enchanter (needs an enchanter) }
+local VALUE_ROWS = { Vendor = "vendor", Auction = "auction", Disenchant = "disenchant" }
+function S.ReadMastercraftValues(tip)
+    local out = {}
+    local name = tip:GetName()
+    for i = 1, tip:NumLines() do
+        local fs = _G[name .. "TextLeft" .. i]
+        local left = StripColour(fs and fs:GetText())
+        local key = VALUE_ROWS[left:match("^(%a+)")]
+        if key and not left:find("^Disenchanting") then
+            local right = _G[name .. "TextRight" .. i]
+            out[key] = S.ParseMoney(right and right:GetText())
+            if key == "disenchant" then out.partial = left:find("some prices missing", 1, true) ~= nil end
+            local r, g, b = 1, 1, 1
+            if right and right.GetTextColor then r, g, b = right:GetTextColor() end
+            if out[key] and r > 0.95 and g > 0.95 and b < 0.7 then out.best = key end
+        elseif left:find("Needs an enchanter", 1, true) then
+            out.enchanter = true
+        end
+    end
+    return out
+end
+
+-- Is a hidden read going on (quiet, or GameTooltip filled for a read and not on screen)? A tooltip hook adding
+-- lines for you leaves those alone
+function S.ReadingTooltip(tip) return quiet or (tip and tip.GetOwner and tip:GetOwner() == WorldFrame) or false end

@@ -2,12 +2,10 @@
 # Mastercraft's tooltip "Disenchant ~..." row, listed when it disenchants into more than it costs (biggest profit first);
 # blues when ticked; the server's 15-minute limit; a row's click searches for it in the auction house's own Browse.
 import sys
-from lupa import LuaRuntime
 src = open(sys.argv[1], encoding="utf-8").read()
-lua = LuaRuntime()
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
-lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
+from shared_lua import module_test; lua = module_test(_sys.argv[1])
+from shared_lua import fake_tooltip; fake_tooltip(lua)
 lua.execute(r'''
   FRAMES, TIMERS, ERRS, PRINTS, NOW = {}, {}, 0, {}, 100000
   function time() return NOW end
@@ -21,6 +19,7 @@ lua.execute(r'''
     function r:GetFrameLevel() return 1 end
     function r:GetHeight() return 600 end
     function r:GetScript(k) return self.scripts[k] end
+    function r:IsObjectType() return true end
     function r:SetText(t) self.text = t end
     function r:SetScript(k, fn) self.scripts[k] = fn end
     function r:Show() local was = self.shown; self.shown = true; if not was and self.scripts.OnShow then self.scripts.OnShow(self) end end
@@ -72,24 +71,18 @@ lua.execute(r'''
       return "Item " .. l[1], "tex" .. l[1], l[3], l[2], true, 10, 0, 0, 0, l[4], 0, false, nil, l[5] or "Seller", "x", 0, l[1], true end,
     GetReplicateItemLink = function(i) local id = LIST[i + 1][1]; return "|cff1eff00|Hitem:" .. id .. "|h[Item " .. id .. "]|h|r" end,
   }
-  LEFT, RIGHT = {}, {}
-  GameTooltip = {}
-  function GameTooltip:GetName() return "GameTooltip" end
-  function GameTooltip:NumLines() return #LEFT end
-  function GameTooltip:SetOwner(o) self.owner = o end
-  function GameTooltip:GetOwner() return self.owner end
-  function GameTooltip:IsShown() return false end
-  function GameTooltip:GetItem() return nil end
-  function GameTooltip:Hide() end
+  -- the game's tooltip hook (TooltipDataProcessor): Master Options' advice listeners hear every item tooltip
+  POSTCALLS, LEARNED, READS = {}, 0, 0
+  Enum = { TooltipDataType = { Item = 0 } }
+  TooltipDataProcessor = { AddTooltipPostCall = function(_, fn) POSTCALLS[#POSTCALLS + 1] = fn end }
+  MasterOptions_Shared.OnMastercraftAdvice("test", function() LEARNED = LEARNED + 1 end)
   function GameTooltip:SetHyperlink(link)
     local id = tonumber(link:match("item:(%d+)"))
+    READS = READS + 1
+    for _, fn in ipairs(POSTCALLS) do fn(self, { id = id }) end
     LEFT, RIGHT = { "Item " .. id, " ", "|cff4da6ffMastercraft|r" }, { nil, nil, "|cffaaaaaaDISENCHANT|r" }
     if DE[id] then LEFT[#LEFT + 1] = "Disenchant"; RIGHT[#LEFT] = "~" .. Coins(DE[id]) end
     if id == 1007 then LEFT[#LEFT + 1] = "Needs an enchanter - a friend or guild mate." end
-  end
-  for i = 1, 10 do
-    _G["GameTooltipTextLeft" .. i] = { GetText = function() return LEFT[i] end }
-    _G["GameTooltipTextRight" .. i] = { GetText = function() return RIGHT[i] end }
   end
   SEARCHED = nil
   function hooksecurefunc(t, k, fn) local o = t[k]; t[k] = function(...) local r = o(...); fn(...); return r end end
@@ -101,6 +94,11 @@ lua.execute(r'''
   AuctionHouseFrameDisplayMode = { Buy = { "BrowseResultsFrame", "SearchBar" } }
   function Order() local o = {} for _, e in ipairs(MasterOptions_CheapDisenchants.Results()) do o[#o + 1] = e.itemID .. "+" .. e.profit end return table.concat(o, ",") end
 ''')
+# Master Options' own LibStub and LibAHTab (Libs), as the .toc loads them before the modules
+libs = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(sys.argv[1]))), "Libs")
+lua.execute("function PanelTemplates_TabResize() end; function PanelTemplates_DeselectTab(t) t.selected = false end; function PanelTemplates_SelectTab(t) t.selected = true end")
+for lib in ("LibStub.lua", "LibAHTab.lua"):
+    lua.eval("function(s, n) return load(s, '=' .. n) end")(open(_os.path.join(libs, lib), encoding="utf-8").read(), lib)()
 lua.eval("function(s) return load(s, '=p') end")(src)("MasterOptions_Mastercraft_CheapDisenchants")
 E, L = lua.eval, lua.execute
 P = "MasterOptions_CheapDisenchants.ParseMoney"
@@ -112,13 +110,15 @@ res = {
     "money: no price": E(P + '("no price")') is None,
 }
 L('Fire("ADDON_LOADED", "MasterOptions_Mastercraft_CheapDisenchants"); Fire("AUCTION_HOUSE_SHOW")')
-res["at the auction house: a Cheap Disenchants tab (its own, without LibAHTab)"] = E("MasterOptionsCheapDisenchantsTab ~= nil and MasterOptionsCheapDisenchantsTab.text") == "Cheap Disenchants"
-L('MasterOptionsCheapDisenchantsTab.scripts.OnClick(MasterOptionsCheapDisenchantsTab)')
+TAB = '_G["LibAHFrame-1.0-MasterOptions_CheapDisenchants"]'
+res["at the auction house: a Cheap Disenchants tab, through Master Options' own LibAHTab"] = E(TAB + " ~= nil and " + TAB + ".text") == "Cheap Disenchants"
+L(TAB + '.scripts.OnClick(' + TAB + ')')
 res["...its click: the window shown, the auction house's own view put away, its title"] = E("MasterOptionsCheapDisenchants.shown and type(MODE) == 'table' and TITLE == 'Cheap Disenchants'") is True
 L('MasterOptions_CheapDisenchants.Scan()')
 res["Scan AH: one full read of the auction house asked for"] = E("REPLICATES") == 1
 L('Fire("REPLICATE_ITEM_LIST_UPDATE"); Run()')
 res["greens worth disenchanting, cheapest listing each (stacks per item), the biggest profit first"] = E("Order()") == "1007+8000,1001+1000,1005+500"
+res["a scan's tooltip reads are quiet: Master Options' modules learn nothing from auction house items"] = E("LEARNED") == 0 and E("READS") > 0
 res["...needs an enchanter: marked"] = E("MasterOptions_CheapDisenchants.Results()[1].enchanter") is True
 res["...the list shows them"] = E("MasterOptionsCheapDisenchants.rows[1].entry ~= nil and MasterOptionsCheapDisenchants.rows[4].shown == false") is True
 res["...the Scan button counts down the server's 15 minutes"] = "(15:00)" in (E("MasterOptionsCheapDisenchants.scan.text") or "")
@@ -127,7 +127,8 @@ res["a column header: sorted by it (Buyout, highest first; the same buyout by na
 L('MasterOptionsCheapDisenchants.headers.buyout.scripts.OnClick()')
 res["...again: the other way"] = E("Order()") == "1005+500,1007+8000,1001+1000"
 L('MasterOptionsCheapDisenchants.headers.profit.scripts.OnClick()')
-L('NOW = NOW + 60; MasterOptions_CheapDisenchantsDB.blues = true; MasterOptions_CheapDisenchants.Scan(); Run()')
+L('NOW = NOW + 60; READS = 0; MasterOptions_CheapDisenchantsDB.blues = true; MasterOptions_CheapDisenchants.Scan(); Run()')
+res["scanned again within 10 minutes: only the new item read (values kept)"] = E("READS") == 1
 res["Scan again within 15 minutes: not asked again, the last read valued again (blues ticked: the blue too)"] = E("REPLICATES") == 1 and E("Order()") == "1007+8000,1003+4000,1001+1000,1005+500"
 res["...and says when it can read again"] = "in 14 min" in (E("PRINTS[#PRINTS]") or "")
 L('NOW = NOW + 15 * 60; MasterOptions_CheapDisenchants.Scan()')

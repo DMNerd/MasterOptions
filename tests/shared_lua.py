@@ -62,3 +62,68 @@ def load_master_options(lua, mo_path):
     for f in core:
         load(open(os.path.join(d, f), encoding="utf-8").read(), f)("MasterOptions", ns)
     return ns
+
+
+MODULE_STUB = "function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end"
+
+
+def module_test(tested_path, **runtime_args):
+    """A Lua runtime for a test of one file: Shared.lua loaded (load_shared), and MasterOptions_Module running a
+    module's body at once, as its old addon did."""
+    from lupa import LuaRuntime
+    lua = LuaRuntime(**runtime_args)
+    load_shared(lua, tested_path)
+    lua.execute(MODULE_STUB)
+    return lua
+
+
+# The small fakes most module tests need (each test adds or overrides what it needs after them):
+# frames with events (FRAMES, CreateFrame, Fire), timers (queued: RunTimers() runs one round, Run(n) up to n rounds;
+# or run at once with timers_now), and errors counted (ERRS).
+FAKE_FRAMES = r'''
+FRAMES, TIMERS, ERRS = {}, {}, 0
+function CreateFrame() local f = { ev = {} }
+  function f:RegisterEvent(e) self.ev[e] = true end
+  function f:SetScript(k, fn) self[k] = fn end
+  FRAMES[#FRAMES + 1] = f; return f end
+C_Timer = { After = function(d, fn) if TIMERS_NOW then fn() else TIMERS[#TIMERS + 1] = fn end end }
+function RunTimers() local t = TIMERS; TIMERS = {}; for _, fn in ipairs(t) do fn() end end
+function Run(n) for _ = 1, (n or 10) do RunTimers() end end
+function Fire(e, ...) for _, f in ipairs(FRAMES) do if f.ev[e] and f.OnEvent then f.OnEvent(f, e, ...) end end end
+function MasterOptions_ReportError(_, _, e) ERRS = ERRS + 1; io.write("ERR ", tostring(e), "\n") end
+'''
+
+
+def fake_frames(lua, timers_now=False):
+    lua.globals().TIMERS_NOW = timers_now
+    lua.execute(FAKE_FRAMES)
+
+
+# GameTooltip, as the hidden reads use it: lines LEFT[i] / RIGHT[i] (RIGHTCOL[i]: a right text's colour), its
+# GameTooltipTextLeft/Right1..12 font strings; never on screen. A test adds the Set... that fills LEFT and RIGHT.
+FAKE_TOOLTIP = r'''
+LEFT, RIGHT, RIGHTCOL = {}, {}, {}
+GameTooltip = {}
+function GameTooltip:GetName() return "GameTooltip" end
+function GameTooltip:NumLines() return #LEFT end
+function GameTooltip:SetOwner(o) self.owner = o end
+function GameTooltip:GetOwner() return self.owner end
+function GameTooltip:IsShown() return false end
+function GameTooltip:GetItem() return nil end
+function GameTooltip:Hide() end
+function GameTooltip:Show() end
+function GameTooltip:AddLine() end
+for i = 1, 12 do
+  _G["GameTooltipTextLeft" .. i] = { GetText = function() return LEFT[i] end }
+  _G["GameTooltipTextRight" .. i] = { GetText = function() return RIGHT[i] end, IsShown = function() return RIGHT[i] ~= nil end,
+    GetTextColor = function() local c = RIGHTCOL[i] or { 1, 1, 1 }; return c[1], c[2], c[3] end }
+end
+'''
+
+
+def fake_tooltip(lua):
+    lua.execute(FAKE_TOOLTIP)
+
+
+def module_source(tested_path):
+    return open(tested_path, encoding="utf-8").read()

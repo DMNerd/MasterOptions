@@ -1,13 +1,10 @@
 # Mastercraft_BankMats: Store mats / Take mats under the bank window, by Mastercraft's advice for each item - how many,
 # a stack split when only part of it goes - and the storing by itself at the bank (off by default).
 import sys
-from lupa import LuaRuntime
-
-lua = LuaRuntime()
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
+from shared_lua import module_test; lua = module_test(_sys.argv[1])
+from shared_lua import fake_tooltip; fake_tooltip(lua)
 
-lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")  # (module files: run at once, as their old addon did)
 lua.execute(r'''
 FR, TM, PRINTS = {}, {}, {}
 function CreateFrame(kind, name) local f = { ev = {}, scripts = {} }; if name then _G[name] = f end
@@ -66,23 +63,10 @@ C_Container = {
 function CursorHasItem() return CURSOR ~= nil end
 function ClearCursor() CURSOR = nil end
 NUM_BAG_SLOTS, NUM_BANKBAGSLOTS = 0, 0
-LEFT, RIGHT = {}, {}
-GameTooltip = {}
-function GameTooltip:GetName() return "GameTooltip" end
-function GameTooltip:NumLines() return #LEFT end
-function GameTooltip:SetOwner(o) self.owner = o end
-function GameTooltip:GetOwner() return self.owner end
-function GameTooltip:IsShown() return false end
-function GameTooltip:GetItem() return nil end
-function GameTooltip:Hide() end
 function GameTooltip:AddLine() end function GameTooltip:Show() end
 function GameTooltip:SetItemByID(id)
   local a = ADV[id] or { "", "" }
   LEFT, RIGHT = { "Item", " ", "|cff4da6ffMastercraft|r", a[2] }, { nil, nil, "|cffaaaaaa" .. a[1] .. "|r" }
-end
-for i = 1, 10 do
-  _G["GameTooltipTextLeft" .. i] = { GetText = function() return LEFT[i] end }
-  _G["GameTooltipTextRight" .. i] = { GetText = function() return RIGHT[i] end, IsShown = function() return RIGHT[i] ~= nil end }
 end
 function Click(name, shift) PRINTS = {}; SHIFT = shift; _G[name].scripts.OnClick(); SHIFT = false; Run() end
 ''')

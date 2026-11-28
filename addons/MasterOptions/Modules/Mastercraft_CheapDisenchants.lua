@@ -3,8 +3,8 @@ MasterOptions_Module("Mastercraft_CheapDisenchants", { "Mastercraft" }, function
 
 -- Cheap Disenchants: green (and if you like blue) gear on the auction house that disenchants into more than it costs.
 --
--- A "Cheap Disenchants" tab of the auction house (next to Auctionator's and CheapUpgrades'), in the auction house's
--- own look. Scan reads the whole auction house at once (the
+-- A "Cheap Disenchants" tab of the auction house (next to Auctionator's and CheapUpgrades', through LibAHTab), in the
+-- auction house's own look. Scan reads the whole auction house at once (the
 -- game's replicate list: the server allows it about every 15 minutes - and when another addon, e.g. CheapUpgrades,
 -- has just read it, that list is used without asking again). For each item, its cheapest buyout; for each of those,
 -- what Mastercraft says disenchanting it is worth - its tooltip's "Disenchant ~1g 20s" row (the materials it gives,
@@ -18,51 +18,34 @@ local _, Check = MasterOptions_Shared.ErrorReporters(ADDON)
 local DB -- MasterOptions_CheapDisenchantsDB: { blues = bool, lastScan = time() }
 
 local SCAN_GAP = 15 * 60       -- (the server's: one full read of the auction house per 15 minutes)
-local READ_STEP = 1500         -- listings read per frame
-local VALUE_STEP = 30          -- items valued per frame (a tooltip each)
+local FRAME_MS = 6             -- work per frame, at most (reading the list, valuing items): no hitch
+local VALUE_KEEP = 10 * 60     -- a disenchant value is good for 10 minutes (a scan again re-reads only new items)
 local GREEN, BLUE = 2, 3
 
 local function Say(text) print("|cff4da6ffMaster Options|r: " .. text) end
 
----------------------------------------------------------------------------
--- Money in a tooltip: the game's money string (coin icons, "1,234" thousands) or "1g 20s 5c"
----------------------------------------------------------------------------
-local function ParseMoney(text)
-    if type(text) ~= "string" then return nil end
-    local t = MasterOptions_Shared.StripColour(text):gsub(",", "")
-    local total, found = 0, false
-    for _, coin in ipairs({ { "Gold", "g", 10000 }, { "Silver", "s", 100 }, { "Copper", "c", 1 } }) do
-        local n = t:match("(%d+)%s*|T[^|]-" .. coin[1] .. "Icon") or t:match("(%d+)" .. coin[2] .. "%f[%A]")
-        if n then total, found = total + tonumber(n) * coin[3], true end
-    end
-    return found and total or nil
+local ParseMoney = MasterOptions_Shared.ParseMoney
+
+-- Mastercraft's disenchant value from its tooltip rows (Shared.ReadMastercraftValues): value, partial, needs an enchanter
+local function ReadDisenchant(tip)
+    local v = MasterOptions_Shared.ReadMastercraftValues(tip)
+    return v.disenchant, v.partial, v.enchanter
 end
 
----------------------------------------------------------------------------
--- Mastercraft's disenchant value for an item (its tooltip's "Disenchant" row): value, partial, needs an enchanter
----------------------------------------------------------------------------
-local Strip = MasterOptions_Shared.StripColour
-
-local function ReadDisenchant(tip)
-    local value, partial, enchanter
-    local name = tip:GetName()
-    for i = 1, tip:NumLines() do
-        local left = Strip(_G[name .. "TextLeft" .. i] and _G[name .. "TextLeft" .. i]:GetText())
-        if left:find("^Disenchant") and not left:find("^Disenchanting") then
-            local right = _G[name .. "TextRight" .. i]
-            value = ParseMoney(right and right:GetText())
-            partial = left:find("some prices missing", 1, true) ~= nil
-        elseif left:find("Needs an enchanter", 1, true) then
-            enchanter = true
-        end
-    end
+-- (quiet: an auction house item isn't yours - nothing is learned from it; values kept a while by link)
+local valueCache = {}
+local function Disenchant(link)
+    if not link then return nil end
+    local hit = valueCache[link]
+    if hit and time() - hit[1] < VALUE_KEEP then return hit[2], hit[3], hit[4] end
+    local value, partial, enchanter = MasterOptions_Shared.QuietTooltip(ReadDisenchant, "SetHyperlink", link)
+    valueCache[link] = { time(), value, partial, enchanter }
     return value, partial, enchanter
 end
 
-local function Disenchant(link)
-    if not link then return nil end
-    return MasterOptions_Shared.HiddenTooltip(ReadDisenchant, "SetHyperlink", link)
-end
+-- milliseconds since a mark (debugprofilestop), for the per-frame budget; without it, a fixed count
+local clock = _G.debugprofilestop
+local function Spent(since) return clock and (clock() - since) or 0 end
 
 ---------------------------------------------------------------------------
 -- The auction house's replicate list: each green (and blue) item's cheapest buyout, then their value
@@ -91,10 +74,12 @@ local function Value(list, i)
         C_Timer.After(0.3, function() Check("valuing disenchants", pcall(Value, list, i)) end)
         return
     end
-    local last = math.min(#list, i + VALUE_STEP - 1)
-    for k = i, last do
+    local start, last = clock and clock() or 0, i - 1
+    for k = i, math.min(#list, i + (clock and #list or 30) - 1) do
         local e = list[k]
         e.value, e.partial, e.enchanter = Disenchant(e.link)
+        last = k
+        if Spent(start) > FRAME_MS then break end
     end
     if last < #list then
         if Refresh then Refresh(("Valuing %d / %d items..."):format(last, #list)) end
@@ -109,8 +94,9 @@ end
 local function Read(i, n)
     local AH = C_AuctionHouse
     local me = UnitName("player")
-    local last = math.min(n - 1, i + READ_STEP - 1)
-    for k = i, last do
+    local start, last = clock and clock() or 0, i - 1
+    for k = i, math.min(n - 1, i + (clock and n or 1500) - 1) do
+        last = k
         local _, texture, count, quality, _, _, _, _, _, buyout, _, _, _, owner, _, _, itemID = AH.GetReplicateItemInfo(k)
         if itemID and Wanted(quality) and (buyout or 0) > 0 and owner ~= me then -- (not your own auctions)
             local each = math.floor(buyout / math.max(1, count or 1) + 0.5) -- (per item, in whole copper)
@@ -120,6 +106,7 @@ local function Read(i, n)
                 cheapest[itemID] = { itemID = itemID, link = link, texture = texture, quality = quality, buyout = each }
             end
         end
+        if k % 200 == 0 and Spent(start) > FRAME_MS then break end
     end
     if last < n - 1 then
         if Refresh then Refresh(("Reading the auction house: %d / %d..."):format(last + 1, n)) end
@@ -159,8 +146,8 @@ end
 
 ---------------------------------------------------------------------------
 -- The window: a "Cheap Disenchants" tab of the auction house, in its own look (as CheapUpgrades' tabs): the
--- auction house's background and column headers, rows like its lists. The tab through LibAHTab (Auctionator's, the
--- tab row Auctionator and CheapUpgrades share), else one of our own next to the game's tabs.
+-- auction house's background and column headers, rows like its lists. The tab through LibAHTab (the tab row Auctionator
+-- and CheapUpgrades share).
 ---------------------------------------------------------------------------
 local host, offset, sortKey = nil, 0, "profit"
 local TITLE_H, TOP_H, FOOT_H, LIST_ROW = 22, 34, 22, 30
@@ -168,10 +155,7 @@ local COLS = { -- key, title, width (the item: the rest)
     { "name", "Item" }, { "buyout", "Buyout", 130 }, { "value", "Disenchants into", 150 }, { "profit", "Profit", 130 },
 }
 
-local function Money(c)
-    if GetMoneyString then return GetMoneyString(math.floor(c + 0.5), true) end
-    return ("%dg %ds %dc"):format(math.floor(c / 10000), math.floor(c / 100) % 100, math.floor(c) % 100)
-end
+local Money = MasterOptions_Shared.Money
 local function Name(e) return e.link and e.link:match("%[(.-)%]") or "?" end
 
 -- the auction house's own Buy view, searching for the item by its exact name: bought there with Buy Now
@@ -427,52 +411,26 @@ Refresh = function(statusText)
     if host.UpdateScan then host.UpdateScan() end
 end
 
--- the tab: LibAHTab's (shared with Auctionator and CheapUpgrades), else one of our own after the game's tabs
+-- the tab: LibAHTab's (Master Options ships it, Libs\LibAHTab.lua - Auctionator's, if newer, is the one in use): one
+-- tab row shared with Auctionator and CheapUpgrades, and no taint (a tab made with the game's own tab functions spreads
+-- it to your bags, even in combat after the auction house)
 local TAB_ID = "MasterOptions_CheapDisenchants"
-local ownTab
-local function OwnTab(h)
-    local ah = _G.AuctionHouseFrame
-    local tabs = type(ah.Tabs) == "table" and ah.Tabs or {}
-    local ok, tab = pcall(CreateFrame, "Button", "MasterOptionsCheapDisenchantsTab", ah, "AuctionHouseFrameDisplayModeTabTemplate")
-    if not ok or not tab then tab = CreateFrame("Button", "MasterOptionsCheapDisenchantsTab", ah, "UIPanelButtonTemplate"); tab:SetSize(130, 24) end
-    tab:SetText("Cheap Disenchants")
-    if PanelTemplates_TabResize then pcall(PanelTemplates_TabResize, tab, 20, nil, 70) end
-    if tabs[#tabs] then tab:SetPoint("TOPLEFT", tabs[#tabs], "TOPRIGHT", 3, 0) end
-    local function Deselect(t) if PanelTemplates_DeselectTab then pcall(PanelTemplates_DeselectTab, t) end end
-    Deselect(tab)
-    tab:SetScript("OnClick", function()
-        pcall(ah.SetDisplayMode, ah, {})
-        ah.displayMode = nil
-        for _, t in ipairs(tabs) do Deselect(t) end
-        if PanelTemplates_SelectTab then pcall(PanelTemplates_SelectTab, tab) end
-        h:Show()
-    end)
-    -- (the game's tabs, or anything that sets a real view, put ours away)
-    hooksecurefunc(ah, "SetDisplayMode", function(_, mode)
-        if type(mode) == "table" and #mode > 0 then h:Hide(); Deselect(tab) end
-    end)
-    ownTab = tab
-end
+local function Lib() return LibStub and LibStub("LibAHTab-1-0", true) end
 
 local tabbed = false
 local function AddTab()
-    if tabbed or not _G.AuctionHouseFrame then return end
+    local lib = Lib()
+    if tabbed or not (lib and _G.AuctionHouseFrame) then return end
     local h = Build()
     if not h then return end
     tabbed = true
-    local lib = LibStub and LibStub("LibAHTab-1-0", true)
-    if lib and not lib:DoesIDExist(TAB_ID) then
-        lib:CreateTab(TAB_ID, h, "Cheap Disenchants", "Cheap Disenchants")
-    else
-        OwnTab(h)
-    end
+    if not lib:DoesIDExist(TAB_ID) then lib:CreateTab(TAB_ID, h, "Cheap Disenchants", "Cheap Disenchants") end
 end
 
 local function Open() -- (the tab, chosen)
     AddTab()
-    local lib = LibStub and LibStub("LibAHTab-1-0", true)
-    if lib and lib:DoesIDExist(TAB_ID) then lib:SetSelected(TAB_ID)
-    elseif ownTab then ownTab:GetScript("OnClick")(ownTab) end
+    local lib = Lib()
+    if lib and lib:DoesIDExist(TAB_ID) then lib:SetSelected(TAB_ID) end
 end
 
 local f = CreateFrame("Frame")

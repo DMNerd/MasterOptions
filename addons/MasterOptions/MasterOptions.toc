@@ -13,6 +13,11 @@ Libs\LibStub.lua
 Libs\CallbackHandler-1.0.lua
 Libs\LibDataBroker-1.1.lua
 Libs\LibDBIcon-1.0.lua
+Libs\LibAHTab.lua
+Libs\AceSerializer-3.0.lua
+Libs\LibDeflate.lua
+Libs\HereBeDragons-2.0.lua
+Libs\HereBeDragons-Pins-2.0.lua
 Shared.lua
 MasterOptions.lua
 Pawn.lua
@@ -20,12 +25,14 @@ AddonSettings.lua
 Options.lua
 Problems.lua
 Settings.lua
+Share.lua
 Window.lua
 Startup.lua
 Modules\GearMatic_Forever.lua
 Modules\GearMatic_Baganator.lua
 Modules\CheapUpgrades_Baganator.lua
 Modules\CheapUpgrades_GearMatic.lua
+Modules\CheapUpgrades_Mastercraft.lua
 Modules\DialogKey_Pawn.lua
 Modules\Mastercraft_Advice.lua
 Modules\Mastercraft_Keep.lua
