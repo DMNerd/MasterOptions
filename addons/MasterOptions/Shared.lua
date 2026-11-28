@@ -317,7 +317,20 @@ end
 --              can go." / "... guide needs ..." / "... guide uses ..."
 --   guideNeeds its guide section's "<Profession> guide needs  N more" line
 ---------------------------------------------------------------------------
-local function StripColour(s) return (s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")) end
+local function StripColour(s) return ((s or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")) end
+S.StripColour = StripColour
+
+-- GameTooltip, hidden, filled by `method` (SetBagItem, SetItemByID, SetHyperlink) with its arguments, and handed to
+-- `read(tip)` while it's filled; read's results (up to four) back - nothing when it couldn't be filled
+function S.HiddenTooltip(read, method, ...)
+    local tip = GameTooltip
+    if not (tip and tip[method]) then return nil end
+    tip:SetOwner(WorldFrame, "ANCHOR_NONE")
+    local a, b, c, d
+    if pcall(tip[method], tip, ...) then a, b, c, d = read(tip) end
+    tip:Hide()
+    return a, b, c, d
+end
 local KEEP_REASONS = { "guide still needs", "guide uses all", "^You're tracking it:" }
 
 function S.ReadMastercraftAdvice(tip)
@@ -387,24 +400,28 @@ function S.OnMastercraftAdvice(name, fn)
     end
 end
 
--- Mastercraft's advice for a bag slot, read now through the hidden GameTooltip (the subscribers learn from it too):
--- verdict, reason, keepSome, guideNeeds - nil when there's nothing to read
-function S.MastercraftSlotAdvice(bag, slot)
-    local tip = GameTooltip
-    if not (tip and tip.SetBagItem) then return nil end
+-- Mastercraft's advice through a hidden GameTooltip filled by `method` (SetBagItem, SetItemByID) with its arguments
+local function AdviceThrough(method, ...)
     lastRead.id = nil
-    tip:SetOwner(WorldFrame, "ANCHOR_NONE")
-    local verdict, reason, keepSome, guideNeeds
-    if pcall(tip.SetBagItem, tip, bag, slot) then
+    return S.HiddenTooltip(function(tip)
         if lastRead.id then -- (read by the hook just now)
-            verdict, reason, keepSome, guideNeeds = lastRead.verdict, lastRead.reason, lastRead.keepSome, lastRead.guideNeeds
+            return lastRead.verdict, lastRead.reason, lastRead.keepSome, lastRead.guideNeeds
         elseif S.MastercraftModuleOn("tip") then -- (no tooltip data hook on this client)
             local ok, v, r, k, g = pcall(S.ReadMastercraftAdvice, tip)
-            if ok then verdict, reason, keepSome, guideNeeds = v, r, k, g end
+            if ok then return v, r, k, g end
         end
-    end
-    tip:Hide()
-    return verdict, reason, keepSome, guideNeeds
+    end, method, ...)
+end
+
+-- Mastercraft's advice for a bag slot, read now through the hidden GameTooltip (the subscribers learn from it too):
+-- verdict, reason, keepSome, guideNeeds - nil when there's nothing to read
+function S.MastercraftSlotAdvice(bag, slot) return AdviceThrough("SetBagItem", bag, slot) end
+
+-- by the item's ID (its advice is per item: what you have of it everywhere, what your guides need) - for an item
+-- that isn't in your bags, e.g. one in the bank
+function S.MastercraftItemAdvice(itemID)
+    if not itemID then return nil end
+    return AdviceThrough("SetItemByID", itemID)
 end
 
 -- An item's tooltip is on screen (the mouse on a bag slot): a hidden read through GameTooltip would take it away

@@ -30,6 +30,7 @@ $tests = @(
     @("DeleteCheapestItem_Protect",  "test_protect.py", @((F "MasterOptions_Mastercraft_Keep"), (F "MasterOptions_DeleteCheapestItem_Protect"))),
     @("Mastercraft_VendorSell",      "test_vsell.py",  @((F "MasterOptions_Mastercraft_VendorSell"))),
     @("Mastercraft_BankMats",        "test_bank.py",   @((F "MasterOptions_Mastercraft_BankMats"))),
+    @("Mastercraft_CheapDisenchants", "test_cheapde.py", @((F "MasterOptions_Mastercraft_CheapDisenchants"))),
     @("Mastercraft_FarmTour (farming tours)", "test_farmtour.py", @((F "MasterOptions_Mastercraft_FarmTour"))),
     @("Mastercraft_RecipeMap (vendors, trainers)", "test_recipemap.py", @((F "MasterOptions_Mastercraft_RecipeMap"))),
     @("OpenMapMiniMap_Border",       "test_border.py", @((F "MasterOptions_OpenMapMiniMap_Border"))),

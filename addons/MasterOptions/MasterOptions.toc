@@ -5,7 +5,7 @@
 ## Version: 2.18.0
 ## IconTexture: Interface\AddOns\MasterOptions\Icon
 ## OptionalDeps: Questie, BetterBlizzPlates, BetterBlizzFrames, GearMatic, Mastercraft, OpenMap, OpenMap_Tweaks, OpenMap_MiniMap, Pawn, Pawn_Forever, CheapUpgrades, Baganator, Chattynator, Details, DeleteCheapestItem, Auctionator, DialogKey_Numy, ForeverDungeonJournal, Sparkles_Forever, ShortestPathForever, Spoken_Bosses
-## SavedVariables: MasterOptionsDB, MasterOptions_DialogKeyPawnDB, MasterOptions_DJOpenMapDB, MasterOptions_GearMaticForeverDB, MasterOptions_MastercraftBankDB, MasterOptions_MastercraftKeepDB, MasterOptions_MastercraftAdviceDB, MasterOptions_MastercraftVendorDB, MasterOptions_MinimapBorderDB
+## SavedVariables: MasterOptionsDB, MasterOptions_DialogKeyPawnDB, MasterOptions_DJOpenMapDB, MasterOptions_GearMaticForeverDB, MasterOptions_MastercraftBankDB, MasterOptions_MastercraftKeepDB, MasterOptions_MastercraftAdviceDB, MasterOptions_MastercraftVendorDB, MasterOptions_MinimapBorderDB, MasterOptions_CheapDisenchantsDB
 
 ErrorLog.lua
 Modules.lua
@@ -34,6 +34,7 @@ Modules\Mastercraft_RecipeMap.lua
 Modules\Mastercraft_VendorSell.lua
 Modules\Baganator_Mastercraft.lua
 Modules\Mastercraft_BankMats.lua
+Modules\Mastercraft_CheapDisenchants.lua
 Modules\Mastercraft_Auctionator.lua
 Modules\Mastercraft_FishingView.lua
 Modules\Mastercraft_Chattynator.lua

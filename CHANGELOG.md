@@ -7,6 +7,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+### Added
+
+- **Cheap Disenchants**, a tab in the auction house next to Auctionator's and CheapUpgrades', in the auction
+  house's own look: Scan AH reads the whole auction house and lists the green gear (blues too if you tick it) that
+  disenchants into more than its buyout, by Mastercraft's Disenchant value (its materials at their auction prices,
+  after the cut) - item, buyout, what it disenchants into and the profit, biggest first (a column header sorts by
+  it). Click a row to open it in Buy and buy it there; Shift-click links it in chat; "needs an enchanter" is
+  marked. The server allows one full read every 15 minutes - a read another addon (CheapUpgrades) just made is
+  used too. Your own auctions aren't listed.
+- **Store mats and Take mats** at the bank: two buttons under the bank window (the game's or Baganator's), with
+  as many of each material as Mastercraft's advice says (a stack is split when only part of it goes).
+  - Store mats: what your guides need goes into the bank. Of a material you have more of ("Keep 5 ... the other
+    3 can go"), only the 5 - the rest stays in your bags to be sold. Shift-click: what you track too.
+  - Take mats: what your guides need and what you track comes back out, only as many as you don't carry.
+    Shift-click: what Mastercraft says to auction - for a material a guide needs some of, only the rest.
+
+### Changed
+
+- Storing guide materials by itself when you open the bank is off now (the setting stays: Vendor and bank > At
+  the bank: store guide materials by itself). Of a material you have more of than a guide needs, it now stores
+  the part the guide needs (that kind stayed in your bags before).
+
 ## [2.18.0] - 2026-11-28
 
 ### Changed

@@ -115,6 +115,7 @@ purpose (no `.pkgmeta`).
 | DeleteCheapestItem / Protect | DeleteCheapestItem | Never offers upgrades, sets, tools or needed materials |
 | Mastercraft / Keep | Mastercraft | Needed / KEEP items go on GearMatic's never-sell list |
 | Mastercraft / Advice | Mastercraft | Mastercraft's advice per item (KEEP / VENDOR / AUCTION / DISENCHANT) remembered from its tooltips, and read for new bag items in the background: what the junk coins and advice icons show |
+| Mastercraft / CheapDisenchants | Mastercraft | A Cheap Disenchants tab in the auction house: green (and blue) gear that disenchants into more than its buyout, by Mastercraft's disenchant value, the biggest profit first; a click opens it in Buy |
 | Mastercraft / VendorSell | Mastercraft | Items Mastercraft marks VENDOR are sold by your junk seller (Goods, or Goods and gear), and so are soulbound DISENCHANT pieces when you have no Enchanting; `/mo vendor` tells, item by item, what will be sold and why not |
 | Baganator / Mastercraft | Baganator, Mastercraft | Mastercraft's junk coin in Baganator, and an icon with its advice on every bag slot; GearMatic's best-gold badges kept off meanwhile (one verdict per slot) |
 | Mastercraft / RecipeMap | Mastercraft, Questie | Map markers on vendors selling patterns for recipes you haven't learned, the creatures and chests they drop from (specific drops, with GearMatic's chance), and on your profession's trainers when you're near your cap and can train the next rank (Mastercraft's recipe list + QuestieDB, drawn with HereBeDragons) |

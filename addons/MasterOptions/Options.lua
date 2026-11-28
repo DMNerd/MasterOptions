@@ -127,17 +127,19 @@ local OPTIONS = {
         end,
     },
     {
-        kind = "choice", label = "At the bank: guide materials go in", rec = "Guide mats", since = 18,
-        needs = "MasterOptions_Mastercraft_BankMats", choices = { "Guide mats", "Guide and tracked mats", "Off" },
-        tip = "When you open the bank, what Mastercraft keeps for your profession guides (\"... guide still needs\", \"... guide uses all you have\") goes into it, so you collect it there - Mastercraft's Grab mats brings it back to craft. What Mastercraft says to VENDOR or AUCTION stays in your bags to be sold, and so do tools, fishing gear, food, items you keep some of for a guide, and Mastercraft's \"Never in the bank\" list. Guide and tracked mats: your Mastercraft item tracker's items too. Needs the MasterOptions_Mastercraft_BankMats patch.",
+        -- (the Store mats / Take mats buttons are there either way; this is only the storing by itself. Off by default
+        -- from 2.19.0 - the buttons do it when you want)
+        kind = "choice", label = "At the bank: store guide materials by itself", rec = "Off", since = 40,
+        needs = "MasterOptions_Mastercraft_BankMats", choices = { "Off", "Guide mats", "Guide and tracked mats" }, off = "Off",
+        tip = "Under the bank window: Store mats (what your Mastercraft guides need goes into the bank - of a material you have more of, only what they need; Shift-click: what you track too) and Take mats (what they need comes back out, only as many as you don't carry; Shift-click: what Mastercraft says to auction). This setting does Store mats by itself each time you open the bank: Guide mats like a click, Guide and tracked mats like a Shift-click. Off: only when you click.",
         get = function()
             local d = _G.MasterOptions_MastercraftBankDB
-            local m = type(d) == "table" and d.mode or "guide"
-            return (m == "tracked" and "Guide and tracked mats") or (m == "off" and "Off") or "Guide mats"
+            local m = type(d) == "table" and d.mode or "off"
+            return (m == "tracked" and "Guide and tracked mats") or (m == "guide" and "Guide mats") or "Off"
         end,
         set = function(v)
             MasterOptions_MastercraftBankDB = MasterOptions_MastercraftBankDB or {}
-            MasterOptions_MastercraftBankDB.mode = (v == "Guide and tracked mats" and "tracked") or (v == "Off" and "off") or "guide"
+            MasterOptions_MastercraftBankDB.mode = (v == "Guide and tracked mats" and "tracked") or (v == "Guide mats" and "guide") or "off"
         end,
     },
     GearMaticOrMastercraftRow({
@@ -893,10 +895,12 @@ local MODULES = {
       tip = "DeleteCheapestItem never offers upgrades (Pawn, GearMatic), best-in-slot items, set or loadout pieces, profession tools or materials Mastercraft says you need. Kept as entries in its ignore list; only those it added are removed again." },
     { "Mastercraft_Keep", "Materials your guides need are never sold", { "Mastercraft" }, since = 10,
       tip = "Materials on your Mastercraft item tracker, or that Mastercraft's tooltip says a guide still needs, go on GearMatic's never-sell list (and are protected from DeleteCheapestItem with the Protect patch)." },
+    { "Mastercraft_CheapDisenchants", "Cheap Disenchants at the auction house", { "Mastercraft" }, since = 41,
+      tip = "A Cheap Disenchants tab in the auction house (next to Auctionator's and CheapUpgrades', in the auction house's own look): Scan AH reads the whole auction house and lists the green gear (blues too if you tick it) that disenchants into more than its buyout - by Mastercraft's Disenchant value (its materials at their auction prices, after the cut) - the biggest profit first (a column header sorts by it). Click a row to open it in Buy and buy it there; Shift-click links it in chat. The server allows one full read every 15 minutes; a read another addon (CheapUpgrades) just made is used too. Needs Mastercraft's tooltip Disenchant row on." },
     { "Mastercraft_VendorSell", "Sell what Mastercraft says to vendor", { "Mastercraft" }, since = 17,
       tip = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank." },
-    { "Mastercraft_BankMats", "Guide materials go into the bank", { "Mastercraft" }, since = 18,
-      tip = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank." },
+    { "Mastercraft_BankMats", "Guide materials to and from the bank", { "Mastercraft" }, since = 18,
+      tip = "Two buttons under the bank window. Store mats: what your Mastercraft guides need goes into the bank - of a material you have more of, only what they need (the rest stays in your bags to be sold); Shift-click: what you track too. Take mats: what they need comes back out, only as many as you don't carry (a stack split for part of it); Shift-click: what Mastercraft says to auction - for a material a guide needs some of, only the rest. Storing can also happen by itself at the bank (Vendor and bank)." },
     { "CheapUpgrades_Baganator", "Upgrade badges on bag slots", { "CheapUpgrades", "Baganator" }, since = 1,
       tip = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots." },
     { "GearMatic_Baganator", "GearMatic's junk coins and loadouts in bags", { "GearMatic", "Baganator" }, since = 6,

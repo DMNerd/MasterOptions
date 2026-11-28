@@ -477,23 +477,33 @@ local function PlayerXY()
     return "--, --" -- (no position: in an instance, or between maps)
 end
 
+-- a coordinates frame's OnUpdate: its text (self.text) the player's position five times a second, redrawn only when
+-- it changes (standing still: nothing); `everySecond`, if given, run once a second too
+local function CoordsUpdate(everySecond)
+    local wait, shown, ticks = 0, nil, 0
+    return function(self, elapsed)
+        wait = wait - elapsed
+        if wait > 0 then return end
+        wait = 0.2
+        local xy = PlayerXY()
+        if xy ~= shown then shown = xy; self.text:SetText(xy) end
+        if everySecond then
+            ticks = ticks + 1
+            if ticks >= 5 then ticks = 0; everySecond() end
+        end
+    end
+end
+
 local function TabBuild()
     if tab then return tab end
     tab = Slice(body, "MasterOptionsMinimapCoords") or CreateFrame("Frame", "MasterOptionsMinimapCoords", body)
     tab.bg = tab:CreateTexture(nil, "BACKGROUND")
     HeadFill(tab.bg) -- (as the zone bar)
     tab.text = tab:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    local wait, shown, look = 0, nil, 0
-    tab:SetScript("OnUpdate", function(self, elapsed)
-        wait = wait - elapsed
-        if wait > 0 then return end
-        wait = 0.2
-        local xy = PlayerXY()
-        if xy ~= shown then shown = xy; self.text:SetText(xy) end -- (standing still: nothing redrawn)
-        -- (OpenMap_MiniMap lays its buttons out again as addons add or move theirs: looked at once a second)
-        look = look + 1
-        if look >= 5 then look = 0; Check("keeping the coordinates clear of buttons", pcall(ClearOfButtons)) end
-    end)
+    -- (OpenMap_MiniMap lays its buttons out again as addons add or move theirs: looked at once a second)
+    tab:SetScript("OnUpdate", CoordsUpdate(function()
+        Check("keeping the coordinates clear of buttons", pcall(ClearOfButtons))
+    end))
     return tab
 end
 
@@ -525,14 +535,7 @@ local function InnerBuild()
     if font then inner.text:SetFont(font, size or 10, "OUTLINE") end
     inner.text:SetPoint("TOPRIGHT")
     inner.text:SetJustifyH("RIGHT")
-    local wait, shown = 0, nil
-    inner:SetScript("OnUpdate", function(self, elapsed)
-        wait = wait - elapsed
-        if wait > 0 then return end
-        wait = 0.2
-        local xy = PlayerXY()
-        if xy ~= shown then shown = xy; self.text:SetText(xy) end
-    end)
+    inner:SetScript("OnUpdate", CoordsUpdate())
     return inner
 end
 
