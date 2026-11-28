@@ -29,10 +29,9 @@ Unreleased (after 2.20.0):
 - [ ] **Cheap Disenchants, Max price**: type 50s - the list shrinks a moment later, no new scan. 0 - everything back.
 - [ ] **Cheap Disenchants, Hide "needs an enchanter"**: ticking it takes those rows out at once; unticking brings
       them back.
-- [ ] **Auction house tabs down its side**: open the auction house - Buy, Sell, Auctions, then Auctionator's,
-      CheapUpgrades' and Cheap Disenchants' tabs stacked down its right side, one width, none overlapping; each
-      click still opens its page and the chosen one shows chosen. Move the window to the right edge and reopen: the
-      tabs on its left.
+- [ ] **Auction house tabs, More**: open the auction house - the tab row ends at the window's right edge with a
+      "More »" tab; its click lists the rest (Selling, Cancelling, Auctionator ...). Pick one: its page opens, the
+      More tab shows chosen with its name. Buy (or any tab in the row): More back to "More »", not chosen.
 - [ ] **OpenMap's Pins list window** (the list of your map pins): Shift-click on a row starts a Shortest Path journey
       there; with a chat box open it still puts the pin in chat; a plain click still goes there; the row's tooltip
       says "Shift-click: journey there (Shortest Path)".

@@ -9,10 +9,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ### Added
 
-- **Auction house tabs down its side** (new module AuctionHouse_SideTabs, on by default). The game's Buy, Sell and
-  Auctions and every addon's tab (Auctionator, CheapUpgrades, Cheap Disenchants) are stacked down the window's right
-  side at one width, instead of a row under it wider than the window. They go on the left when the right side is
-  off the screen. Turn it off in Modules: more.
+- **Auction house tabs fit the window** (new module AuctionHouse_TabOverflow, on by default). The row of the game's
+  and every addon's tabs (Auctionator, CheapUpgrades, Cheap Disenchants) was wider than the window. The tabs that
+  would reach past its right edge now go into a last tab, More, which lists them. While one of them is open, the
+  More tab bears its name. Turn it off in Modules: more.
 - **Cheap Disenchants: a second list, Cheapest.** Buttons Profitable / Cheapest at the top. Cheapest lists every
   item that can be disenchanted, the cheapest first, with what it disenchants into and the gain or loss (a loss in
   red): materials or Enchanting skill-ups for little gold. The choice is saved; switching reads nothing again.

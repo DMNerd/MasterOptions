@@ -129,7 +129,7 @@ purpose (no `.pkgmeta`).
 | DungeonJournal / SpokenBosses | ForeverDungeonJournal, Spoken_Bosses | Spoken_Bosses' dungeon and boss stories beside Dungeon Journal's map on the world map; `/mo story` tells what the last try did |
 | DungeonJournal / OpenMap | ForeverDungeonJournal, OpenMap | Map inside dungeons (OpenMap's own switch); Dungeon entrance click: Dungeon Journal's map, its page, or OpenMap's map (written to OpenMap's option too), closed again when the world map moves on |
 | DungeonJournal / ShowOnMap | ForeverDungeonJournal, OpenMap | Dungeon Journal's Show on Map puts an OpenMap pin there, gone when Dungeon Journal clears its mark |
-| AuctionHouse / SideTabs | — | The auction house's tabs (the game's and every addon's) stacked down the window's side at one width, instead of a row under it |
+| AuctionHouse / TabOverflow | — | The auction house's tab row kept to the window's width: the tabs that don't fit go into a More tab that lists them |
 | Chat / AddonWhispers | — | Hides "No player named ..." when an addon's hidden whisper went to someone who just logged off; `/mo whispers` lists which addon whispered whom |
 | Mastercraft / FishingView | Mastercraft | Bags, popups and loot rolls stay visible in the fishing view |
 | Mastercraft / Chattynator | Mastercraft, Chattynator | Mastercraft's /played request stays out of Chattynator |

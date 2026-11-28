@@ -52,7 +52,7 @@ $tests = @(
     @("Questie_Chattynator (re-linked quest links)", "test_questiechatty.py", @((F "MasterOptions_Questie_Chattynator"))),
     @("OpenMap_QuestieTownsfolk (one townsfolk menu)", "test_omtownsfolk.py", @((F "MasterOptions_OpenMap_QuestieTownsfolk"))),
     @("Chat_AddonWhispers (not-online lines)", "test_addonwhispers.py", @((F "MasterOptions_Chat_AddonWhispers"))),
-    @("AuctionHouse_SideTabs (tabs down the side)", "test_ahsidetabs.py", @((F "MasterOptions_AuctionHouse_SideTabs")))
+    @("AuctionHouse_TabOverflow (More tab)", "test_ahtaboverflow.py", @((F "MasterOptions_AuctionHouse_TabOverflow")))
 )
 
 # macOS/Linux: run Lua in the C locale, as WoW does. Under a UTF-8 locale macOS treats bytes 0x80-0x9F as
