@@ -421,3 +421,12 @@ BetterBlizzPlates|config-key|avoidCVarPickup|Problems.lua (corpse enemy plates: 
 BetterBlizzPlates|config-key|nameplateToggles_|Problems.lua (its nameplate toggle sets: enemy plates off somewhere)
 Questie|function|GetQuestLinkStringById|Questie_Chattynator.lua (a quest link rebuilt on shift-click)
 Chattynator|function|GetHyperlinkHandler|Questie_Chattynator.lua (its chat's link clicks)
+
+# --- added in 2.19.0 (OpenMap_QuestieTownsfolk: Questie's kinds out of OpenMap's Townsfolk menu)
+OpenMap|field|mod.TOWNSFOLK = KINDS|OpenMap_QuestieTownsfolk.lua
+OpenMap|literal|for _, k in ipairs(mod.TOWNSFOLK or {}) do|OpenMap_QuestieTownsfolk.lua (its menu reads the list)
+OpenMap|config-key|key = "classTrainer"|OpenMap_QuestieTownsfolk.lua
+OpenMap|config-key|key = "spirit"|OpenMap_QuestieTownsfolk.lua
+OpenMap|literal|S.PinSet("tf_" .. k.key|OpenMap_QuestieTownsfolk.lua
+Questie|config-key|"Class Trainer"|OpenMap_QuestieTownsfolk.lua
+Questie|config-key|"Spirit Healer"|OpenMap_QuestieTownsfolk.lua

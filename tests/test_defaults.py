@@ -218,6 +218,10 @@ lua.execute('QTOWN.Banker = false; QTOWN.Mailbox = true; Row("Town NPC icons").s
 res["Town NPC icons -> OpenMap + game's tracking: OpenMap's mailbox on the world map, the game's on the minimap, Questie's off"] = E(
     'OMTOWN.mailbox == true and TRACK[3].active == true and QTOWN.Mailbox == false and Row("Town NPC icons").get() == "OpenMap + game\'s tracking"')
 res["Town NPC icons: flight masters left to their own row"] = E('QTOWN["Flight Master"] == true')
+res["Town NPC icons -> OpenMap + game's tracking: remembered for this character (OpenMap's kinds kept in its menu)"] = E(
+    '(function() for _, v in pairs(MasterOptionsDB.townOpenMap or {}) do if v == true then return true end end return false end)()')
+lua.execute('Row("Town NPC icons").set("Questie")')
+res["Town NPC icons -> Questie: no longer remembered (Questie's kinds out of OpenMap's menu again)"] = E('next(MasterOptionsDB.townOpenMap or {}) == nil')
 res["World map coordinates: both on = conflict"] = E('Row("World map coordinates").get() == "Both (conflict)"')
 lua.execute('Row("World map coordinates").set("OpenMap")')
 res["World map coordinates -> OpenMap: Questie's off"] = E('Questie.db.profile.mapCoordinatesEnabled == false and Row("World map coordinates").get() == "OpenMap"')

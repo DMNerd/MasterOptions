@@ -7,6 +7,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+### Added
+
+- **One townsfolk menu (new module OpenMap_QuestieTownsfolk):** Questie's townsfolk menu and OpenMap's Townsfolk
+  menu both had repair, innkeepers, bankers, mailboxes, auctioneers, stable masters, class trainers and spirit
+  healers, so a kind ticked in both showed twice on the world map. Those kinds are taken out of OpenMap's menu and
+  its "Find a place" townsfolk search. You pick them in Questie's menu, which draws them on the world map and the
+  minimap. OpenMap keeps what Questie hasn't got: its vendors, profession trainers and rare mobs. A kind you had on
+  in OpenMap is turned on in Questie's menu instead. With "Town NPC icons" on "OpenMap + game's tracking", OpenMap's
+  are all back. Only OpenMap's list of kinds is changed, in memory; nothing in its saved settings.
+
 ## [2.18.0] - 2026-11-28
 
 ### Changed

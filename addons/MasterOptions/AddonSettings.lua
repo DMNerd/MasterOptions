@@ -347,6 +347,13 @@ local function TownSet(v)
             end
         end
     end
+    -- (OpenMap's townsfolk that Questie has too are out of its menu - OpenMap_QuestieTownsfolk - unless they're the
+    -- ones in use: put back first, so the kinds set above are there)
+    MasterOptionsDB = MasterOptionsDB or {}
+    MasterOptionsDB.townOpenMap = type(MasterOptionsDB.townOpenMap) == "table" and MasterOptionsDB.townOpenMap or {}
+    MasterOptionsDB.townOpenMap[MasterOptions_Shared.CharacterKey()] = (v == "OpenMap + game's tracking") or nil
+    local hide = _G.MasterOptions_OpenMapTownsfolk
+    if hide and hide.Apply then hide.Apply() end
     if omChanged and omMod and omMod.RefreshTownsfolk then pcall(omMod.RefreshTownsfolk, omMod) end
     QuestieTownRefresh()
 end
