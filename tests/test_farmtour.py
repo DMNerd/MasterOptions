@@ -1,19 +1,12 @@
 # Mastercraft_FarmTour: Mastercraft's farm session starts a ShortestPathForever walking tour of the zone's nodes
 # worth it (Mastercraft's rule, by the skill each node's item needs), nearest first; stopping ends it; /mo farm.
 import sys
-from lupa import LuaRuntime
 src = open(sys.argv[1], encoding="utf-8").read()
-lua = LuaRuntime()
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
-lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
+from shared_lua import module_test; lua = module_test(_sys.argv[1])
+from shared_lua import fake_frames; fake_frames(lua)
 lua.execute(r'''
-  FRAMES, PRINTS, ERRS = {}, {}, 0
-  function CreateFrame() local f = { ev = {} }
-    function f:RegisterEvent(e) self.ev[e] = true end
-    function f:SetScript(k, fn) self[k] = fn end
-    FRAMES[#FRAMES + 1] = f; return f end
-  function Fire(e) for _, f in ipairs(FRAMES) do if f.ev[e] and f.OnEvent then f.OnEvent(f, e) end end end
+  PRINTS = {}
   function Tick() for _, f in ipairs(FRAMES) do if f.OnUpdate then f.OnUpdate(f, 1) end end end
   function print(t) PRINTS[#PRINTS + 1] = t end
   function MasterOptions_ReportError(_, _, e) ERRS = ERRS + 1 end

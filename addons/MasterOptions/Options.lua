@@ -127,17 +127,19 @@ local OPTIONS = {
         end,
     },
     {
-        kind = "choice", label = "At the bank: guide materials go in", rec = "Guide mats", since = 18,
-        needs = "MasterOptions_Mastercraft_BankMats", choices = { "Guide mats", "Guide and tracked mats", "Off" },
-        tip = "When you open the bank, what Mastercraft keeps for your profession guides (\"... guide still needs\", \"... guide uses all you have\") goes into it, so you collect it there - Mastercraft's Grab mats brings it back to craft. What Mastercraft says to VENDOR or AUCTION stays in your bags to be sold, and so do tools, fishing gear, food, items you keep some of for a guide, and Mastercraft's \"Never in the bank\" list. Guide and tracked mats: your Mastercraft item tracker's items too. Needs the MasterOptions_Mastercraft_BankMats patch.",
+        -- (the Store mats / Take mats buttons are there either way; this is only the storing by itself. Off by default
+        -- from 2.19.0 - the buttons do it when you want)
+        kind = "choice", label = "At the bank: store guide materials by itself", rec = "Off", since = 40,
+        needs = "MasterOptions_Mastercraft_BankMats", choices = { "Off", "Guide mats", "Guide and tracked mats" }, off = "Off",
+        tip = "Under the bank window: Store mats (what your Mastercraft guides need goes into the bank - of a material you have more of, only what they need; Shift-click: what you track too) and Take mats (what they need comes back out, only as many as you don't carry; Shift-click: what Mastercraft says to auction). This setting does Store mats by itself each time you open the bank: Guide mats like a click, Guide and tracked mats like a Shift-click. Off: only when you click.",
         get = function()
             local d = _G.MasterOptions_MastercraftBankDB
-            local m = type(d) == "table" and d.mode or "guide"
-            return (m == "tracked" and "Guide and tracked mats") or (m == "off" and "Off") or "Guide mats"
+            local m = type(d) == "table" and d.mode or "off"
+            return (m == "tracked" and "Guide and tracked mats") or (m == "guide" and "Guide mats") or "Off"
         end,
         set = function(v)
             MasterOptions_MastercraftBankDB = MasterOptions_MastercraftBankDB or {}
-            MasterOptions_MastercraftBankDB.mode = (v == "Guide and tracked mats" and "tracked") or (v == "Off" and "off") or "guide"
+            MasterOptions_MastercraftBankDB.mode = (v == "Guide and tracked mats" and "tracked") or (v == "Guide mats" and "guide") or "off"
         end,
     },
     GearMaticOrMastercraftRow({
@@ -876,6 +878,8 @@ local MODULES = {
     { header = "Modules: gear (on / off after a reload)" },
     { "DungeonJournal_Upgrades", "Upgrade marks in Dungeon Journal's loot", { "ForeverDungeonJournal" }, since = 29,
       tip = "Dungeon Journal's loot marked: an upgrade arrow and how big (+23%) by whoever judges upgrades - Pawn with Pawn Forever, else GearMatic with CheapUpgrades' size - GearMatic's skull on what's best in slot for you, and a cog on what your Mastercraft guides need. No more hovering every item." },
+    { "CheapUpgrades_Mastercraft", "Mastercraft's numbers on CheapUpgrades' upgrades", { "CheapUpgrades", "Mastercraft" }, since = 42,
+      tip = "On the tooltip of an item CheapUpgrades calls an upgrade (in its tab, the auction house, a chat link...): what the piece it replaces brings back by Mastercraft (vendor, auction or disenchant - its own pick), which of your characters already has one (bags, bank or mail), and who of them can craft it with its materials' cost at Auctionator's prices." },
     { "CheapUpgrades_GearMatic", "CheapUpgrades uses GearMatic's stat weights", { "CheapUpgrades", "GearMatic" }, since = 27,
       tip = "CheapUpgrades values items with GearMatic's stat weights: a \"GearMatic\" weights profile for every spec, kept up to date (level, talents) and used unless you picked a profile of your own in CheapUpgrades. Off: CheapUpgrades' own weights again." },
     { "GearMatic_SpecKeep", "Keep your best gear for every spec", { "GearMatic" }, since = 27,
@@ -893,10 +897,12 @@ local MODULES = {
       tip = "DeleteCheapestItem never offers upgrades (Pawn, GearMatic), best-in-slot items, set or loadout pieces, profession tools or materials Mastercraft says you need. Kept as entries in its ignore list; only those it added are removed again." },
     { "Mastercraft_Keep", "Materials your guides need are never sold", { "Mastercraft" }, since = 10,
       tip = "Materials on your Mastercraft item tracker, or that Mastercraft's tooltip says a guide still needs, go on GearMatic's never-sell list (and are protected from DeleteCheapestItem with the Protect patch)." },
+    { "Mastercraft_CheapDisenchants", "Cheap Disenchants at the auction house", { "Mastercraft" }, since = 41,
+      tip = "A Cheap Disenchants tab in the auction house (next to Auctionator's and CheapUpgrades', in the auction house's own look): Scan AH reads the whole auction house and lists the green gear (blues too if you tick it) that disenchants into more than its buyout - by Mastercraft's Disenchant value (its materials at their auction prices, after the cut) - the biggest profit first (a column header sorts by it). Click a row to open it in Buy and buy it there; Shift-click links it in chat. The server allows one full read every 15 minutes; a read another addon (CheapUpgrades) just made is used too. Needs Mastercraft's tooltip Disenchant row on." },
     { "Mastercraft_VendorSell", "Sell what Mastercraft says to vendor", { "Mastercraft" }, since = 17,
       tip = "At a vendor, what Mastercraft's advice says to VENDOR is sold by your junk seller (GearMatic or Mastercraft). Pick what under Vendor and bank." },
-    { "Mastercraft_BankMats", "Guide materials go into the bank", { "Mastercraft" }, since = 18,
-      tip = "When you open the bank, the materials Mastercraft keeps for your guides go into it; VENDOR and AUCTION items stay in your bags. Pick what under Vendor and bank." },
+    { "Mastercraft_BankMats", "Guide materials to and from the bank", { "Mastercraft" }, since = 18,
+      tip = "Two buttons under the bank window. Store mats: what your Mastercraft guides need goes into the bank - of a material you have more of, only what they need (the rest stays in your bags to be sold); Shift-click: what you track too. Take mats: what they need comes back out, only as many as you don't carry (a stack split for part of it); Shift-click: what Mastercraft says to auction - for a material a guide needs some of, only the rest. Storing can also happen by itself at the bank (Vendor and bank)." },
     { "CheapUpgrades_Baganator", "Upgrade badges on bag slots", { "CheapUpgrades", "Baganator" }, since = 1,
       tip = "CheapUpgrades' \"+23%\" badges on Baganator's bag slots." },
     { "GearMatic_Baganator", "GearMatic's junk coins and loadouts in bags", { "GearMatic", "Baganator" }, since = 6,
@@ -914,7 +920,7 @@ local MODULES = {
       tip = "Mastercraft's own /played request (it records your play time) stays out of Chattynator's chat, as it already does in the game's chat. Your own /played still shows." },
     { "Questie_Chattynator", "Questie quest links re-linked in Chattynator", { "Questie", "Chattynator" }, since = 38,
       tip = "Shift-clicking a Questie quest link in Chattynator's chat puts Questie's fresh link in the chat box (its current title and level), as Questie does in the game's own chat - and keeps what you typed around it." },
-    { "OpenMap_QuestieTownsfolk", "One townsfolk menu: Questie's kinds out of OpenMap's", { "OpenMap", "Questie" }, since = 40,
+    { "OpenMap_QuestieTownsfolk", "One townsfolk menu: Questie's kinds out of OpenMap's", { "OpenMap", "Questie" }, since = 43,
       tip = "Repair, innkeepers, bankers, mailboxes, auctioneers, stable masters, class trainers and spirit healers are in Questie's townsfolk menu and in OpenMap's Townsfolk menu, so a kind ticked in both showed twice on the world map. They're taken out of OpenMap's menu (and its Find a place search): pick them in Questie's, which draws them on the world map and the minimap. OpenMap keeps its vendors, profession trainers and rare mobs. A kind you had on in OpenMap is turned on in Questie's menu instead. With Town NPC icons on OpenMap + game's tracking, OpenMap's are all there again." },
     { "Chat_AddonWhispers","Hide not-online lines from addons' whispers", {}, since = 33,
       tip = "Hides \"No player named ... is currently playing\" when an addon's hidden whisper (OpenMap's map sharing, Questie's sync, Mastercraft's crafter search ...) went to someone who just logged off - you sent nothing. Your own whispers' answers always show. /mo whispers lists which addon whispered whom." },

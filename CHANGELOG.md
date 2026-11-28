@@ -9,6 +9,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ### Added
 
+- **Share setup** (/mo > Share setup): every choice Master Options shows - its rows, its modules on / off - and the
+  never-sell list as one code. Make code, copy it, and on another account or computer paste it and Use this code:
+  what can be set there is set (a choice whose addons aren't loaded there is left as it is), and it says how many.
+  Codes are made with LibDeflate and AceSerializer, which Master Options now ships.
+- **Mastercraft's numbers on CheapUpgrades' upgrades**: on the tooltip of an item CheapUpgrades calls an upgrade
+  (in its tab, the auction house, a chat link), up to three lines:
+  - "Replaces Wolf Bracers: ~1g 20s back (disenchant)" - what the piece it replaces brings in, by Mastercraft's
+    own pick (vendor, auction or disenchant). Of two rings, trinkets or weapons, the weaker. "Fills an empty slot"
+    when nothing is worn there.
+  - "You have one: Anathar (bank)" - which of your characters already has it (bags, bank or mail).
+  - "You can craft it: Bob (Leatherworking) - materials ~2g 10s" - a recipe one of your characters knows, its
+    materials at Auctionator's prices (* when some have no price).
+- **Cheap Disenchants**, a tab in the auction house next to Auctionator's and CheapUpgrades', in the auction
+  house's own look: Scan AH reads the whole auction house and lists the green gear (blues too if you tick it) that
+  disenchants into more than its buyout, by Mastercraft's Disenchant value (its materials at their auction prices,
+  after the cut) - item, buyout, what it disenchants into and the profit, biggest first (a column header sorts by
+  it). Click a row to open it in Buy and buy it there; Shift-click links it in chat; "needs an enchanter" is
+  marked. The server allows one full read every 15 minutes - a read another addon (CheapUpgrades) just made is
+  used too. Your own auctions aren't listed. Its tab is made through LibAHTab, which Master Options now ships
+  (plusmouse, MIT): one tab row with Auctionator's and CheapUpgrades' tabs even without Auctionator, and no taint
+  from the auction house. Light on the game: the reading and valuing are spread over frames a few
+  milliseconds at a time, values are kept 10 minutes (a scan again reads only new items), and nothing is learned
+  from items that aren't yours (no remembered advice, no never-sell entries from the auction house).
+- **Store mats and Take mats** at the bank: two buttons under the bank window (the game's or Baganator's), with
+  as many of each material as Mastercraft's advice says (a stack is split when only part of it goes).
+  - Store mats: what your guides need goes into the bank. Of a material you have more of ("Keep 5 ... the other
+    3 can go"), only the 5 - the rest stays in your bags to be sold. Shift-click: what you track too.
+  - Take mats: what your guides need and what you track comes back out, only as many as you don't carry.
+    Shift-click: what Mastercraft says to auction - for a material a guide needs some of, only the rest.
 - **One townsfolk menu (new module OpenMap_QuestieTownsfolk):** Questie's townsfolk menu and OpenMap's Townsfolk
   menu both had repair, innkeepers, bankers, mailboxes, auctioneers, stable masters, class trainers and spirit
   healers, so a kind ticked in both showed twice on the world map. Those kinds are taken out of OpenMap's menu and
@@ -16,6 +45,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
   minimap. OpenMap keeps what Questie hasn't got: its vendors, profession trainers and rare mobs. A kind you had on
   in OpenMap is turned on in Questie's menu instead. With "Town NPC icons" on "OpenMap + game's tracking", OpenMap's
   are all back. Only OpenMap's list of kinds is changed, in memory; nothing in its saved settings.
+
+### Changed
+
+- Storing guide materials by itself when you open the bank is off now (the setting stays: Vendor and bank > At
+  the bank: store guide materials by itself). Of a material you have more of than a guide needs, it now stores
+  the part the guide needs (that kind stayed in your bags before).
+
+### Fixed
+
+- The recipe map's markers use Master Options' own copy of HereBeDragons (now shipped), not Questie's private one:
+  a change in Questie can't make them vanish again (Questie's copy stays the fallback).
+- Mastercraft's advice is learned only from items you have (bags, bank or worn): looking at an item on the auction
+  house, in a chat link, a quest reward or Dungeon Journal's loot no longer adds it to the remembered advice, and
+  a KEEP item you don't have no longer goes on GearMatic's never-sell list.
 
 ## [2.18.0] - 2026-11-28
 

@@ -1,12 +1,9 @@
 # OpenMapTweaks_Mastercraft with OpenMap's stitched map: OpenMap_Tweaks adds its gathering pins through
 # OpenMap.MapStitch.AddPin (set "omt_gather", pin.data = the spot); Mastercraft's node rule must hide the unwanted ones.
 import sys
-from lupa import LuaRuntime
 src = open(sys.argv[1], encoding="utf-8").read()
-lua = LuaRuntime()
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
-lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
+from shared_lua import module_test; lua = module_test(_sys.argv[1])
 lua.execute(r'''
   local Frame = {}
   Frame.__index = Frame

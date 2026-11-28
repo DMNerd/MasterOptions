@@ -1,12 +1,9 @@
 # NeverSell: one never-sell list kept the same in GearMatic (sellIgnore), Mastercraft (lootNever) and
 # DeleteCheapestItem (IgnoredItems, per character) - both ways, our own modules' automatic entries left out.
 import sys
-from lupa import LuaRuntime
 src = open(sys.argv[1], encoding="utf-8").read()
-lua = LuaRuntime()
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
-lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
+from shared_lua import module_test; lua = module_test(_sys.argv[1])
 lua.execute(r'''
   FRAMES, TIMERS = {}, {}
   function CreateFrame() local f = { RegisterEvent = function() end, SetScript = function(self, k, fn) self[k] = fn end }; FRAMES[#FRAMES + 1] = f; return f end

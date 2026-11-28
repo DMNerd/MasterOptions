@@ -421,6 +421,24 @@ BetterBlizzPlates|config-key|avoidCVarPickup|Problems.lua (corpse enemy plates: 
 BetterBlizzPlates|config-key|nameplateToggles_|Problems.lua (its nameplate toggle sets: enemy plates off somewhere)
 Questie|function|GetQuestLinkStringById|Questie_Chattynator.lua (a quest link rebuilt on shift-click)
 Chattynator|function|GetHyperlinkHandler|Questie_Chattynator.lua (its chat's link clicks)
+# --- Take mats (Mastercraft_BankMats): Mastercraft's advice lines whose numbers are read
+Mastercraft|literal|reason = ("Keep %d for your %s guide - you have %d, the other %d can go."):format(u.need, u.guide, u.have, u.have - u.need)|Mastercraft_BankMats.lua (Take mats: how many a guide needs, how many can go)
+Mastercraft|literal|("Your %s guide still needs %d."):format(n.guide, n.missing)|Mastercraft_BankMats.lua (Take mats: all of it)
+Mastercraft|literal|("Your %s guide uses all %d you have."):format(use.guide, use.have)|Mastercraft_BankMats.lua (Take mats: all of it)
+Mastercraft|literal|e.best, e.keep = "keep", ("You're tracking it: %d / %d."):format(have, goal.want)|Mastercraft_BankMats.lua (Take mats: up to what you track)
+# --- Cheap Disenchants (Mastercraft_CheapDisenchants): Mastercraft's tooltip Disenchant row
+Mastercraft|literal|Value("Disenchant" .. (e.disenchantPartial and " (some prices missing)" or ""),|Mastercraft_CheapDisenchants.lua (the value read)
+Mastercraft|literal|e.disenchant and ("~" .. ns.Money(e.disenchant)) or "|Mastercraft_CheapDisenchants.lua (its money string)
+Mastercraft|literal|if GetMoneyString then return GetMoneyString(copper, true) end|Mastercraft_CheapDisenchants.lua (coin icons, thousands with commas)
+Mastercraft|literal|Needs an enchanter - a friend or guild mate.|Mastercraft_CheapDisenchants.lua (your Enchanting can't do it)
+# --- CheapUpgrades / Mastercraft
+Mastercraft|literal|ns.TipDouble(tooltip, label, value, MUTED[1], MUTED[2], MUTED[3], c, c, isBest and 0.6 or c)|Shared.lua ReadMastercraftValues (its pick: the brighter, yellow row)
+Mastercraft|literal|if On("tipVendor") then Value("Vendor", ns.Money(e.vendor), e.best == "vendor") end|Shared.lua ReadMastercraftValues
+Mastercraft|literal|if On("tipPrice") then Value("Auction", auction, e.best == "auction") end|Shared.lua ReadMastercraftValues
+Mastercraft|literal|r.output = schematic.outputItemID|CheapUpgrades_Mastercraft.lua (what a recipe makes)
+Mastercraft|literal|inv.bags, inv.bagLinks = Count(BagIDs())|CheapUpgrades_Mastercraft.lua (who has it: MastercraftDB.inv)
+Auctionator|literal|GetAuctionPriceByItemID|CheapUpgrades_Mastercraft.lua (materials' prices: Auctionator.API.v1)
+CheapUpgrades|function|function CU:WatchedInfo(link)|Shared.lua CheapUpgradesBadge (is it an upgrade)
 
 # --- added in 2.19.0 (OpenMap_QuestieTownsfolk: Questie's kinds out of OpenMap's Townsfolk menu)
 OpenMap|field|mod.TOWNSFOLK = KINDS|OpenMap_QuestieTownsfolk.lua

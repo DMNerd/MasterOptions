@@ -1,0 +1,13 @@
+{
+  "path": ["addons/MasterOptions", "tests"],
+  "ignore": [
+    "**/Libs/**",
+    "tests/fixtures/**",
+    "**/__pycache__/**",
+    ".venv/**",
+    ".tools/**",
+    "dist/**",
+    "node_modules/**"
+  ],
+  "reporters": ["ai"]
+}

@@ -3,22 +3,12 @@
 # not a route's numbered stops); any end - arrived, cleared, stopped, replaced - clears the pin and OpenMap's
 # following; a pin with your own note stays; the same spot changing owner is the same trip.
 import sys
-from lupa import LuaRuntime
 src = open(sys.argv[1], encoding="utf-8").read()
-lua = LuaRuntime()
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
-lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")
+from shared_lua import module_test; lua = module_test(_sys.argv[1])
+from shared_lua import fake_frames; fake_frames(lua, timers_now=True)
 lua.execute(r'''
-  FRAMES, ERRS = {}, 0
-  function CreateFrame() local f = { ev = {} }
-    function f:RegisterEvent(e) self.ev[e] = true end
-    function f:SetScript(k, fn) self[k] = fn end
-    FRAMES[#FRAMES + 1] = f; return f end
-  C_Timer = { After = function(d, fn) fn() end }
   function time() return 1000 end
-  function Fire(e) for _, f in ipairs(FRAMES) do if f.ev[e] and f.OnEvent then f.OnEvent(f, e) end end end
-  function MasterOptions_ReportError(_, _, e) ERRS = ERRS + 1; print("ERR", e) end
   function hooksecurefunc(t, k, fn) local orig = t[k]; t[k] = function(...) local r = orig(...); fn(...); return r end end
   MasterOptionsDB = {}
   -- a frame-like table: Show / Hide / SetShown / IsShown

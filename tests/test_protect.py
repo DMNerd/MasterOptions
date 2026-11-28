@@ -7,13 +7,6 @@ lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOption
 lua.execute(r'''
 function print(...) local t = {} for i = 1, select("#", ...) do t[#t+1] = tostring((select(i, ...))) end io.write(table.concat(t, " "), "\n") end
 FRAMES, TIMERS, POSTCALLS = {}, {}, {}
-function CreateFrame() local f = { ev = {} }
-  function f:RegisterEvent(e) self.ev[e] = true end
-  function f:SetScript(k, fn) self[k] = fn end
-  FRAMES[#FRAMES+1] = f; return f end
-C_Timer = { After = function(d, fn) TIMERS[#TIMERS+1] = fn end }
-function RunTimers() local t = TIMERS; TIMERS = {}; for _, fn in ipairs(t) do fn() end end
-function Fire(e, ...) for _, f in ipairs(FRAMES) do if f.ev[e] and f.OnEvent then f.OnEvent(f, e, ...) end end end
 function UnitGUID() return "Player-6943-00A6A3F9" end
 function time() return 1000 end
 Enum = { TooltipDataType = { Item = 0 } }
@@ -45,6 +38,7 @@ function arr(t) local o = {} for _, v in ipairs(t) do o[#o+1] = tostring(v) end 
 load = lua.eval("function(src, name) local f, e = load(src, '=' .. name); if not f then error(e) end; return f end")
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
 from shared_lua import load_shared; load_shared(lua, protect_path)
+from shared_lua import fake_frames; fake_frames(lua)
 load(open(keep_path, encoding="utf-8").read(), "keep")("MasterOptions_Mastercraft_Keep")
 load(open(protect_path, encoding="utf-8").read(), "protect")("MasterOptions_DeleteCheapestItem_Protect")
 L = lua.execute

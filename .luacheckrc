@@ -15,13 +15,13 @@ files["addons/MasterOptions/Modules/DialogKey_Pawn.lua"] = { ignore = { "122/Que
 -- Globals Master Options defines (saved variables, its slash command, what modules share)
 globals = {
     "MasterOptionsDB", "MasterOptions_DialogKeyPawnDB", "MasterOptions_DJOpenMapDB", "MasterOptions_GearMaticForeverDB",
-    "MasterOptions_MastercraftBankDB", "MasterOptions_MastercraftKeepDB", "MasterOptions_MastercraftVendorDB",
+    "MasterOptions_MastercraftBankDB", "MasterOptions_CheapDisenchantsDB", "MasterOptions_CheapDisenchants", "MasterOptions_CUMastercraft", "MasterOptions_MastercraftKeepDB", "MasterOptions_MastercraftVendorDB",
     "MasterOptions_MinimapBorderDB",
     "MasterOptions_Module", "MasterOptions_Modules", "MasterOptions_ErrorLog", "MasterOptions_ReportError",
     "MasterOptions_MastercraftKeep", "MasterOptions_MastercraftVendorSell", "MasterOptions_MinimapBorder",
     "MasterOptions_NeverSell", "MasterOptions_AddonWhispers", "MasterOptions_GMRefreshBagIcons", "MasterOptions_MastercraftAdvice", "MasterOptions_MastercraftAdviceDB",
     "MasterOptions_BaganatorMastercraft", "MasterOptions_Pawn", "MasterOptions_QuestieChattynator", "MasterOptions_OpenMapTownsfolk", "MasterOptions_PawnKeeps", "MasterOptions_PawnKeepsMany",
-    "MasterOptions_GearKeeps", "MasterOptions_GearKeepsMany", "MasterOptions_GearMaticSpecKeeps", "MasterOptions_Shared", "MasterOptions_FarmTour", "MasterOptions_DJSpoken",
+    "MasterOptions_GearKeeps", "MasterOptions_GearKeepsMany", "MasterOptions_GearMaticSpecKeeps", "MasterOptions_Shared", "MasterOptions_FarmTour", "MasterOptions_DJSpoken", "MasterOptions_MastercraftBank",
     "SLASH_MASTEROPTIONS1", "SLASH_MASTEROPTIONS2",
     -- Blizzard tables we add entries to
     "SlashCmdList", "UISpecialFrames",
@@ -41,7 +41,7 @@ read_globals = {
     "HideUIPanel", "InCombatLockdown", "IsAddOnLoadOnDemand", "IsAddOnLoaded", "IsEquippableItem", "IsInInstance",
     "IsModifierKeyDown", "IsResting", "ReloadUI", "UnitClass", "UnitFactionGroup", "UnitLevel", "UnitGUID", "UnitName", "UseContainerItem",
     "GameTooltip_Hide", "QuestInfoItem_OnClick", "QuestInfo_GetRewardButton",
-    "GetCursorInfo", "ERR_CHAT_PLAYER_NOT_FOUND_S", "ChatFrame_AddMessageEventFilter", "C_ChatInfo", "SendChatMessage", "ClearCursor", "GetItemIcon", "ChatEdit_InsertLink", "ChatFrameUtil",
+    "GetCursorInfo", "ERR_CHAT_PLAYER_NOT_FOUND_S", "ChatFrame_AddMessageEventFilter", "C_ChatInfo", "SendChatMessage", "ClearCursor", "CursorHasItem", "GetInventoryItemLink", "C_AuctionHouse", "GetMoneyString", "GetItemCount", "GetItemIcon", "ChatEdit_InsertLink", "ChatFrameUtil",
     "CreateSettingsButtonInitializer", "CreateSettingsListSectionHeaderInitializer",
     -- frames and other game objects
     "AuctionFrame", "AuctionHouseFrame", "BankFrame", "ChatFontNormal", "ChatFrame1", "GameTooltip", "ItemLocation",

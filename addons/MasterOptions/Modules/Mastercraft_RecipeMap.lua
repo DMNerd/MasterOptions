@@ -57,15 +57,16 @@ local GLOW = "Interface\\GLUES\\Models\\UI_Draenei\\GenericGlow64"
 local MCDB = Shared.MastercraftDB
 local function Lib() local l = _G.LibQuestieDB; return type(l) == "table" and l or nil end
 local Module = Shared.QuestieModule
--- HereBeDragons-Pins: Questie 12.8 and later keep their copy as one of Questie's own modules (QuestieLoader's
--- HBDPins), not in LibStub - looked up as OpenMap does (read from the module list: ImportModule would make an empty
--- one). Else a LibStub copy. (Until 2.9.0 only LibStub was asked, and nothing was ever drawn.)
+-- HereBeDragons-Pins: Master Options' own copy (Libs, as LibStub has it - a newer one another addon ships wins), so a
+-- change in Questie's private copy (12.8 made it one of its modules, and the markers silently stopped) can't break
+-- them. Questie's copy only if ours somehow didn't load.
 local function Pins()
+    local own = LibStub and LibStub("HereBeDragons-Pins-2.0", true)
+    if own then return own end
     local loader = _G.QuestieLoader
     local modules = type(loader) == "table" and rawget(loader, "_modules")
     local q = type(modules) == "table" and rawget(modules, "HBDPins")
     if type(q) == "table" and type(q.AddWorldMapIconMap) == "function" then return q end
-    return LibStub and LibStub("HereBeDragons-Pins-2.0", true) or nil
 end
 local function MyFaction() return UnitFactionGroup("player") == "Alliance" and "A" or "H" end
 

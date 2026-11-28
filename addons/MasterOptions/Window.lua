@@ -609,7 +609,7 @@ do
         "|cffffd200Thank you|r - Master Options only makes these addons work together: everything it connects is their authors' work.", " " }
     for _, c in ipairs(CREDITS) do lines[#lines + 1] = ("|cffffd200%s|r  %s"):format(c[1], c[2]) end
     lines[#lines + 1] = " "
-    lines[#lines + 1] = "And to the libraries Master Options uses - LibStub, CallbackHandler (the Ace3 team), LibDataBroker (tekkub), LibDBIcon (funkehdude), HereBeDragons (Nevcairiel) - and to the WoWSims Forever and Wowhead Forever data GearMatic, CheapUpgrades and Mastercraft are built on."
+    lines[#lines + 1] = "And to the libraries Master Options uses - LibStub, CallbackHandler (the Ace3 team), LibDataBroker (tekkub), LibDBIcon (funkehdude), LibAHTab (plusmouse), LibDeflate (Haoqian He), AceSerializer (the Ace3 team), HereBeDragons (Nevcairiel) - and to the WoWSims Forever and Wowhead Forever data GearMatic, CheapUpgrades and Mastercraft are built on."
     thanksText:SetText(table.concat(lines, "\n"))
 end
 local thanksHeight = math.ceil((thanksText:GetStringHeight() or 300) + 16)
@@ -687,6 +687,11 @@ local function BuildWindow()
     local at = #sections + 1
     for i, s in ipairs(sections) do if s.name == "Vendor and bank" then at = i + 1 end end
     table.insert(sections, at, nsSec)
+    -- Share setup: before Thanks (Share.lua: one code for every choice, to paste elsewhere)
+    if MO.Share then
+        local pane, h = MO.Share.BuildPane(body, PANE_W)
+        sections[#sections + 1] = { name = "Share setup", pane = pane, share = true, height = h, opts = {} }
+    end
     -- Thanks: last
     thanksSec = { name = "Thanks", pane = thanksPane, thanks = true, height = thanksHeight, opts = {} }
     sections[#sections + 1] = thanksSec
@@ -695,7 +700,7 @@ local function BuildWindow()
     sideStep = math.max(SIDE_ROW_MIN, math.min(SIDE_ROW, math.floor(avail / math.max(1, #sections))))
     sideList:SetHeight(8 + #sections * sideStep)
     for i, s in ipairs(sections) do
-        if not s.problems and not s.neverSell and not s.thanks then
+        if not s.problems and not s.neverSell and not s.thanks and not s.share then
             s.pane = CreateFrame("Frame", nil, body)
             s.pane:SetPoint("TOPLEFT")
             s.pane:SetSize(PANE_W, 10)

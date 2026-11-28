@@ -1,9 +1,7 @@
 import sys
-from lupa import LuaRuntime
-lua = LuaRuntime()
 import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))  # (run with -I)
-from shared_lua import load_shared; load_shared(lua, _sys.argv[1])
-lua.execute("function MasterOptions_Module(name, needs, body) body('MasterOptions_' .. name) end")  # (module files: run at once, as their old addon did)
+from shared_lua import module_test; lua = module_test(_sys.argv[1])
+from shared_lua import fake_tooltip; fake_tooltip(lua)
 lua.execute(r'''
 FR, TM, PC = {}, {}, {}
 function CreateFrame() local f = { ev = {} } function f:RegisterEvent(e) self.ev[e] = true end function f:SetScript(k, fn) self[k] = fn end FR[#FR+1] = f return f end
@@ -18,14 +16,6 @@ GearMaticDB = { sellIgnore = {}, sellMark = {} }
 MastercraftDB = { settings = {}, goals = {} }
 REFRESHED = 0
 GearMatic = { RefreshSellIgnoreSurfaces = function() REFRESHED = REFRESHED + 1 end }
-LEFT, RIGHT = {}, {}
-GameTooltip = {}
-function GameTooltip:GetName() return "GameTooltip" end
-function GameTooltip:NumLines() return #LEFT end
-for i = 1, 10 do
-  _G["GameTooltipTextLeft" .. i] = { GetText = function() return LEFT[i] end }
-  _G["GameTooltipTextRight" .. i] = { GetText = function() return RIGHT[i] end, IsShown = function() return RIGHT[i] ~= nil end }
-end
 function Hover(id) for _, fn in ipairs(PC) do fn(GameTooltip, { id = id }) end; Run() end
 ''')
 lua.eval("function(s) return load(s, '=keep') end")(open(sys.argv[1], encoding="utf-8").read())("MasterOptions_Mastercraft_Keep")
@@ -37,6 +27,17 @@ L('RIGHT = { nil, nil, "VENDOR" }; Hover(6256)')
 print("later it says VENDOR:    never-sell =", lua.eval("GearMaticDB.sellIgnore[6256] == true"))
 L('LEFT = { "Some item" }; RIGHT = {}; Hover(1234)')
 print("no Mastercraft advice:   never-sell =", lua.eval("GearMaticDB.sellIgnore[1234] == true"))
+# learned only from items you have: an auction house item's or a chat link's KEEP doesn't reach the never-sell list
+L('OWNED = {}; C_Item = C_Item or {}; C_Item.GetItemCount = function(id) return OWNED[id] or 0 end')
+L('LEFT = { "Fishing Rod", " ", "|cff4da6ffMastercraft|r", "You use it for fishing." }; RIGHT = { nil, nil, "|cff66b8ffKEEP|r" }; Hover(7777)')
+notMine = lua.eval("GearMaticDB.sellIgnore[7777] == nil")
+L('OWNED[7777] = 1; Hover(7777)')
+mine = lua.eval("GearMaticDB.sellIgnore[7777] == true")
+print(("ok   " if notMine else "FAIL ") + "an item you don't have (auction house, chat link): its KEEP not learned")
+print(("ok   " if mine else "FAIL ") + "...once you have it: learned (never-sell)")
+L('C_Item.GetItemCount = nil')
+if not (notMine and mine):
+    print("ERRORS: 1"); sys.exit(1)
 # IsNeeded: an item in Mastercraft's tracker (read in place), and one that isn't
 L('MastercraftDB.goals = { [UnitGUID("player")] = { { id = 2592 }, { id = "4306" } } }')
 tracked = lua.eval("MasterOptions_MastercraftKeep.IsNeeded(2592) and MasterOptions_MastercraftKeep.IsNeeded(4306) and not MasterOptions_MastercraftKeep.IsNeeded(9999)")
