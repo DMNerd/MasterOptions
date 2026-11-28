@@ -97,6 +97,17 @@ print("Pawn Forever problem: installed+loaded", pf_before, "/ missing", pf_missi
 if pf_before or not pf_missing or not pf_off:
     lua.execute('ERRORS[#ERRORS+1] = "Pawn Forever problem row wrong"')
 lua.execute('LOADED.Pawn_Forever = true; ENABLED.Pawn_Forever = true')
+# ShortestPathForever's arrow off with no pin over the destination (and no TomTom): nothing points the way since 1.49.4
+lua.execute('LOADED.ShortestPathForever = true; SPF_WAS = ShortestPathForeverDB; ShortestPathForeverDB = { arrow = false }')
+spf_none = lua.eval('ShowsProblem("nothing on screen points the way")')
+lua.execute('ShortestPathForeverDB.destinationPin = true')
+spf_pin = lua.eval('ShowsProblem("nothing on screen points the way")')
+lua.execute('ShortestPathForeverDB.destinationPin = nil; LOADED.TomTom = true')
+spf_tomtom = lua.eval('ShowsProblem("nothing on screen points the way")')
+print("SPF no-pointer problem: arrow off", spf_none, "/ with the pin", spf_pin, "/ with TomTom", spf_tomtom)
+if not spf_none or spf_pin or spf_tomtom:
+    lua.execute('ERRORS[#ERRORS+1] = "ShortestPathForever no-pointer problem row wrong"')
+lua.execute('LOADED.TomTom = nil; LOADED.ShortestPathForever = nil; ShortestPathForeverDB = SPF_WAS')
 # Sparkles_Forever with Mastercraft: the bobber mark that can't show, and tracking switching under "While tracking" pins
 lua.execute('LOADED.Sparkles_Forever = true; SparklesDB = { sparkleBobber = true, minimapResources = true, minimapAutoAlternate = false }; MastercraftDB.settings.fishMarker = true; MastercraftDB.settings.nodesWhen = nil')
 sp_ok = not lua.eval('ShowsProblem("bobber isn\'t marked") or ShowsProblem("Switch Herbs and Ore")')

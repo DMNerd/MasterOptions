@@ -122,9 +122,17 @@ res["Town NPC icons -> Questie: no longer remembered (Questie's kinds out of Ope
 res["World map coordinates: both on = conflict"] = E('Row("World map coordinates").get() == "Both (conflict)"')
 lua.execute('Row("World map coordinates").set("OpenMap")')
 res["World map coordinates -> OpenMap: Questie's off"] = E('Questie.db.profile.mapCoordinatesEnabled == false and Row("World map coordinates").get() == "OpenMap"')
-lua.execute('Row("Navigation arrow").set("Game\'s marker only"); Row("Arrow text").set("Both")')
+lua.execute('Row("Navigation arrow").set("Destination pin only"); Row("Arrow text").set("Both")')
 res["Navigation arrow / Arrow text: ShortestPathForever's settings"] = E(
-    'ShortestPathForeverDB.arrow == false and ShortestPathForeverDB.arrowLabel == "both" and Row("Arrow text").get() == "Both" and Row("Navigation arrow").get() == "Game\'s marker only"')
+    'ShortestPathForeverDB.arrow == false and ShortestPathForeverDB.arrowLabel == "both" and Row("Arrow text").get() == "Both" and Row("Navigation arrow").get() == "Destination pin only"')
+res["Navigation arrow -> Destination pin only: its pin over the destination on (its arrow off hides the game's marker since 1.49.4)"] = E(
+    'ShortestPathForeverDB.destinationPin == true and MasterOptionsDB.spfPinOurs == true')
+lua.execute('Row("Navigation arrow").set("Shortest Path\'s arrow")')
+res["Navigation arrow -> Shortest Path's arrow: its arrow back, the pin we turned on off again"] = E(
+    'ShortestPathForeverDB.arrow == true and ShortestPathForeverDB.destinationPin == false and MasterOptionsDB.spfPinOurs == nil')
+lua.execute('ShortestPathForeverDB.destinationPin = true; Row("Navigation arrow").set("Game\'s marker only"); Row("Navigation arrow").set("Shortest Path\'s arrow")')
+res["Navigation arrow: the old choice's name still works; a pin you had on yourself stays on"] = E(
+    'ShortestPathForeverDB.destinationPin == true and ShortestPathForeverDB.arrow == true')
 lua.execute('Row("Quest and recipe waypoints").set("Game\'s waypoint")')
 res["Quest and recipe waypoints -> game's: ShortestPathForever's TomTom stand-in off"] = E('ShortestPathForeverDB.tomtom == false')
 lua.execute('Row("Minimap buttons").set("In a tray")')

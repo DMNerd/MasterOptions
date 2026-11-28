@@ -293,8 +293,8 @@ local OPTIONS = {
     { header = "Routes and waypoints" },
     {
         kind = "choice", label = "Navigation arrow", rec = "Shortest Path's arrow", since = 32,
-        needs = "ShortestPathForever", choices = { "Shortest Path's arrow", "Game's marker only" },
-        tip = "While ShortestPathForever leads you somewhere, it shows its own arrow on screen and the game's waypoint marker. Shortest Path's arrow: both. Game's marker only: its arrow hidden, the game's marker leads (one pointer on screen).",
+        needs = "ShortestPathForever", choices = { "Shortest Path's arrow", "Destination pin only" },
+        tip = "While ShortestPathForever leads you somewhere, it shows its own arrow on screen and the game's waypoint marker. Shortest Path's arrow: both. Destination pin only: its arrow hidden, and its pin over the destination (its Show a pin over the destination) leads instead - one marker on screen. (Since ShortestPathForever 1.49.4 its arrow off also takes the game's marker away, so the pin is turned on with it; TomTom's arrow, if you use it, stays.)",
         get = MO.ArrowGet, set = MO.ArrowSet,
     },
     {

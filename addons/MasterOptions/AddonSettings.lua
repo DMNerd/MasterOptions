@@ -416,11 +416,42 @@ local function SPF()
     return Loaded("ShortestPathForever") and type(_G.ShortestPathForeverDB) == "table" and _G.ShortestPathForeverDB or nil
 end
 local LABELS = { Distance = "distance", Time = "time", Both = "both" }
+-- one of its settings: through the game's Settings where it's registered (ShortestPathForever_<key>: its own
+-- refresh runs, no reload), else straight into its saved settings
+local function SetSPF(key, value)
+    local s = Settings and Settings.GetSetting and Settings.GetSetting("ShortestPathForever_" .. key)
+    if s and s.SetValue and pcall(s.SetValue, s, value) then return end
+    local d = SPF(); if d then d[key] = value end
+end
+-- Navigation arrow: its arrow, or only its pin over the destination (destinationPin). Since ShortestPathForever 1.49.4
+-- its arrow off also takes away the game's waypoint marker (only TomTom's arrow stays): "Game's marker only" (until
+-- 2.19.0) left nothing to follow. The pin is turned on with it, and off again on the way back if we turned it on.
+local PIN_ONLY, OLD_PIN_ONLY = "Destination pin only", "Game's marker only"
 local function ArrowGet()
     local d = SPF() or {}
-    return d.arrow == false and "Game's marker only" or "Shortest Path's arrow"
+    return d.arrow == false and PIN_ONLY or "Shortest Path's arrow"
 end
-local function ArrowSet(v) local d = SPF(); if d then d.arrow = v ~= "Game's marker only" end end
+local function ArrowSet(v)
+    if not SPF() then return end
+    MasterOptionsDB = MasterOptionsDB or {}
+    if v == OLD_PIN_ONLY then
+        v = PIN_ONLY
+        -- (the account-wide choice kept under its old name: the new one, so it isn't set again at every login)
+        local shared = MasterOptionsDB.shared
+        if type(shared) == "table" and shared["Navigation arrow"] == OLD_PIN_ONLY then shared["Navigation arrow"] = PIN_ONLY end
+    end
+    local pinOnly = v == PIN_ONLY
+    SetSPF("arrow", not pinOnly)
+    if pinOnly then
+        if SPF().destinationPin ~= true then
+            SetSPF("destinationPin", true)
+            MasterOptionsDB.spfPinOurs = true
+        end
+    elseif MasterOptionsDB.spfPinOurs then
+        MasterOptionsDB.spfPinOurs = nil
+        SetSPF("destinationPin", false)
+    end
+end
 local function ArrowTextGet()
     local m = (SPF() or {}).arrowLabel or "distance"
     for label, key in pairs(LABELS) do if key == m then return label end end

@@ -7,6 +7,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+### Fixed
+
+- **Navigation arrow: "Game's marker only" left nothing to follow.** Since ShortestPathForever 1.49.4, turning its
+  arrow off also hides the game's waypoint marker, so with that choice nothing on screen pointed the way on a journey.
+  The choice is now **Destination pin only**: Shortest Path's arrow off and its pin over the destination ("Show a pin
+  over the destination") on, so one marker leads. Going back to Shortest Path's arrow turns the pin off again, if
+  Master Options was the one that turned it on. If your arrow is off with no pin and no TomTom, /mo > Problems says so
+  and turns the pin on in one click.
+
 ## [2.19.0] - 2026-11-28
 
 ### Added

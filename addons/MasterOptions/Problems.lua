@@ -321,6 +321,18 @@ CHECKS[#CHECKS + 1] = { "Sparkles", function(add)
     end
 end }
 
+-- ShortestPathForever's arrow off with nothing in its place: since its 1.49.4 the arrow off also takes the game's
+-- waypoint marker away, so Master Options' old "Navigation arrow: Game's marker only" left nothing on screen to follow
+-- (TomTom's arrow, when TomTom is there, still points the way)
+CHECKS[#CHECKS + 1] = { "ShortestPathForever", function(add)
+    local d = _G.ShortestPathForeverDB
+    if Loaded("ShortestPathForever") and type(d) == "table" and d.arrow == false and d.destinationPin ~= true
+        and not Loaded("TomTom") then
+        add("spf:nopointer", "Shortest Path's arrow is off, and since ShortestPathForever 1.49.4 that also hides the game's waypoint marker - nothing on screen points the way on a journey. Turn on its pin over the destination (Navigation arrow: Destination pin only).",
+            "Turn on the pin", function() MO.ArrowSet("Destination pin only") end)
+    end
+end }
+
 -- 4. Baganator settings pointing at addons that aren't loaded
 CHECKS[#CHECKS + 1] = { "Baganator", function(add)
     local p = BAG()
