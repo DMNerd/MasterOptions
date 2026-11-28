@@ -8,7 +8,11 @@ The standing checks after any update are in [UPDATING.md](UPDATING.md), step 4.
 
 ## Waiting
 
-Unreleased (after 2.20.0):
+Unreleased (after 2.21.0): nothing yet.
+
+Released, not confirmed yet:
+
+2.21.0:
 
 - [ ] **Cheap Disenchants, Quick scan** (with Auctionator): press Quick scan. Auctionator says it's starting its scan;
       the status goes through steps 1/4 to 4/4 with the thin bar filling for each; the list fills; the footer says
@@ -41,7 +45,7 @@ Unreleased (after 2.20.0):
       there; with a chat box open it still puts the pin in chat; a plain click still goes there; the row's tooltip
       says "Shift-click: journey there (Shortest Path)".
 
-Released, not confirmed yet:
+Earlier:
 
 - [ ] **2.20.0 - Navigation arrow "Destination pin only"**: on a journey, Shortest Path's arrow is gone and its pin
       over the destination shows. Back on "Shortest Path's arrow": the arrow again, the pin gone (unless you had it on).

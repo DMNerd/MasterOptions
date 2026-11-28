@@ -3,6 +3,49 @@
 Every update check (`scripts\check-addons.ps1 -Log`, see UPDATING.md), newest first: the versions of the
 addons Master Options works with, which changed since the check before, and what was done about it.
 
+## 2026-11-28 - Master Options 2.21.0
+
+| Addon | Version | Since the last check | Names |
+|---|---|---|---|
+| Auctionator | 354 | same | ok |
+| Baganator | 870 | same | ok |
+| BetterBlizzFrames | v2.2.4 | same | ok |
+| BetterBlizzPlates | v2.2.5c | same | ok |
+| DeleteCheapestItem | v1.11.0 | same | ok |
+| Details | #Details.20261124.15450.172 | same | ok |
+| DialogKey_Numy | v1.2.62 | same | ok |
+| ForeverDungeonJournal | 2.1.7 | same | ok |
+| GearMatic | 6.11.0 | same | ok |
+| Chattynator | 241 | same | ok |
+| CheapUpgrades | 0.18.13 | same | ok |
+| Mastercraft | 2.1.3 | same | ok |
+| OpenMap | v0.8.14 | same | ok |
+| OpenMap_MiniMap | 1.4.1 | same | ok |
+| OpenMap_Tweaks | 1.5.5 | same | ok |
+| Questie | 12.15.0 | **updated** (was ?) | ok |
+| QuestieDB | 1.1.6 | same | ok |
+| ShortestPathForever | 1.50.0 | same | ok |
+| Sparkles_Forever | 0.6.0-beta | same | ok |
+| Spoken | 3.13.2 | same | ok |
+| Spoken_Bosses | 3.13.2 | same | ok |
+| Spoken_Places | 3.13.2 | same | ok |
+| Syndicator | 293 | same | ok |
+
+Not installed (skipped): BetterBetterBlizzPlates, Pawn, Pawn_Forever.
+
+**Notes:**
+- **Questie 12.15.0**: the check could read its version this time (the last check logged "?"), so "updated" may only
+  mean that the check can now read the version. All 23 names we use are still there. Nothing to do.
+- No other addon changed since 2.19.0. Everything we rely on is still there.
+- New in 2.21.0, worth watching on updates:
+  - **AuctionHouse_TabOverflow** hides and re-anchors the tabs of the game and of LibAHTab, which Auctionator,
+    CheapUpgrades and Cheap Disenchants use. It relies on two things:
+    - LibAHTab chains its tabs from `AuctionHouseFrame.Tabs[#Tabs]`.
+    - The tab template `AuctionHouseFrameDisplayModeTabTemplate` adds each tab made with it to its parent's `Tabs`.
+      This is why More lives in a frame of its own.
+  - **Cheap Disenchants** also listens for two Auctionator EventBus events: `full_incremental_scan_complete` (its
+    quick scan) and `replicate_scan_complete` (its full scan).
+
 ## 2026-11-28 - Master Options 2.19.0
 
 | Addon | Version | Since the last check | Names |

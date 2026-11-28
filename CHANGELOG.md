@@ -7,6 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.21.0] - 2026-11-28
+
 ### Added
 
 - **Auction house tabs fit the window** (new module AuctionHouse_TabOverflow, on by default). The row of the game's
@@ -30,8 +32,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ### Changed
 
-- **Cheap Disenchants' tab is easier to read.** The top has two rows: the scans and the max price, then the options
-  and the status. A thin bar shows how far each step is, and the status names the step (1/4 reading, 2/4 looking at
+- **Cheap Disenchants' tab is easier to read.** The top has two rows, clear of the auction house's portrait: the
+  scans, the two lists and the status, then the options and the max price. A thin bar shows how far each step is, and the status names the step (1/4 reading, 2/4 looking at
   the items, 3/4 valuing, 4/4 checking the finds), so the counts no longer seem to jump. Every other row is a shade
   lighter. The profit shows its share of the price too ("+1g 20s 150%"). The empty list says what to do, or that
   nothing was found. The buttons and options explain themselves on mouse-over.
@@ -705,7 +707,8 @@ Not released on its own: part of 2.6.0.
   them work together (until now separate `MasterOptions_<Addon>_<Addon>` addons). Each module runs only when the
   addons it works with are loaded.
 
-[Unreleased]: https://github.com/DMNerd/MasterOptions/compare/v2.20.0...HEAD
+[Unreleased]: https://github.com/DMNerd/MasterOptions/compare/v2.21.0...HEAD
+[2.21.0]: https://github.com/DMNerd/MasterOptions/compare/v2.20.0...v2.21.0
 [2.20.0]: https://github.com/DMNerd/MasterOptions/compare/v2.19.0...v2.20.0
 [2.19.0]: https://github.com/DMNerd/MasterOptions/compare/v2.18.0...v2.19.0
 [2.18.0]: https://github.com/DMNerd/MasterOptions/compare/v2.17.0...v2.18.0
