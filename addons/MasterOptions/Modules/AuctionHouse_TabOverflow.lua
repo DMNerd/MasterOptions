@@ -55,10 +55,10 @@ local function Tabs()
         if not origin[t] and t.GetPoint then origin[t] = { t:GetPoint(1) } end
         if t:IsShown() or hidden[t] then list[#list + 1] = t end
     end
-    for _, t in ipairs(ah and ah.Tabs or {}) do Add(t) end
+    for _, t in ipairs(ah and ah.Tabs or {}) do if t ~= more then Add(t) end end
     local lib = Lib()
     local state = lib and lib.internalState
-    for _, t in ipairs(state and state.Tabs or {}) do Add(t) end
+    for _, t in ipairs(state and state.Tabs or {}) do if t ~= more then Add(t) end end
     return list
 end
 local isTab = {}
@@ -161,8 +161,12 @@ end
 
 local function MakeMore(ah)
     if more then return more end
-    local ok, b = pcall(CreateFrame, "Button", "MasterOptionsAHTabMore_Tab", ah, "AuctionHouseFrameDisplayModeTabTemplate")
-    if not ok or not b then b = CreateFrame("Button", "MasterOptionsAHTabMore_Tab", ah, "UIPanelButtonTemplate"); b:SetSize(90, 24) end
+    -- (in a holder of its own: the tab template puts every tab made with it into its parent's Tabs - made on the
+    -- auction house, More was one of its tabs, the others chained after it and it after them: a loop the game refuses)
+    local holder = CreateFrame("Frame", nil, ah)
+    holder:SetAllPoints()
+    local ok, b = pcall(CreateFrame, "Button", "MasterOptionsAHTabMore_Tab", holder, "AuctionHouseFrameDisplayModeTabTemplate")
+    if not ok or not b then b = CreateFrame("Button", "MasterOptionsAHTabMore_Tab", holder, "UIPanelButtonTemplate"); b:SetSize(90, 24) end
     b:SetScript("OnClick", function()
         if menu and menu:IsShown() then HideMenu() return end
         arranging = #overflow == 0 -- (nothing in More: straight to where each tab goes)

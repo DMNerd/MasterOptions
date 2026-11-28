@@ -34,7 +34,11 @@ lua.execute(r'''
   function Base:SetTextColor(r, g, b) self.color = { r, g, b } end
   local meta = { __index = function(_, k) return Base[k] or (type(k) == "string" and k:match("^%u") and function() end) or nil end }
   function New() return setmetatable({ scripts = {}, shown = false }, meta) end
-  CreateFrame = function(_, name) local f = New(); f.ev = {}
+  -- (the game's tab template puts each tab made with it into its parent's Tabs: parentArray)
+  CreateFrame = function(_, name, parent, template) local f = New(); f.ev = {}
+    if template == "AuctionHouseFrameDisplayModeTabTemplate" and parent then
+      parent.Tabs = rawget(parent, "Tabs") or {}; table.insert(parent.Tabs, f)
+    end
     function f:RegisterEvent(e) self.ev[e] = true end
     function f:SetScript(k, fn) self.scripts[k] = fn; if k == "OnEvent" then self.OnEvent = fn end end
     if name then _G[name] = f end
@@ -75,7 +79,9 @@ res = {}
 L('Fire("AUCTION_HOUSE_SHOW")')
 res["the tabs past the window's edge (with room for More) hidden and listed, in order"] = E("Names()") == "Selling,Cancelling,Auctionator" and E(
     "LIB.internalState.Tabs[5].shown == false and LIB.internalState.Tabs[4].shown == true") is True
-res["...a More tab after the last that fits"] = E("MasterOptions_AuctionHouseTabOverflow.More().shown") is True and E(
+res["...More not one of the auction house's own tabs (no anchor loop)"] = E(
+    "(function() for _, t in ipairs(AuctionHouseFrame.Tabs) do if t == MasterOptions_AuctionHouseTabOverflow.More() then return false end end return #AuctionHouseFrame.Tabs == 3 end)()") is True
+res["...a More tab after the last that fits"] =E("MasterOptions_AuctionHouseTabOverflow.More().shown") is True and E(
     "MasterOptions_AuctionHouseTabOverflow.More().point[2] == LIB.internalState.Tabs[4]") is True and E(
     "MasterOptions_AuctionHouseTabOverflow.More().text:find('^More') ~= nil") is True
 L('local m = MasterOptions_AuctionHouseTabOverflow.More(); m.scripts.OnClick(m)')
