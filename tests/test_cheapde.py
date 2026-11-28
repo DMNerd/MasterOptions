@@ -267,9 +267,16 @@ L(r'''
   })
   Run()
 ''')
-res["Auctionator's full scan with our tab closed: not read then"] = E("Has(5001)") is None
-L('MasterOptionsCheapDisenchants:Show(); Run()')
-res["...read when the tab opens (your own auction left out)"] = E("Has(5001) ~= nil and Has(5001).buyout == 900") is True
+res["Auctionator's full scan with our tab closed: read in the background (your own auction left out)"] = E("Has(5001) ~= nil and Has(5001).buyout == 900") is True
+res["...and said in chat, as CheapUpgrades does: how many, the best"] = "Cheap Disenchants: 1 item" in (E("PRINTS[#PRINTS]") or "") and "item:5001" in (E("PRINTS[#PRINTS]") or "")
+L(r'''
+  NP = #PRINTS; MasterOptions_CheapDisenchantsDB.noChat = true
+  LISTENER:ReceiveEvent("replicate_scan_complete", {
+    { replicateInfo = { "Item 5001", "tex", 1, 2, true, 10, 0, 0, 0, 800, 0, false, nil, "Seller", "x", 0, 5001, true }, itemLink = "x" } })
+  Run()
+''')
+res["...Tell me in chat unticked: read, nothing said"] = E("Has(5001).buyout") == 800 and E("#PRINTS") == E("NP")
+L('MasterOptions_CheapDisenchantsDB.noChat = nil; MasterOptionsCheapDisenchants:Show(); Run()')
 # Your own auctions in Auctionator's quick scan (containsOwnerItem): yours alone - not listed; yours among others -
 # listed, marked "the cheapest may be yours"
 L(r'''

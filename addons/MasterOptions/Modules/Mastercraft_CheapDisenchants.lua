@@ -88,6 +88,24 @@ local reading = false   -- (rows being taken in and their items loaded: until th
 local lastFinish = 0    -- (GetTime() when the last read was through)
 local lastReadCount     -- (the replicate list's row count when it was last read: the same list isn't read twice)
 local source            -- what the list shown came from ("Auctionator's quick scan" ...) and when: { name, at }
+local announceGen       -- the read whose finds are said in chat when it's through (one done in the background)
+
+-- the heads-up in chat after a read in the background: how many disenchant into more than they cost, and the best
+-- (whichever list the tab shows; nothing said when nothing was found, or with "Tell me in chat" unticked)
+local function Announce()
+    if not DB or DB.noChat then return end
+    local n, best = 0, nil
+    for _, e in pairs(cheapest) do
+        if e.value and e.value > e.buyout and UnderCap(e) and not (DB.hideEnchanter and e.enchanter) then
+            n = n + 1
+            if not best or e.value - e.buyout > best.value - best.buyout then best = e end
+        end
+    end
+    if n == 0 then return end
+    Say(("Cheap Disenchants: %d item%s on the auction house disenchant%s into more than %s. Best: %s +%s - see the Cheap Disenchants tab.")
+        :format(n, n == 1 and "" or "s", n == 1 and "s" or "", n == 1 and "it costs" or "they cost",
+            best.link or "?", MasterOptions_Shared.Money(best.value - best.buyout)))
+end
 
 -- `list` worked through a few milliseconds a frame: fn(entry) on each, then done(); status(k, n) says how far.
 -- Stops when a newer read has started (gen)
@@ -177,6 +195,7 @@ local function Value(list, gen)
                 lastFinish = GetTime and GetTime() or 0
                 Rank()
                 if Refresh then Refresh() end
+                if announceGen == gen then announceGen = nil; Announce() end
             end)
     end)
 end
@@ -314,9 +333,11 @@ local function TakeAuctionator(rows, full)
     end, function(k, n) return ("Reading Auctionator's scan (1/4): %d / %d"):format(k, n) end, function() Resolve(gen) end)
 end
 
--- Auctionator's scans as they complete: taken while our tab is open or we asked for one; else kept for when it opens
+-- Auctionator's scans as they complete (its Scan button, its scan as the auction house opens, ours): read at once -
+-- with the tab closed too, in the background (a few milliseconds a frame), and what's found said in chat (as
+-- CheapUpgrades does; the tab's "Tell me in chat" option). Kept for later while a read is still going on.
 local host -- (the tab's frame: the window, below)
-local held -- { rows, full }: the last one that came while the tab was closed
+local held -- { rows, full }: the last one that came while a read was going on
 local function Shown() return host and host:IsShown() end
 local hookedAuctionator = false
 local function HookAuctionator()
@@ -334,8 +355,11 @@ local function HookAuctionator()
         ReceiveEvent = function(_, eventName, rows)
             local isFull = full and eventName == full.ScanComplete
             if not (isFull or (quick and eventName == quick.ScanComplete)) then return end
-            if Shown() or waitingAuctionator then
+            if waitingAuctionator or not busy then
                 held = nil
+                -- (asked for, or watched: no word in chat needed; else the read about to start - TakeAuctionator's
+                -- Begin - is said in chat when it's through)
+                announceGen = not (Shown() or waitingAuctionator) and generation + 1 or nil
                 Check("reading Auctionator's scan", pcall(TakeAuctionator, rows, isFull))
             else
                 held = { rows = rows, full = isFull }
@@ -639,9 +663,13 @@ local function Build()
         local c = CreateFrame("CheckButton", nil, h, "UICheckButtonTemplate")
         c:SetSize(22, 22)
         c:SetPoint("TOPLEFT", anchor, gap, -(TITLE_H + 31))
-        c:SetChecked(DB and DB[key])
+        -- ("!key": on unless DB[key] is set - an option on by default)
+        local off = key:sub(1, 1) == "!"
+        if off then key = key:sub(2) end
+        c:SetChecked(DB and ((DB[key] and true or false) ~= off))
         c:SetScript("OnClick", function(self)
-            DB[key] = self:GetChecked() and true or nil
+            local on = self:GetChecked() and true or false
+            DB[key] = (on ~= off) or nil
             if now then now() end
         end)
         c:SetScript("OnEnter", function(self) Tip(self, title, help) end)
@@ -657,7 +685,10 @@ local function Build()
         "hideEnchanter", "Hide \"needs an enchanter\"",
         "Leave out what your own Enchanting can't disenchant yet (Mastercraft's word). Shown again when you untick it.",
         function() Rank(); if Refresh then Refresh() end end)
-    h.optionsEnd = el
+    local _, cl = Option(h, 8 + 22 + ((bl.GetStringWidth and bl:GetStringWidth()) or 60) + 16 + 22
+        + ((el.GetStringWidth and el:GetStringWidth()) or 140) + 16, "Tell me in chat", "!noChat", "Tell me in chat",
+        "When Auctionator scans the auction house (its Scan button, or as the auction house opens) with this tab closed, the scan is read here too, in the background, and what disenchants into more than it costs is said in chat.")
+    h.optionsEnd = cl
     -- Max price (as CheapUpgrades' tab: the game's own gold / silver / copper input, the auction house Sell tab's;
     -- applied a moment after typing stops, or at Enter; 0: no max). Our own box where the client has no such input.
     -- (row two, at the right)

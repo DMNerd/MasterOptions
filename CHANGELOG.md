@@ -12,7 +12,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 - **Auction house tabs fit the window** (new module AuctionHouse_TabOverflow, on by default). The row of the game's
   and every addon's tabs (Auctionator, CheapUpgrades, Cheap Disenchants) was wider than the window. The tabs that
   would reach past its right edge now go into a last tab, More, which lists them. While one of them is open, the
-  More tab bears its name. Turn it off in Modules: more.
+  More tab bears its name. More's "Arrange tabs..." sets each tab to Auto (in the row while there's room), Always
+  in row, or Always in More; saved. Turn the module off in Modules: more.
+- **Cheap Disenchants: a heads-up in chat, as CheapUpgrades gives.** When Auctionator scans (its Scan button, or as
+  the auction house opens) with the tab closed, the scan is read in the background and chat says how many items
+  disenchant into more than they cost, and the best. "Tell me in chat" on the tab turns it off.
 - **Cheap Disenchants: a second list, Cheapest.** Buttons Profitable / Cheapest at the top. Cheapest lists every
   item that can be disenchanted, the cheapest first, with what it disenchants into and the gain or loss (a loss in
   red): materials or Enchanting skill-ups for little gold. The choice is saved; switching reads nothing again.

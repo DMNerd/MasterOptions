@@ -32,6 +32,11 @@ Unreleased (after 2.20.0):
 - [ ] **Auction house tabs, More**: open the auction house - the tab row ends at the window's right edge with a
       "More »" tab; its click lists the rest (Selling, Cancelling, Auctionator ...). Pick one: its page opens, the
       More tab shows chosen with its name. Buy (or any tab in the row): More back to "More »", not chosen.
+      "Arrange tabs..." at the list's end: click a tab's line to go round Auto / Always in row / Always in More -
+      the row changes at once, no gap where a tab left; still so after a /reload.
+- [ ] **Cheap Disenchants, heads-up in chat**: open the auction house on another tab and let Auctionator's scan run
+      (or press its Scan): a moment after it's done, chat says "Cheap Disenchants: N items ... Best: [item] +..."
+      (only when something was found), and the game doesn't hitch meanwhile. Untick "Tell me in chat": nothing said.
 - [ ] **OpenMap's Pins list window** (the list of your map pins): Shift-click on a row starts a Shortest Path journey
       there; with a chat box open it still puts the pin in chat; a plain click still goes there; the row's tooltip
       says "Shift-click: journey there (Shortest Path)".

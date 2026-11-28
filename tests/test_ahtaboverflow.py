@@ -26,11 +26,13 @@ lua.execute(r'''
   function Base:GetText() return self.text end
   function Base:SetPoint(...) self.point = { ... } end
   function Base:GetWidth() return 90 end
+  function Base:GetPoint() local p = self.point or {}; return p[1], p[2], p[3], p[4], p[5] end
+  function Base:ClearAllPoints() self.point = nil end
   function Base:GetStringWidth() return 80 end
   function Base:CreateTexture() return New() end
   function Base:CreateFontString() return New() end
   function Base:SetTextColor(r, g, b) self.color = { r, g, b } end
-  local meta = { __index = function(_, k) return Base[k] or function() end end }
+  local meta = { __index = function(_, k) return Base[k] or (type(k) == "string" and k:match("^%u") and function() end) or nil end }
   function New() return setmetatable({ scripts = {}, shown = false }, meta) end
   CreateFrame = function(_, name) local f = New(); f.ev = {}
     function f:RegisterEvent(e) self.ev[e] = true end
@@ -41,16 +43,18 @@ lua.execute(r'''
   function PanelTemplates_SelectTab(t) SELECTED[t] = true end
   function PanelTemplates_DeselectTab(t) SELECTED[t] = nil end
   -- ten tabs, 100 wide each from 0: rights 100 .. 1000; the window's right edge at 800
-  local n = 0
+  local prev
+  AuctionHouseFrame = New(); AuctionHouseFrame.shown = true
   local function Tab(text)
-    n = n + 1
-    local t = New(); t.shown = true; t.text = text; t.right = n * 100
-    function t:GetRight() return self.right end
+    local t = New(); t.shown = true; t.text = text
+    t.point = prev and { "TOPLEFT", prev, "TOPRIGHT", 3, 0 } or { "TOPLEFT", AuctionHouseFrame, "BOTTOMLEFT", 10, 0 }
+    function t:GetLeft() return 0 end
     t.scripts.OnClick = function() CLICKED = text end
+    prev = t
     return t
   end
   AH_RIGHT = 800
-  AuctionHouseFrame = New(); AuctionHouseFrame.shown = true
+  MasterOptionsDB = {}
   AuctionHouseFrame.Tabs = { Tab("Buy"), Tab("Sell"), Tab("Auctions") }
   function AuctionHouseFrame:GetRight() return AH_RIGHT end
   function AuctionHouseFrame:SetDisplayMode() end
@@ -85,8 +89,30 @@ L('LIB:SetSelected("shop")')
 res["a tab in the row chosen: More back to More, not chosen"] = E("MasterOptions_AuctionHouseTabOverflow.More().text:find('^More') ~= nil") is True and E(
     "SELECTED[MasterOptions_AuctionHouseTabOverflow.More()]") is None
 L('AH_RIGHT = 1200; AuctionHouseFrame.scripts.OnShow()')
-res["all fit: every tab back, no More"] = E("Names()") == "" and E("LIB.internalState.Tabs[7].shown") is True and E(
-    "MasterOptions_AuctionHouseTabOverflow.More().shown") is False
+res["all fit: every tab back in the row (More stays, for Arrange tabs)"] = E("Names()") == "" and E("LIB.internalState.Tabs[7].shown") is True
+L('local m = MasterOptions_AuctionHouseTabOverflow.More(); m.scripts.OnClick(m)')
+res["...More's click then: straight to where each tab goes"] = E("MasterOptionsAHTabMore.rows[1].text.text") == "Buy" and "Auto" in (
+    E("MasterOptionsAHTabMore.rows[1].place.text") or "") and "Done" in (E("MasterOptionsAHTabMore.rows[11].text.text") or "")
+# Arrange tabs: a click goes round Auto -> Always in row -> Always in More; saved by the tab; the row laid out again
+L(r'''
+  MasterOptionsAHTabMore.rows[11].scripts.OnClick(MasterOptionsAHTabMore.rows[11]) -- (Done)
+  AH_RIGHT = 800; MasterOptions_AuctionHouseTabOverflow.Layout()
+  local m = MasterOptions_AuctionHouseTabOverflow.More(); m.scripts.OnClick(m); m.scripts.OnClick(m) -- (closed, opened)
+''')
+res["More's list ends with Arrange tabs..."] = "Arrange" in (E("MasterOptionsAHTabMore.rows[4].text.text") or "")
+L(r'''
+  MasterOptionsAHTabMore.rows[4].scripts.OnClick(MasterOptionsAHTabMore.rows[4])
+  local rows = MasterOptionsAHTabMore.rows
+  rows[1].scripts.OnClick(rows[1]); rows[1].scripts.OnClick(rows[1])   -- Buy: Always in More
+  rows[10].scripts.OnClick(rows[10])                                   -- Auctionator: Always in row
+''')
+res["Buy always in More, Auctionator always in row: saved"] = E("MasterOptionsDB.ahTabs.Buy") == "more" and E("MasterOptionsDB.ahTabs.Auctionator") == "row"
+res["...More lists Buy and what didn't fit after Auctionator took its room"] = E("Names()") == "Buy,Selling,Cancelling" and E(
+    "LIB.internalState.Tabs[7].shown") is True and E("AuctionHouseFrame.Tabs[1].shown") is False
+res["...the row starts where Buy did (no gap), Auctionator chained after Shopping"] = E(
+    "AuctionHouseFrame.Tabs[2].point[2] == AuctionHouseFrame and AuctionHouseFrame.Tabs[2].point[4] == 10") is True and E(
+    "LIB.internalState.Tabs[7].point[2] == LIB.internalState.Tabs[4]") is True
+res["...the arrange list shows it"] = "Always in More" in (E("MasterOptionsAHTabMore.rows[1].place.text") or "")
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)
