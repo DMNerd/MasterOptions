@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+### Added
+
+- **Cheap Disenchants: Max price.** A "Max price:" field on the tab, as in CheapUpgrades' auction house tab: the
+  game's own gold / silver / copper input, applied a moment after you stop typing or at Enter (0: no max). What
+  costs more isn't listed, and isn't valued during a scan either, so a scan with a max price reads less. Changing it
+  lists the last scan again at once (no new scan; values already read are kept). Saved between sessions.
+
 ### Fixed
 
 - **Cheap Disenchants no longer lags the game while it scans.** Each item's value was read from Mastercraft's

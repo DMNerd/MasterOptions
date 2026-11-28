@@ -15,7 +15,9 @@ lua.execute(r'''
     local r = { scripts = {}, shown = false }
     for _, m in ipairs({ "SetSize", "SetPoint", "SetHeight", "SetWidth", "SetJustifyH", "SetAllPoints", "SetColorTexture",
       "EnableMouse", "EnableMouseWheel", "SetChecked", "SetTexture", "SetFrameLevel", "SetHitRectInsets", "SetWordWrap",
-      "SetAtlas" }) do r[m] = function() end end
+      "SetAtlas", "SetAutoFocus", "ClearFocus" }) do r[m] = function() end end
+    function r:GetText() return self.text end
+    function r:HookScript(k, fn) self.scripts[k] = fn end
     function r:GetFrameLevel() return 1 end
     function r:GetHeight() return 600 end
     function r:GetScript(k) return self.scripts[k] end
@@ -167,6 +169,14 @@ res["grouped: the cheap items of the group listed (an item that can't be disench
     "#MasterOptions_CheapDisenchants.Results()") == 8 and E("Has(2000) ~= nil and Has(2000).profit == 4000 and Has(2003) == nil and Has(2200) ~= nil and Has(2200).profit == 1000") is True
 res["grouped: a shirt never read or listed"] = E("Has(2100) == nil") is True
 res["grouped: 32 items, 2 groups - one read per group and one per cheap find, not one per item"] = 0 < E("READS") <= 2 + 9
+# Max price (as CheapUpgrades' "Max price:"): what costs more isn't listed; changing it lists the last scan again (no
+# new scan, values kept: nothing read again); saved
+L('READS = 0; R0 = REPLICATES; MasterOptions_CheapDisenchants.SetMaxPrice(3000); Run()')
+res["max price 30s: only what costs up to it listed (the 1000-3000 ones), the weapon at 60s gone"] = E(
+    "#MasterOptions_CheapDisenchants.Results()") == 4 and E("Has(2200) == nil and Has(2004) ~= nil and Has(2005) == nil") is True
+res["...saved, no new scan, nothing read again"] = E("MasterOptions_CheapDisenchantsDB.maxPrice") == 3000 and E("REPLICATES") == E("R0") and E("READS") == 0
+L('MasterOptions_CheapDisenchants.SetMaxPrice(0); Run()')
+res["max price 0: no max, every find back"] = E("#MasterOptions_CheapDisenchants.Results()") == 8 and E("MasterOptions_CheapDisenchantsDB.maxPrice") is None
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

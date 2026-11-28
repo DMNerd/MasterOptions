@@ -55,11 +55,19 @@ local Refresh, Sort -- (the window, below)
 
 local function Wanted(quality) return quality == GREEN or (quality == BLUE and DB and DB.blues) end
 
+-- the max price per item (DB.maxPrice, copper; 0 or none: no max), as CheapUpgrades' "Max price:" in its tab: what
+-- costs more isn't listed - nor valued, so a scan reads less
+local function Cap()
+    local c = DB and tonumber(DB.maxPrice)
+    return c and c > 0 and c or nil
+end
+local function UnderCap(e) local c = Cap(); return not c or e.buyout <= c end
+
 -- results: what disenchants into more than its buyout, the biggest profit first
 local function Rank()
     local out = {}
     for _, e in pairs(cheapest) do
-        if e.value and e.value > e.buyout then
+        if e.value and e.value > e.buyout and UnderCap(e) then
             e.profit = e.value - e.buyout
             out[#out + 1] = e
         end
@@ -71,6 +79,7 @@ end
 -- One read of the list at a time: a list arriving again mid-way (REPLICATE_ITEM_LIST_UPDATE more than once, another
 -- addon's scan) starts over, and the chain running stops - two chains at once each did the whole work
 local generation = 0
+local reading = false -- (the replicate list being read: OnList until Read is through)
 
 -- `list` worked through a few milliseconds a frame: fn(entry) on each, then done(); status(k, n) says how far.
 -- Stops when a newer read has started (gen)
@@ -124,7 +133,8 @@ local function Value(list, gen)
     -- 1. into groups
     local groups, order = {}, {}
     for _, e in ipairs(list) do
-        local key = GroupKey(e)
+        local key = UnderCap(e) and GroupKey(e) -- (over the max price: not valued)
+        if not key and key ~= nil then e.value = nil end
         if key ~= false then
             key = key or e.link -- (item level not known: a group of its own)
             local g = groups[key]
@@ -183,6 +193,7 @@ local function Read(i, n, gen)
         C_Timer.After(0, function() Check("reading the auction house", pcall(Read, last + 1, n, gen)) end)
         return
     end
+    reading = false
     local list = {}
     for _, e in pairs(cheapest) do if e.link then list[#list + 1] = e end end
     Value(list, gen)
@@ -193,10 +204,26 @@ local function OnList()
     local AH = C_AuctionHouse
     local n = AH and AH.GetNumReplicateItems and AH.GetNumReplicateItems() or 0
     if n <= 0 then busy = false; if Refresh then Refresh() end return end
-    busy, cheapest = true, {}
+    busy, cheapest, reading = true, {}, true
     if DB then DB.lastScan = time() end
     generation = generation + 1 -- (a read already going stops: this one starts over)
     Read(0, n, generation)
+end
+
+-- The max price changed (the tab's field, as CheapUpgrades'): the last read listed again at once - what's newly under
+-- it valued (values are kept: only what wasn't valued yet is read), what's over it dropped. No new scan.
+local function SetMaxPrice(copper)
+    if not DB then return end
+    copper = math.max(0, math.floor(tonumber(copper) or 0))
+    if copper == (tonumber(DB.maxPrice) or 0) then return end
+    DB.maxPrice = copper > 0 and copper or nil
+    if reading then return end -- (the list still being read: it's valued with the new max price when it's in)
+    local list = {}
+    for _, e in pairs(cheapest) do if e.link then list[#list + 1] = e end end
+    if #list == 0 then if Refresh then Refresh() end return end
+    busy = true
+    generation = generation + 1
+    Value(list, generation)
 end
 
 local function Scan()
@@ -325,8 +352,76 @@ local function Build()
     local bl = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     bl:SetPoint("LEFT", blues, "RIGHT", 0, 0)
     bl:SetText("Blues too (next scan)")
+    -- Max price (as CheapUpgrades' tab: the game's own gold / silver / copper input, the auction house Sell tab's;
+    -- applied a moment after typing stops, or at Enter; 0: no max). Our own box where the client has no such input.
+    local ml = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    ml:SetPoint("LEFT", bl, "RIGHT", 16, 0)
+    ml:SetText("Max price:")
+    local function PriceHelp(owner)
+        GameTooltip:SetOwner(owner, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine("Max price per item")
+        GameTooltip:AddLine("What costs more isn't listed, nor valued when scanning (a lighter scan). 0: no max. Changing it lists the last scan again - no new scan.", 1, 1, 1, true)
+        GameTooltip:Show()
+    end
+    local token = 0
+    local function Later(get)
+        token = token + 1
+        local t = token
+        C_Timer.After(0.35, function() if t == token then Check("setting the max price", pcall(SetMaxPrice, get())) end end)
+    end
+    local priceEnd
+    local ok, mf = pcall(CreateFrame, "Frame", nil, h, "LargeMoneyInputFrameTemplate")
+    if ok and mf and type(mf.GoldBox) == "table" and mf.GetAmount and mf.SetAmount then
+        mf:SetSize(200, 30)
+        mf:SetPoint("LEFT", ml, "RIGHT", 6, 0)
+        local setting = false
+        h.SetPriceShown = function(c) setting = true; mf:SetAmount(c or 0); setting = false end
+        if mf.SetOnValueChangedCallback then
+            mf:SetOnValueChangedCallback(function() if not setting then Later(function() return mf:GetAmount() end) end end)
+        end
+        for _, box in ipairs({ mf.GoldBox, mf.SilverBox, mf.CopperBox }) do
+            box:HookScript("OnEnterPressed", function(b) token = token + 1; Check("setting the max price", pcall(SetMaxPrice, mf:GetAmount())); b:ClearFocus() end)
+            box:HookScript("OnEscapePressed", function(b) token = token + 1; h.SetPriceShown(Cap()); b:ClearFocus() end)
+            box:HookScript("OnEnter", PriceHelp)
+            box:HookScript("OnLeave", function() GameTooltip:Hide() end)
+        end
+        priceEnd = mf
+    else
+        -- "25" (gold), "25g", "1g 50s", "5s": as CheapUpgrades reads its /cu max
+        local box = CreateFrame("EditBox", nil, h, "InputBoxTemplate")
+        box:SetSize(90, 20)
+        box:SetPoint("LEFT", ml, "RIGHT", 8, 0)
+        box:SetAutoFocus(false)
+        local function Amount()
+            local s = (box:GetText() or ""):lower():gsub("%s", "")
+            if s == "" or s == "0" then return 0 end
+            local g = tonumber(s)
+            if g then return math.floor(g * 10000) end
+            local total = 0
+            local rest = s:gsub("([%d%.]+)([gsc])", function(n, unit)
+                total = total + (tonumber(n) or 0) * (unit == "g" and 10000 or unit == "s" and 100 or 1)
+                return ""
+            end)
+            return rest == "" and math.floor(total) or nil
+        end
+        h.SetPriceShown = function(c)
+            c = c or 0
+            local g, s = math.floor(c / 10000), math.floor(c % 10000 / 100)
+            box:SetText(c == 0 and "0" or ((g > 0 and (g .. "g") or "") .. (s > 0 and (" " .. s .. "s") or "")):gsub("^ ", ""))
+        end
+        box:SetScript("OnEnterPressed", function(b)
+            local c = Amount()
+            if c then Check("setting the max price", pcall(SetMaxPrice, c)) end
+            h.SetPriceShown(Cap()); b:ClearFocus()
+        end)
+        box:SetScript("OnEscapePressed", function(b) h.SetPriceShown(Cap()); b:ClearFocus() end)
+        box:SetScript("OnEnter", PriceHelp)
+        box:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        priceEnd = box
+    end
+    h.SetPriceShown(Cap())
     h.status = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    h.status:SetPoint("LEFT", bl, "RIGHT", 16, 0)
+    h.status:SetPoint("LEFT", priceEnd, "RIGHT", 16, 0)
     h.status:SetPoint("RIGHT", h, "RIGHT", -10, 0)
     h.status:SetJustifyH("RIGHT")
     h.status:SetWordWrap(false)
@@ -474,7 +569,8 @@ Refresh = function(statusText)
         for _, e in ipairs(results) do if e.profit > best.profit then best = e end end
         host.status:SetText(("%d worth disenchanting.  Best: %s  |cff4dff4d+%s|r"):format(#results, best.link or Name(best), Money(best.profit)))
     elseif DB and DB.lastScan then
-        host.status:SetText("Nothing on the auction house disenchants into more than it costs right now.")
+        host.status:SetText(Cap() and ("Nothing up to %s disenchants into more than it costs right now."):format(Money(Cap()))
+            or "Nothing on the auction house disenchants into more than it costs right now.")
     else
         host.status:SetText("Scan AH reads the whole auction house: what disenchants into more than it costs.")
     end
@@ -525,7 +621,7 @@ end)
 MasterOptions_Shared.ReplayAddonLoaded(f, ADDON) -- (its ADDON_LOADED setup, now: the saved variables are in)
 
 MasterOptions_CheapDisenchants = { -- (for the tests)
-    ParseMoney = ParseMoney, Disenchant = Disenchant, Scan = Scan, Open = Open,
+    ParseMoney = ParseMoney, Disenchant = Disenchant, Scan = Scan, Open = Open, SetMaxPrice = SetMaxPrice,
     Results = function() return results end,
 }
 end)
