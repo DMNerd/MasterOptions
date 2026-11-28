@@ -7,6 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
+## [2.19.0] - 2026-11-28
+
 ### Added
 
 - **Share setup** (/mo > Share setup): every choice Master Options shows - its rows, its modules on / off - and the
@@ -628,7 +630,8 @@ Not released on its own: part of 2.6.0.
   them work together (until now separate `MasterOptions_<Addon>_<Addon>` addons). Each module runs only when the
   addons it works with are loaded.
 
-[Unreleased]: https://github.com/DMNerd/MasterOptions/compare/v2.18.0...HEAD
+[Unreleased]: https://github.com/DMNerd/MasterOptions/compare/v2.19.0...HEAD
+[2.19.0]: https://github.com/DMNerd/MasterOptions/compare/v2.18.0...v2.19.0
 [2.18.0]: https://github.com/DMNerd/MasterOptions/compare/v2.17.0...v2.18.0
 [2.17.0]: https://github.com/DMNerd/MasterOptions/compare/v2.16.0...v2.17.0
 [2.16.0]: https://github.com/DMNerd/MasterOptions/compare/v2.15.2...v2.16.0
