@@ -270,10 +270,9 @@ local OPTIONS = {
         end,
     },
     {
-        kind = "choice", label = "Town NPC icons", since = 40, scope = "character",
-        rec = function() return Loaded("OpenMap") and "Questie + OpenMap, synced" or "Questie" end,
-        needs = "Questie", choices = { "Questie + OpenMap, synced", "Questie", "Game's tracking", "OpenMap + game's tracking" },
-        tip = "Auctioneer, banker, battlemaster, innkeeper, mailbox, repair and stable master icons (flight masters: their own row with OpenMap): the game's minimap tracking, Questie's townsfolk menu and OpenMap's Townsfolk menu can all draw them, so a kind ticked in two shows twice. Questie + OpenMap, synced (with OpenMap): use either menu - a kind ticked in one is ticked in the other (also class trainers and spirit healers), OpenMap's icons on the world map, Questie's on the minimap, each shown once. Questie: on the world map and the minimap (pick the kinds in Questie's menu). Game's tracking: on the minimap only. OpenMap + game's tracking: OpenMap's on the world map, the game's on the minimap (battlemasters: the game's only). Switching moves the kinds you have on to the one you pick; trainers and the rest stay as they are.",
+        kind = "choice", label = "Town NPC icons", rec = "Questie", since = 21, scope = "character",
+        needs = "Questie", choices = { "Questie", "Game's tracking", "OpenMap + game's tracking" },
+        tip = "Auctioneer, banker, battlemaster, innkeeper, mailbox, repair and stable master icons (flight masters: their own row with OpenMap): the game's minimap tracking, Questie's townsfolk menu and OpenMap's Townsfolk menu can all draw them, so a kind ticked in two shows twice. Questie: on the world map and the minimap (pick the kinds in Questie's menu). Game's tracking: on the minimap only. OpenMap + game's tracking: OpenMap's on the world map, the game's on the minimap (battlemasters: the game's only). Switching moves the kinds you have on to the one you pick; trainers and the rest stay as they are.",
         get = TownGet, set = TownSet,
     },
     {
@@ -915,8 +914,6 @@ local MODULES = {
       tip = "Mastercraft's own /played request (it records your play time) stays out of Chattynator's chat, as it already does in the game's chat. Your own /played still shows." },
     { "Questie_Chattynator", "Questie quest links re-linked in Chattynator", { "Questie", "Chattynator" }, since = 38,
       tip = "Shift-clicking a Questie quest link in Chattynator's chat puts Questie's fresh link in the chat box (its current title and level), as Questie does in the game's own chat - and keeps what you typed around it." },
-    { "Questie_OpenMapTownsfolk", "Questie's and OpenMap's townsfolk menus in step", { "Questie", "OpenMap" }, since = 40,
-      tip = "With Town NPC icons on Questie + OpenMap, synced: a kind ticked in Questie's townsfolk menu is ticked in OpenMap's Townsfolk menu too, and the other way round (repair, innkeepers, bankers, mailboxes, auctioneers, stable masters, class trainers, spirit healers). OpenMap draws them on its world map, Questie on the minimap: Questie's world map icons of those kinds are held back while OpenMap's map is up, so each shows once." },
     { "Chat_AddonWhispers","Hide not-online lines from addons' whispers", {}, since = 33,
       tip = "Hides \"No player named ... is currently playing\" when an addon's hidden whisper (OpenMap's map sharing, Questie's sync, Mastercraft's crafter search ...) went to someone who just logged off - you sent nothing. Your own whispers' answers always show. /mo whispers lists which addon whispered whom." },
 }

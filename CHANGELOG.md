@@ -7,18 +7,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ## [Unreleased]
 
-### Added
-
-- **Questie's and OpenMap's townsfolk menus kept in step (new module Questie_OpenMapTownsfolk):** both addons have a
-  menu to show town services (repair, innkeepers, bankers, mailboxes, auctioneers, stable masters, class trainers,
-  spirit healers). Before, a kind ticked in both showed twice on the world map, so "Town NPC icons" made you pick one.
-  Its new choice **Questie + OpenMap, synced** (recommended with OpenMap) lets you use either menu: a kind ticked
-  in one is ticked in the other. OpenMap draws the icons on its world map, and Questie draws them on the minimap.
-  Questie's world-map copies are held back while OpenMap's map is up, so each icon shows once. Where OpenMap's map
-  isn't up (a map it doesn't stitch, Blizzard's map in a fight), Questie's come back. Kinds only one of them has
-  (Questie's vendors by goods and battlemasters, OpenMap's vendors and rare mobs) stay each its own. Flight masters
-  keep their own row. Characters switch to it once when OpenMap is loaded (recommended setup, defaults version 40).
-
 ## [2.18.0] - 2026-11-28
 
 ### Changed
