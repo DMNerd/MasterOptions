@@ -15,7 +15,7 @@ files["addons/MasterOptions/Modules/DialogKey_Pawn.lua"] = { ignore = { "122/Que
 -- Globals Master Options defines (saved variables, its slash command, what modules share)
 globals = {
     "MasterOptionsDB", "MasterOptions_DialogKeyPawnDB", "MasterOptions_DJOpenMapDB", "MasterOptions_GearMaticForeverDB",
-    "MasterOptions_MastercraftBankDB", "MasterOptions_CheapDisenchantsDB", "MasterOptions_CheapDisenchants", "MasterOptions_CUMastercraft", "MasterOptions_MastercraftKeepDB", "MasterOptions_MastercraftVendorDB",
+    "MasterOptions_MastercraftBankDB", "MasterOptions_CheapDisenchantsDB", "MasterOptions_CheapDisenchants", "MasterOptions_AuctionHouseSideTabs", "MasterOptions_CUMastercraft", "MasterOptions_MastercraftKeepDB", "MasterOptions_MastercraftVendorDB",
     "MasterOptions_MinimapBorderDB",
     "MasterOptions_Module", "MasterOptions_Modules", "MasterOptions_ErrorLog", "MasterOptions_ReportError",
     "MasterOptions_MastercraftKeep", "MasterOptions_MastercraftVendorSell", "MasterOptions_MinimapBorder",

@@ -18,7 +18,7 @@ local function RecOf(opt)
     return opt.rec
 end
 
-local DEFAULTS_VERSION = 43
+local DEFAULTS_VERSION = 44
 local Remember -- set below
 local function ApplyRecommended(after, manual) -- after: only options added after this defaults version
     local n = 0

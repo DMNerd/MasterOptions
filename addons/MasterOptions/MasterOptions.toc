@@ -42,6 +42,7 @@ Modules\Mastercraft_VendorSell.lua
 Modules\Baganator_Mastercraft.lua
 Modules\Mastercraft_BankMats.lua
 Modules\Mastercraft_CheapDisenchants.lua
+Modules\AuctionHouse_SideTabs.lua
 Modules\Mastercraft_Auctionator.lua
 Modules\Mastercraft_FishingView.lua
 Modules\Mastercraft_Chattynator.lua
