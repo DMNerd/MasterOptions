@@ -8,8 +8,9 @@ MasterOptions_Module("Mastercraft_CheapDisenchants", { "Mastercraft" }, function
 -- game's replicate list: the server allows it about every 15 minutes - and when another addon, e.g. CheapUpgrades,
 -- has just read it, that list is used without asking again). For each item, its cheapest buyout; for each of those,
 -- what Mastercraft says disenchanting it is worth - its tooltip's "Disenchant ~1g 20s" row (the materials it gives,
--- at their auction prices, after the cut), read through a hidden GameTooltip. Listed: what disenchants into more
--- than its buyout, the biggest profit first. A row's click searches for it in the auction house's own Browse, where
+-- at their auction prices, after the cut), read through a hidden GameTooltip. Two lists: Profitable - what
+-- disenchants into more than its buyout, the biggest profit first; Cheapest - everything that can be disenchanted,
+-- the cheapest first (materials or skill-ups for little, a small loss included). A row's click searches for it in the auction house's own Browse, where
 -- you buy it with the game's Buy Now (nothing is bought here). "Needs an enchanter": Mastercraft says your own
 -- Enchanting can't disenchant it.
 -- Nothing of Mastercraft is changed; its tooltip's Disenchant row (Settings > Tooltip) must be on.
@@ -63,11 +64,16 @@ local function Cap()
 end
 local function UnderCap(e) local c = Cap(); return not c or e.buyout <= c end
 
--- results: what disenchants into more than its buyout, the biggest profit first
+-- Two lists (DB.mode): "profit" - what disenchants into more than its buyout, the biggest profit first; "cheap" -
+-- everything that can be disenchanted, the cheapest first (materials, or Enchanting skill, for little: what it gives
+-- beside what it costs - a small loss is fine there)
+local function Cheap() return DB and DB.mode == "cheap" end
 local function Rank()
     local out = {}
+    local cheap = Cheap()
     for _, e in pairs(cheapest) do
-        if e.value and e.value > e.buyout and UnderCap(e) and not (DB and DB.hideEnchanter and e.enchanter) then
+        if e.value and e.value > 0 and (cheap or e.value > e.buyout) and UnderCap(e)
+            and not (DB and DB.hideEnchanter and e.enchanter) then
             e.profit = e.value - e.buyout
             out[#out + 1] = e
         end
@@ -148,19 +154,21 @@ local function Value(list, gen)
     -- can't be disenchanted, or one to keep)
     local function GroupValue(g)
         local hit = groupCache[g.key]
-        if hit and time() - hit[1] < VALUE_KEEP then g.value, g.partial = hit[2], hit[3] return end
+        if hit and time() - hit[1] < VALUE_KEEP then g.value, g.partial, g.enchanter = hit[2], hit[3], hit[4] return end
         for i = 1, math.min(#g, 3) do
-            local v, partial = Disenchant(g[i].link)
-            if v then g.value, g.partial = v, partial break end
+            local v, partial, enchanter = Disenchant(g[i].link)
+            if v then g.value, g.partial, g.enchanter = v, partial, enchanter break end
         end
-        groupCache[g.key] = { time(), g.value, g.partial }
+        groupCache[g.key] = { time(), g.value, g.partial, g.enchanter }
     end
     Work(gen, order, GroupValue, function(k, n) return ("Valuing each kind of item (3/4): %d / %d"):format(k, n) end, function()
-        -- 3. what costs less than its group's value: read on its own
+        -- 3. what costs less than its group's value: read on its own; the rest keeps its group's value (the Cheapest
+        -- list shows it - none of them disenchants into more than it costs)
         local maybe = {}
         for _, g in ipairs(order) do
             for _, e in ipairs(g) do
-                if g.value and g.value > e.buyout then maybe[#maybe + 1] = e else e.value = nil end
+                if g.value and g.value > e.buyout then maybe[#maybe + 1] = e
+                else e.value, e.partial, e.enchanter = g.value, g.partial, g.enchanter end
             end
         end
         Work(gen, maybe, function(e) e.value, e.partial, e.enchanter = Disenchant(e.link) end,
@@ -484,8 +492,11 @@ end
 -- auction house's background and column headers, rows like its lists. The tab through LibAHTab (the tab row Auctionator
 -- and CheapUpgrades share).
 ---------------------------------------------------------------------------
-local offset, sortKey = 0, "profit"
+local offset = 0
+local function DefaultSort() return Cheap() and "-buyout" or "profit" end
+local sortKey = "profit"
 local TITLE_H, TOP_H, FOOT_H, LIST_ROW = 22, 60, 22, 30
+local LEFT = 62 -- (the auction house's portrait, top left, covers the first row up to here)
 local COLS = { -- key, title, width (the item: the rest)
     { "name", "Item" }, { "buyout", "Buyout", 130 }, { "value", "Disenchants into", 150 }, { "profit", "Profit", 130 },
 }
@@ -527,7 +538,8 @@ local function RowTooltip(self)
     GameTooltip:AddLine(" ")
     GameTooltip:AddDoubleLine("Buyout", Money(e.buyout), 1, 0.82, 0, 1, 1, 1)
     GameTooltip:AddDoubleLine("Disenchants into" .. (e.partial and " (some prices missing)" or ""), "~" .. Money(e.value), 1, 0.82, 0, 1, 1, 1)
-    GameTooltip:AddDoubleLine("Profit", Money(e.profit), 1, 0.82, 0, 0.3, 1, 0.3)
+    if e.profit >= 0 then GameTooltip:AddDoubleLine("Profit", Money(e.profit), 1, 0.82, 0, 0.3, 1, 0.3)
+    else GameTooltip:AddDoubleLine("Loss", Money(-e.profit), 1, 0.82, 0, 1, 0.4, 0.4) end
     if e.enchanter then GameTooltip:AddLine("Needs an enchanter - your Enchanting can't disenchant it yet.", 1, 0.4, 0.4, true) end
     GameTooltip:AddLine("Click: open it in Buy, where you buy it.  Shift-click: link in chat.", 0.7, 0.7, 0.7, true)
     GameTooltip:Show()
@@ -592,7 +604,7 @@ local function Build()
     end
     local quick = Button(104, function() Check("scanning", pcall(ScanQuick)) end, "Quick scan",
         "Auctionator's quick scan: one search for everything, each item's lowest price. No 15-minute wait, and your Auctionator prices are updated too.")
-    quick:SetPoint("TOPLEFT", 8, -(TITLE_H + 6))
+    quick:SetPoint("TOPLEFT", LEFT, -(TITLE_H + 6))
     quick:SetText("Quick scan")
     h.quick = quick
     local full = Button(126, function() Check("scanning", pcall(ScanFull)) end, "Full scan", function()
@@ -601,6 +613,27 @@ local function Build()
     end)
     full:SetPoint("LEFT", quick, "RIGHT", 6, 0) -- (without Auctionator in its place: UpdateScan)
     h.scan = full
+    -- which list: two buttons side by side, the one shown lit
+    local ll = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    ll:SetPoint("LEFT", full, "RIGHT", 22, 0)
+    ll:SetText("List:")
+    local function ModeButton(mode, text, help)
+        local b = Button(96, function()
+            if DB.mode == mode or (not DB.mode and mode == "profit") then return end
+            DB.mode = mode ~= "profit" and mode or nil
+            sortKey, offset = DefaultSort(), 0
+            Rank()
+            if Refresh then Refresh() end
+        end, text, help)
+        b:SetText(text)
+        return b
+    end
+    h.modeProfit = ModeButton("profit", "Profitable",
+        "What disenchants into more than it costs, the biggest profit first. Buy it, disenchant it, sell the materials.")
+    h.modeProfit:SetPoint("LEFT", ll, "RIGHT", 6, 0)
+    h.modeCheap = ModeButton("cheap", "Cheapest",
+        "Everything that can be disenchanted, the cheapest first - what it disenchants into beside what it costs, a small loss included. For materials or Enchanting skill-ups for little gold.")
+    h.modeCheap:SetPoint("LEFT", h.modeProfit, "RIGHT", 2, 0)
     -- (the options: what's read, what's listed)
     local function Option(anchor, gap, text, key, title, help, now)
         local c = CreateFrame("CheckButton", nil, h, "UICheckButtonTemplate")
@@ -627,9 +660,10 @@ local function Build()
     h.optionsEnd = el
     -- Max price (as CheapUpgrades' tab: the game's own gold / silver / copper input, the auction house Sell tab's;
     -- applied a moment after typing stops, or at Enter; 0: no max). Our own box where the client has no such input.
+    -- (row two, at the right)
     local ml = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    ml:SetPoint("LEFT", full, "RIGHT", 24, 0)
     ml:SetText("Max price:")
+    local ROW2 = -(TITLE_H + 42)
     local function PriceHelp(owner)
         GameTooltip:SetOwner(owner, "ANCHOR_BOTTOM")
         GameTooltip:AddLine("Max price per item")
@@ -645,7 +679,8 @@ local function Build()
     local ok, mf = pcall(CreateFrame, "Frame", nil, h, "LargeMoneyInputFrameTemplate")
     if ok and mf and type(mf.GoldBox) == "table" and mf.GetAmount and mf.SetAmount then
         mf:SetSize(200, 30)
-        mf:SetPoint("LEFT", ml, "RIGHT", 6, 0)
+        mf:SetPoint("RIGHT", h, "TOPRIGHT", -8, ROW2)
+        ml:SetPoint("RIGHT", mf, "LEFT", -8, 0)
         local setting = false
         h.SetPriceShown = function(c) setting = true; mf:SetAmount(c or 0); setting = false end
         if mf.SetOnValueChangedCallback then
@@ -661,7 +696,8 @@ local function Build()
         -- "25" (gold), "25g", "1g 50s", "5s": as CheapUpgrades reads its /cu max
         local box = CreateFrame("EditBox", nil, h, "InputBoxTemplate")
         box:SetSize(90, 20)
-        box:SetPoint("LEFT", ml, "RIGHT", 8, 0)
+        box:SetPoint("RIGHT", h, "TOPRIGHT", -14, ROW2)
+        ml:SetPoint("RIGHT", box, "LEFT", -10, 0)
         box:SetAutoFocus(false)
         local function Amount()
             local s = (box:GetText() or ""):lower():gsub("%s", "")
@@ -690,9 +726,9 @@ local function Build()
         box:SetScript("OnLeave", function() GameTooltip:Hide() end)
     end
     h.SetPriceShown(Cap())
-    -- what's going on (row two, after the options), and a thin bar for how far a step is
+    -- what's going on (row one, after the list buttons), and a thin bar for how far a step is
     h.status = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    h.status:SetPoint("LEFT", el, "RIGHT", 20, 0)
+    h.status:SetPoint("LEFT", h.modeCheap, "RIGHT", 16, 0)
     h.status:SetPoint("RIGHT", h, "RIGHT", -10, 0)
     h.status:SetJustifyH("RIGHT")
     h.status:SetWordWrap(false)
@@ -714,7 +750,7 @@ local function Build()
     h.inset = inset
     -- a message in the list itself when it's empty (what to do, or that nothing was found)
     h.empty = inset:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-    h.empty:SetWidth(460)
+    h.empty:SetWidth(560)
     h.empty:SetJustifyH("CENTER")
     h.empty:SetPoint("CENTER", inset, "CENTER", 0, 10)
     local x, prev = 0, nil
@@ -808,7 +844,14 @@ local function Build()
         local hasQuick = AuctionatorQuick() ~= nil
         if hasQuick then quick:Show() else quick:Hide() end
         full:ClearAllPoints()
-        if hasQuick then full:SetPoint("LEFT", quick, "RIGHT", 6, 0) else full:SetPoint("TOPLEFT", 8, -(TITLE_H + 6)) end
+        if hasQuick then full:SetPoint("LEFT", quick, "RIGHT", 6, 0) else full:SetPoint("TOPLEFT", LEFT, -(TITLE_H + 6)) end
+        -- the list shown: its button lit, its name white; the other's grey
+        local cheap = Cheap()
+        for b, on in pairs({ [h.modeProfit] = not cheap, [h.modeCheap] = cheap }) do
+            if on then b:LockHighlight() else b:UnlockHighlight() end
+            local fs = b.GetFontString and b:GetFontString()
+            if fs then fs:SetTextColor(on and 1 or 0.6, on and 0.82 or 0.6, on and 0 or 0.6) end
+        end
         local label, wait = hasQuick and "Full scan" or "Scan AH", FullWait()
         if busy then
             quick:SetText("|cff9d9d9dScanning...|r")
@@ -818,12 +861,14 @@ local function Build()
             full:SetText(wait > 0 and ("|cff9d9d9d%s (%d:%02d)|r"):format(label, math.floor(wait / 60), wait % 60) or label)
         end
         if quick.SetEnabled then quick:SetEnabled(not busy); full:SetEnabled(not busy) end
-    end    h:SetScript("OnShow", function()
+    end
+    h:SetScript("OnShow", function()
         local a = _G.AuctionHouseFrame
         if a and a.SetTitle then pcall(a.SetTitle, a, "Cheap Disenchants") end
         if Refresh then Refresh() end
         TakeHeld() -- (an Auctionator scan that finished while the tab was closed - the one as the auction house opened)
     end)
+    sortKey = DefaultSort()
     h:Hide()
     host = h
     return h
@@ -858,7 +903,8 @@ Refresh = function(statusText, fraction)
             r.value:SetText("~" .. Money(e.value) .. (e.partial and "|cffff6666*|r" or ""))
             -- (the profit, and what it is of the price: a 2g find on a 50c item beats one on a 40g item)
             local pct = e.buyout > 0 and math.floor(e.profit / e.buyout * 100 + 0.5) or 0
-            r.profit:SetText(("|cff4dff4d+%s|r |cff9d9d9d%d%%|r"):format(Money(e.profit), pct))
+            r.profit:SetText(("|cff%s%s%s|r |cff9d9d9d%d%%|r"):format(e.profit >= 0 and "4dff4d" or "ff6666",
+                e.profit >= 0 and "+" or "-", Money(math.abs(e.profit)), pct))
             r:Show()
             shown = shown + 1
         else
@@ -872,33 +918,42 @@ Refresh = function(statusText, fraction)
     end
     -- the empty list says what to do, or that nothing was found
     local empty
+    local cheap = Cheap()
+    local what = cheap and "nothing that can be disenchanted" or "nothing that disenchants into more than it costs"
     if #results == 0 then
         if busy then empty = statusText or "Scanning..."
         elseif source then
-            empty = Cap() and ("Nothing up to %s disenchants into more than it costs right now."):format(Money(Cap()))
-                or "Nothing on the auction house disenchants into more than it costs right now."
+            empty = Cap() and ("Up to %s, the auction house has %s right now."):format(Money(Cap()), what)
+                or ("The auction house has %s right now."):format(what)
         else
-            empty = AuctionatorQuick() and "Press Quick scan: Auctionator looks through the auction house, and what disenchants into more than it costs is listed here."
-                or "Press Scan AH: the whole auction house is read, and what disenchants into more than it costs is listed here."
+            empty = (AuctionatorQuick() and "Press Quick scan: Auctionator looks through the auction house"
+                or "Press Scan AH: the whole auction house is read")
+                .. (cheap and ", and what can be disenchanted is listed here, the cheapest first."
+                    or ", and what disenchants into more than it costs is listed here.")
         end
     end
     host.empty:SetText(empty or "")
     if empty then host.empty:Show() else host.empty:Hide() end
     if statusText then
         host.status:SetText(statusText)
+    elseif results[1] and cheap then
+        local low = results[1]
+        for _, e in ipairs(results) do if e.buyout < low.buyout then low = e end end
+        host.status:SetText(("%d to disenchant, from %s"):format(#results, Money(low.buyout)))
     elseif results[1] then
         local best = results[1]
         for _, e in ipairs(results) do if e.profit > best.profit then best = e end end
-        host.status:SetText(("%d worth disenchanting.  Best: %s  |cff4dff4d+%s|r"):format(#results, best.link or Name(best), Money(best.profit)))
+        host.status:SetText(("%d worth it.  Best: |cff4dff4d+%s|r"):format(#results, Money(best.profit)))
     else
         host.status:SetText("")
     end
-    local from = ""
+    local parts = {}
+    if #results > 0 then parts[1] = ("%d-%d of %d"):format(offset + 1, offset + shown, #results) end
     if source and not busy then
         local ago = math.floor((time() - (source.at or time())) / 60)
-        from = ("  -  %s, %s"):format(source.name, ago < 1 and "just now" or (ago .. " min ago"))
+        parts[#parts + 1] = ("%s, %s"):format(source.name, ago < 1 and "just now" or (ago .. " min ago"))
     end
-    host.count:SetText((#results > 0 and ("%d-%d of %d"):format(offset + 1, offset + shown, #results) or "") .. from)
+    host.count:SetText(table.concat(parts, "  -  "))
     if host.UpdateScan then host.UpdateScan() end
 end
 

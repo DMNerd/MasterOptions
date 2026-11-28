@@ -17,6 +17,8 @@ lua.execute(r'''
       "EnableMouse", "EnableMouseWheel", "SetChecked", "SetTexture", "SetFrameLevel", "SetHitRectInsets", "SetWordWrap",
       "SetAtlas", "SetAutoFocus", "ClearFocus", "ClearAllPoints", "SetStatusBarTexture", "SetStatusBarColor", "SetMinMaxValues", "SetEnabled" }) do r[m] = function() end end
     function r:SetValue(v) self.value = v end
+    function r:LockHighlight() self.lit = true end
+    function r:UnlockHighlight() self.lit = false end
     function r:GetStringWidth() return 60 end
     function r:GetText() return self.text end
     function r:HookScript(k, fn) self.scripts[k] = fn end
@@ -192,6 +194,18 @@ res["max price 30s: only what costs up to it listed (the 1000-3000 ones), the we
 res["...saved, no new scan, nothing read again"] = E("MasterOptions_CheapDisenchantsDB.maxPrice") == 3000 and E("REPLICATES") == E("R0") and E("READS") == 0
 L('MasterOptions_CheapDisenchants.SetMaxPrice(0); Run()')
 res["max price 0: no max, every find back"] = E("#MasterOptions_CheapDisenchants.Results()") == 8 and E("MasterOptions_CheapDisenchantsDB.maxPrice") is None
+# The Cheapest list: everything that can be disenchanted, the cheapest first - the dear ones by their group's value (a
+# loss), the one that can't be disenchanted and the shirt still out; switching reads nothing again
+L('READS = 0; MasterOptionsCheapDisenchants.modeCheap.scripts.OnClick(); MasterOptionsCheapDisenchants:Show()')
+res["Cheapest: every item that can be disenchanted, the cheapest first, nothing read again"] = E(
+    "#MasterOptions_CheapDisenchants.Results()") == 30 and E("MasterOptions_CheapDisenchants.Results()[1].itemID") == 2000 and E(
+    "Has(2029) ~= nil and Has(2029).profit == 5000 - 15500 and Has(2003) == nil and Has(2100) == nil") is True and E("READS") == 0
+res["...saved, its button lit, a loss in red"] = E("MasterOptions_CheapDisenchantsDB.mode") == "cheap" and E(
+    "MasterOptionsCheapDisenchants.modeCheap.lit and not MasterOptionsCheapDisenchants.modeProfit.lit") is True and any(
+    "ff6666-" in (E("MasterOptionsCheapDisenchants.rows[%d].profit.text" % i) or "") for i in range(1, 25))
+L('MasterOptionsCheapDisenchants.modeProfit.scripts.OnClick(); MasterOptionsCheapDisenchants:Hide()')
+res["...Profitable again: the finds only, the biggest profit first"] = E("#MasterOptions_CheapDisenchants.Results()") == 8 and E(
+    "MasterOptions_CheapDisenchantsDB.mode") is None and E("MasterOptions_CheapDisenchants.Results()[1].profit") == 4000
 # Our own read under the game's flood of REPLICATE_ITEM_LIST_UPDATE (one per row whose data comes in): read once, to
 # the end - not restarted by each - and its echoes afterwards read nothing again
 L(r'''
@@ -312,7 +326,7 @@ L(r'''
   MasterOptions_CheapDisenchants.SetMaxPrice(1)
   Run()
 ''')
-res["nothing found under the max price: the empty list says so"] = "Nothing up to" in (E("MasterOptionsCheapDisenchants.empty.text") or "") and E("MasterOptionsCheapDisenchants.empty.shown") is True
+res["nothing found under the max price: the empty list says so"] = "Up to" in (E("MasterOptionsCheapDisenchants.empty.text") or "") and E("MasterOptionsCheapDisenchants.empty.shown") is True
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

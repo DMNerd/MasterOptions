@@ -9,6 +9,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ### Added
 
+- **Cheap Disenchants: a second list, Cheapest.** Buttons Profitable / Cheapest at the top. Cheapest lists every
+  item that can be disenchanted, the cheapest first, with what it disenchants into and the gain or loss (a loss in
+  red): materials or Enchanting skill-ups for little gold. The choice is saved; switching reads nothing again.
 - **Cheap Disenchants: Quick scan and Full scan.** With Auctionator, two buttons. Quick scan is Auctionator's quick
   scan (each item's lowest price, no wait). Full scan is Auctionator's full scan: every listing, "of the ..."
   variants too, your own auctions left out, once per 15 minutes, with its countdown on the button. Without

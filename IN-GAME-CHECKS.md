@@ -18,8 +18,11 @@ Unreleased (after 2.20.0):
       after it. Pressed again within the 15 minutes: "a full scan can run again in N min".
 - [ ] **Cheap Disenchants, the auction house's own opening scan**: close and reopen the auction house, wait for
       Auctionator's scan to finish, then open the tab: the list is there without pressing anything.
-- [ ] **Cheap Disenchants, the tab's top**: two rows, nothing overlapping - Quick scan, Full scan, Max price and its
-      gold / silver / copper field on the first; Blues too, Hide "needs an enchanter" and the status on the second.
+- [ ] **Cheap Disenchants, the tab's top**: two rows, nothing overlapping and clear of the portrait - Quick scan,
+      Full scan, List: Profitable / Cheapest and the status on the first; Blues too, Hide "needs an enchanter" on the
+      left of the second, Max price and its gold / silver / copper field on its right.
+- [ ] **Cheap Disenchants, Cheapest**: press Cheapest - its button lit, the list is every disenchantable item, the
+      cheapest first, a loss in red; Profitable brings the finds back. Both without a new scan.
 - [ ] **Cheap Disenchants, the list**: every other row a shade lighter; the profit with its share of the price
       ("+1g 20s 150%"); an item with one of your auctions among it says "you have one listed"; the empty list says
       what to do before the first scan, and that nothing was found when nothing was.
