@@ -9,6 +9,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions: [Sem
 
 ### Fixed
 
+- **Cheap Disenchants no longer lags the game while it scans.** Each item's value was read from Mastercraft's
+  tooltip, and every such hidden tooltip runs every addon's tooltip hooks, a few milliseconds each. A scan had
+  thousands of them, so the game lagged for a minute or more. What an item disenchants into is the same for every
+  item of one quality, item level and weapon or armour (Mastercraft works it out that way), so now one tooltip is
+  read per such group, and then only the items cheaper than their group's value are read on their own, to be sure.
+  An item that can't be disenchanted, one Mastercraft says to keep, and "needs an enchanter" are all caught there.
+  The list is the same, with a fraction of the reads: a couple of hundred groups and a few dozen finds instead of
+  every green on the auction house. Shirts and tabards aren't read at all. The auction house list arriving twice
+  during a scan no longer starts a second read alongside the first.
+
 - **Navigation arrow: "Game's marker only" left nothing to follow.** Since ShortestPathForever 1.49.4, turning its
   arrow off also hides the game's waypoint marker, so with that choice nothing on screen pointed the way on a journey.
   The choice is now **Destination pin only**: Shortest Path's arrow off and its pin over the destination ("Show a pin

@@ -140,6 +140,33 @@ res["a row's click: the auction house's Buy view searches for it by its exact na
 res["...and the game's view puts our window away"] = E("MasterOptionsCheapDisenchants.shown") is False
 L('LIST[2][4] = 1; Fire("REPLICATE_ITEM_LIST_UPDATE"); Run()')
 res["another addon's read while our tab isn't open: left alone"] = E("Order()") == "1007+8000,1003+4000,1001+1000,1005+500"
+# Valued by group: every item of one quality, item level and weapon / armour disenchants into the same (Mastercraft's
+# DisenchantResults) - one tooltip read per group, then only the items cheaper than their group's value read on their
+# own (an item that can't be disenchanted drops out there). Shirts and tabards are never read.
+L(r'''
+  ITEM = {}  -- itemID -> { ilvl, classID, equipLoc }
+  C_Item = { GetDetailedItemLevelInfo = function(link) local i = ITEM[tonumber(link:match("item:(%d+)"))]; return i and i[1] end,
+             GetItemInfoInstant = function(link) local id = tonumber(link:match("item:(%d+)")); local i = ITEM[id]
+               if i then return id, nil, nil, i[3], nil, i[2] end end }
+  LIST = {}
+  for k = 0, 29 do -- thirty greens of item level 20, armour: they all disenchant into 5000
+    local id = 2000 + k
+    ITEM[id] = { 20, 4, "INVTYPE_CHEST" }
+    DE[id] = 5000
+    LIST[#LIST + 1] = { id, 2, 1, 1000 + k * 500 } -- 1000 .. 15500: the first eight cost less than 5000
+  end
+  DE[2003] = nil               -- one of the cheap ones can't be disenchanted (no Disenchant row on its own tooltip)
+  ITEM[2100] = { 20, 4, "INVTYPE_BODY" }; DE[2100] = 9000; LIST[#LIST + 1] = { 2100, 2, 1, 10 } -- a shirt: never
+  ITEM[2200] = { 20, 2, "INVTYPE_WEAPON" }; DE[2200] = 7000; LIST[#LIST + 1] = { 2200, 2, 1, 6000 } -- a weapon: its own group
+  MasterOptions_CheapDisenchantsDB.blues = false
+  NOW = NOW + 16 * 60; READS = 0
+  MasterOptions_CheapDisenchants.Scan(); Fire("REPLICATE_ITEM_LIST_UPDATE"); Run()
+  function Has(id) for _, e in ipairs(MasterOptions_CheapDisenchants.Results()) do if e.itemID == id then return e end end end
+''')
+res["grouped: the cheap items of the group listed (an item that can't be disenchanted left out), the weapon by its own value"] = E(
+    "#MasterOptions_CheapDisenchants.Results()") == 8 and E("Has(2000) ~= nil and Has(2000).profit == 4000 and Has(2003) == nil and Has(2200) ~= nil and Has(2200).profit == 1000") is True
+res["grouped: a shirt never read or listed"] = E("Has(2100) == nil") is True
+res["grouped: 32 items, 2 groups - one read per group and one per cheap find, not one per item"] = 0 < E("READS") <= 2 + 9
 res["no errors"] = E("ERRS") == 0
 for k, v in res.items():
     print(("ok   " if v else "FAIL ") + k)

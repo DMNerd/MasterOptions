@@ -68,30 +68,100 @@ local function Rank()
     if Sort then Sort() end
 end
 
-local function Value(list, i)
-    if not list then return end
+-- One read of the list at a time: a list arriving again mid-way (REPLICATE_ITEM_LIST_UPDATE more than once, another
+-- addon's scan) starts over, and the chain running stops - two chains at once each did the whole work
+local generation = 0
+
+-- `list` worked through a few milliseconds a frame: fn(entry) on each, then done(); status(k, n) says how far.
+-- Stops when a newer read has started (gen)
+local function Work(gen, list, fn, status, done, i)
+    i = i or 1
+    if gen ~= generation then return end
     if MasterOptions_Shared.ItemTooltipShown() then -- (your mouse on an item: its tooltip stays; a moment later)
-        C_Timer.After(0.3, function() Check("valuing disenchants", pcall(Value, list, i)) end)
+        C_Timer.After(0.3, function() Check("valuing disenchants", pcall(Work, gen, list, fn, status, done, i)) end)
         return
     end
     local start, last = clock and clock() or 0, i - 1
     for k = i, math.min(#list, i + (clock and #list or 30) - 1) do
-        local e = list[k]
-        e.value, e.partial, e.enchanter = Disenchant(e.link)
+        fn(list[k])
         last = k
         if Spent(start) > FRAME_MS then break end
     end
     if last < #list then
-        if Refresh then Refresh(("Valuing %d / %d items..."):format(last, #list)) end
-        C_Timer.After(0, function() Check("valuing disenchants", pcall(Value, list, last + 1)) end)
+        if Refresh then Refresh(status(last, #list)) end
+        C_Timer.After(0, function() Check("valuing disenchants", pcall(Work, gen, list, fn, status, done, last + 1)) end)
         return
     end
-    busy = false
-    Rank()
-    if Refresh then Refresh() end
+    done()
 end
 
-local function Read(i, n)
+-- What an item disenchants into is the same for every item of one quality and item level, weapon or armour
+-- (Mastercraft's DisenchantResults(quality, itemLevel, isWeapon), its materials at their prices). Each such group's
+-- value is read once, from one of its items' tooltip (each full tooltip runs every addon's tooltip hooks: a few
+-- milliseconds each, and a scan had thousands - the game lagged for a minute). Then only what costs less than its
+-- group's value is read on its own, to be sure: an item that can't be disenchanted, one Mastercraft says to keep,
+-- "needs an enchanter". The same list as reading every item, in a fraction of the reads.
+local NOT_DE = { INVTYPE_BODY = true, INVTYPE_TABARD = true, [""] = true } -- (shirts, tabards: Mastercraft's)
+local groupCache = {} -- [key] = { time, value, partial }
+local function ItemLevel(link)
+    local lvl = C_Item and C_Item.GetDetailedItemLevelInfo and C_Item.GetDetailedItemLevelInfo(link)
+    local info = not lvl and ((C_Item and C_Item.GetItemInfo) or _G.GetItemInfo)
+    if info then lvl = select(4, info(link)) end
+    return lvl
+end
+-- the group's key, or false: never disenchanted (a shirt, a tabard), or nil: its item level isn't known yet (read alone)
+local function GroupKey(e)
+    local instant = (C_Item and C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
+    if not instant then return nil end
+    local _, _, _, equipLoc, _, classID = instant(e.link)
+    if NOT_DE[equipLoc or ""] or (classID ~= 2 and classID ~= 4) then return false end
+    local lvl = ItemLevel(e.link)
+    if not lvl then return nil end
+    return e.quality .. ":" .. lvl .. ":" .. (classID == 2 and "w" or "a")
+end
+
+local function Value(list, gen)
+    -- 1. into groups
+    local groups, order = {}, {}
+    for _, e in ipairs(list) do
+        local key = GroupKey(e)
+        if key ~= false then
+            key = key or e.link -- (item level not known: a group of its own)
+            local g = groups[key]
+            if not g then g = { key = key }; groups[key] = g; order[#order + 1] = g end
+            g[#g + 1] = e
+        end
+    end
+    -- 2. each group's value: kept a while, else one of its items read (the next one if it gives none - an item that
+    -- can't be disenchanted, or one to keep)
+    local function GroupValue(g)
+        local hit = groupCache[g.key]
+        if hit and time() - hit[1] < VALUE_KEEP then g.value, g.partial = hit[2], hit[3] return end
+        for i = 1, math.min(#g, 3) do
+            local v, partial = Disenchant(g[i].link)
+            if v then g.value, g.partial = v, partial break end
+        end
+        groupCache[g.key] = { time(), g.value, g.partial }
+    end
+    Work(gen, order, GroupValue, function(k, n) return ("Valuing %d / %d kinds of item..."):format(k, n) end, function()
+        -- 3. what costs less than its group's value: read on its own
+        local maybe = {}
+        for _, g in ipairs(order) do
+            for _, e in ipairs(g) do
+                if g.value and g.value > e.buyout then maybe[#maybe + 1] = e else e.value = nil end
+            end
+        end
+        Work(gen, maybe, function(e) e.value, e.partial, e.enchanter = Disenchant(e.link) end,
+            function(k, n) return ("Checking %d / %d finds..."):format(k, n) end, function()
+                busy = false
+                Rank()
+                if Refresh then Refresh() end
+            end)
+    end)
+end
+
+local function Read(i, n, gen)
+    if gen ~= generation then return end
     local AH = C_AuctionHouse
     local me = UnitName("player")
     local start, last = clock and clock() or 0, i - 1
@@ -110,12 +180,12 @@ local function Read(i, n)
     end
     if last < n - 1 then
         if Refresh then Refresh(("Reading the auction house: %d / %d..."):format(last + 1, n)) end
-        C_Timer.After(0, function() Check("reading the auction house", pcall(Read, last + 1, n)) end)
+        C_Timer.After(0, function() Check("reading the auction house", pcall(Read, last + 1, n, gen)) end)
         return
     end
     local list = {}
     for _, e in pairs(cheapest) do if e.link then list[#list + 1] = e end end
-    Value(list, 1)
+    Value(list, gen)
 end
 
 -- the replicate list is in (ours, or another addon's scan): read it all again
@@ -125,7 +195,8 @@ local function OnList()
     if n <= 0 then busy = false; if Refresh then Refresh() end return end
     busy, cheapest = true, {}
     if DB then DB.lastScan = time() end
-    Read(0, n)
+    generation = generation + 1 -- (a read already going stops: this one starts over)
+    Read(0, n, generation)
 end
 
 local function Scan()
